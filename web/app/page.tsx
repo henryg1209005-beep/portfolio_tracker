@@ -213,6 +213,64 @@ function Particles() {
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
 }
 
+function Meteors() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    resize();
+    window.addEventListener("resize", resize);
+
+    type Meteor = { x: number; y: number; len: number; speed: number; alpha: number; color: string; active: boolean };
+    const COLORS = ["#bf5af2", "#ff2d78", "#00f5d4"];
+    const meteors: Meteor[] = Array.from({ length: 6 }, () => ({ x: 0, y: 0, len: 0, speed: 0, alpha: 0, color: "", active: false }));
+
+    const spawn = (m: Meteor) => {
+      m.x = Math.random() * canvas.width * 1.5;
+      m.y = Math.random() * canvas.height * 0.5;
+      m.len = Math.random() * 120 + 60;
+      m.speed = Math.random() * 6 + 4;
+      m.alpha = 1;
+      m.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      m.active = true;
+    };
+
+    // stagger initial spawns
+    meteors.forEach((m, i) => setTimeout(() => spawn(m), i * 1800 + Math.random() * 3000));
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const m of meteors) {
+        if (!m.active) continue;
+        m.x += m.speed;
+        m.y += m.speed * 0.5;
+        m.alpha -= 0.012;
+        if (m.alpha <= 0) { m.active = false; setTimeout(() => spawn(m), Math.random() * 4000 + 1500); continue; }
+        const grad = ctx.createLinearGradient(m.x, m.y, m.x - m.len, m.y - m.len * 0.5);
+        grad.addColorStop(0, m.color);
+        grad.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(m.x - m.len, m.y - m.len * 0.5);
+        ctx.strokeStyle = grad;
+        ctx.globalAlpha = m.alpha;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      animId = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", resize); };
+  }, []);
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
+}
+
 function useInView(ref: React.RefObject<HTMLElement | null>) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -269,6 +327,7 @@ export default function LandingPage() {
       {/* ── Hero ── */}
       <section className="relative flex flex-col items-center justify-center text-center px-6 pt-28 pb-24 overflow-hidden">
         <Particles />
+        <Meteors />
         {/* Background glow */}
         <div
           className="absolute inset-0 pointer-events-none"
