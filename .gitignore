@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# Data files — never commit user data or secrets
+portfolio.json
+waitlist.json
+portfolios/
+metrics_cache.json
+perf_cache.json
+config.json
+
+# Next.js
+web/.next/
+web/node_modules/
+web/.env.local
+
+# OS
+.DS_Store
+Thumbs.db

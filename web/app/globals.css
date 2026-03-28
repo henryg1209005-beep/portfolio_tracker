@@ -1,0 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+body {
+  background-color: #080012;
+  color: #e2d9f3;
+  /* Synthwave grid */
+  background-image:
+    linear-gradient(rgba(191, 90, 242, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(191, 90, 242, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a0050; border-radius: 9999px; }
+
+/* Neon glow utilities */
+.glow-pink   { text-shadow: 0 0 20px #ff2d7888, 0 0 40px #ff2d7844; }
+.glow-cyan   { text-shadow: 0 0 20px #00f5d488, 0 0 40px #00f5d444; }
+.glow-purple { text-shadow: 0 0 20px #bf5af288, 0 0 40px #bf5af244; }
+
+.border-glow-pink   { box-shadow: 0 0 12px #ff2d7833, inset 0 0 12px #ff2d7811; }
+.border-glow-cyan   { box-shadow: 0 0 12px #00f5d433, inset 0 0 12px #00f5d411; }
+.border-glow-purple { box-shadow: 0 0 12px #bf5af233, inset 0 0 12px #bf5af211; }
+
+/* Synthwave card base */
+.synth-card {
+  background: linear-gradient(135deg, #16002b 0%, #10001e 100%);
+  border: 1px solid #2a0050;
+}
+
+/* Scanline overlay (subtle) */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+}
