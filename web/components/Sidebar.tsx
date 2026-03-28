@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 
 const links = [
   { href: "/dashboard",             label: "Overview",    icon: "▦" },
@@ -18,6 +19,7 @@ type Props = {
 
 export default function Sidebar({ token, copied, onCopyToken }: Props) {
   const path = usePathname();
+  const { signOut } = useClerk();
   return (
     <aside className="w-52 shrink-0 flex flex-col py-6 px-4 gap-1 relative"
       style={{ background: "linear-gradient(180deg, #10001e 0%, #080012 100%)", borderRight: "1px solid #2a0050" }}>
@@ -49,6 +51,15 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
           </Link>
         );
       })}
+
+      {/* Sign out */}
+      <button
+        onClick={() => signOut({ redirectUrl: "/" })}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-muted hover:text-text hover:bg-white/5 w-full text-left"
+      >
+        <span className="text-base">→</span>
+        Sign out
+      </button>
 
       {/* Access token */}
       {token && (
