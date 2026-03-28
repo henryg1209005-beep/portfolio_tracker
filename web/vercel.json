@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-railway-url.up.railway.app/api/:path*"
+      "destination": "https://portfoliotracker-production-5e98.up.railway.app/api/:path*"
     }
   ]
 }
