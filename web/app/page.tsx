@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { submitWaitlist } from "@/lib/api";
 
 // ── Feature data ──────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ export default function LandingPage() {
           <span style={{ color: "#e2d9f3" }}>vex</span>
         </div>
         <div className="flex items-center gap-3">
-          <Show when="signed-out">
+          <SignedOut>
             <SignInButton mode="redirect">
               <button className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
                 Sign in
@@ -192,13 +192,13 @@ export default function LandingPage() {
                 Get started →
               </button>
             </SignUpButton>
-          </Show>
-          <Show when="signed-in">
+          </SignedOut>
+          <SignedIn>
             <Link href="/dashboard" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
               Dashboard →
             </Link>
             <UserButton />
-          </Show>
+          </SignedIn>
         </div>
       </nav>
 
