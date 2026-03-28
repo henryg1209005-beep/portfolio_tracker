@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { submitWaitlist } from "@/lib/api";
@@ -165,8 +165,22 @@ function WaitlistForm() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+function useInView(ref: React.RefObject<HTMLElement | null>) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold: 0.12 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ref]);
+  return visible;
+}
+
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useUser();
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const featuresVisible = useInView(featuresRef);
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -217,8 +231,8 @@ export default function LandingPage() {
 
         {/* Badge */}
         <div
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-8"
-          style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2" }}
+          className="animate-fade-up inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-8"
+          style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2", animationDelay: "0ms" }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
           Early Access · UK Retail Investors
@@ -226,8 +240,8 @@ export default function LandingPage() {
 
         {/* Headline */}
         <h1
-          className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight max-w-3xl mb-6"
-          style={{ color: "#e2d9f3" }}
+          className="animate-fade-up text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight max-w-3xl mb-6"
+          style={{ color: "#e2d9f3", animationDelay: "120ms" }}
         >
           Your portfolio,{" "}
           <span
@@ -243,28 +257,29 @@ export default function LandingPage() {
 
         {/* Subheadline */}
         <p
-          className="text-base sm:text-lg leading-relaxed max-w-xl mb-10"
-          style={{ color: "#6b5e7e" }}
+          className="animate-fade-up text-base sm:text-lg leading-relaxed max-w-xl mb-10"
+          style={{ color: "#6b5e7e", animationDelay: "240ms" }}
         >
           Institutional-grade risk metrics, AI-powered insights, and portfolio analysis —
           built for UK investors who want more than a spreadsheet.
         </p>
 
         {/* CTA */}
-        <WaitlistForm />
-
-        <div className="flex items-center gap-2 mt-4">
-          <span
-            className="text-xs font-mono px-2.5 py-1 rounded-full"
-            style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}
-          >
-            Free during early access
-          </span>
-          <span className="text-xs" style={{ color: "#3a2a50" }}>· No card required</span>
+        <div className="animate-fade-up w-full flex flex-col items-center" style={{ animationDelay: "360ms" }}>
+          <WaitlistForm />
+          <div className="flex items-center gap-2 mt-4">
+            <span
+              className="text-xs font-mono px-2.5 py-1 rounded-full"
+              style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}
+            >
+              Free during early access
+            </span>
+            <span className="text-xs" style={{ color: "#3a2a50" }}>· No card required</span>
+          </div>
         </div>
 
         {/* Hero screenshot */}
-        <div className="relative mt-16 w-full max-w-5xl mx-auto">
+        <div className="animate-fade-up relative mt-16 w-full max-w-5xl mx-auto" style={{ animationDelay: "480ms" }}>
           {/* Glow underneath */}
           <div
             className="absolute -inset-px rounded-2xl pointer-events-none"
@@ -314,14 +329,15 @@ export default function LandingPage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {FEATURES.map((f) => (
+        <div ref={featuresRef} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {FEATURES.map((f, i) => (
             <div
               key={f.title}
-              className="rounded-2xl flex flex-col overflow-hidden"
+              className={`rounded-2xl flex flex-col overflow-hidden card-hidden ${featuresVisible ? "card-visible" : ""}`}
               style={{
                 background: "linear-gradient(135deg, #0f002088, #0a001288)",
                 border: `1px solid ${f.accent}22`,
+                transitionDelay: featuresVisible ? `${i * 120}ms` : "0ms",
               }}
             >
               {/* Text section */}
