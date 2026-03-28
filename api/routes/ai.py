@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import queue
@@ -283,6 +284,9 @@ def _build_context(market_data: dict) -> str:
 
 
 def _get_api_key() -> str | None:
+    env_key = os.environ.get("ANTHROPIC_API_KEY")
+    if env_key:
+        return env_key
     config_path = PROJECT_ROOT / "config.json"
     if config_path.exists():
         try:
