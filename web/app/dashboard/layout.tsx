@@ -1,22 +1,25 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import { ensureToken, getToken } from "@/lib/api";
+import { setToken, getToken } from "@/lib/api";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState("");
+  const { userId, isLoaded } = useAuth();
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [ready, setReady]   = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    ensureToken().then(t => {
-      setToken(t);
-      setReady(true);
-    });
-  }, []);
+    if (!isLoaded) return;
+    if (!userId) { router.replace("/sign-in"); return; }
+    setToken(userId);
+    setReady(true);
+  }, [isLoaded, userId, router]);
 
   function copyToken() {
-    navigator.clipboard.writeText(token);
+    navigator.clipboard.writeText(getToken());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -31,7 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden font-sans">
-      <Sidebar token={token} copied={copied} onCopyToken={copyToken} />
+      <Sidebar token={getToken()} copied={copied} onCopyToken={copyToken} />
       <main className="flex-1 overflow-y-auto bg-bg">
         {children}
       </main>

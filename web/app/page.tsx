@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import { submitWaitlist } from "@/lib/api";
 
 // ── Feature data ──────────────────────────────────────────────────────────────
@@ -179,13 +180,26 @@ export default function LandingPage() {
           <span style={{ color: "#ff2d78", textShadow: "0 0 12px #ff2d7866" }}>Porti</span>
           <span style={{ color: "#e2d9f3" }}>vex</span>
         </div>
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
-        >
-          Launch App →
-        </Link>
+        <div className="flex items-center gap-3">
+          <Show when="signed-out">
+            <SignInButton mode="redirect">
+              <button className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
+                Sign in
+              </button>
+            </SignInButton>
+            <SignUpButton mode="redirect">
+              <button className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
+                Get started →
+              </button>
+            </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+            <Link href="/dashboard" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
+              Dashboard →
+            </Link>
+            <UserButton />
+          </Show>
+        </div>
       </nav>
 
       {/* ── Hero ── */}
