@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { submitWaitlist } from "@/lib/api";
 
 // ── Feature data ──────────────────────────────────────────────────────────────
@@ -166,6 +166,7 @@ function WaitlistForm() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const { isSignedIn, isLoaded } = useUser();
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -181,24 +182,28 @@ export default function LandingPage() {
           <span style={{ color: "#e2d9f3" }}>vex</span>
         </div>
         <div className="flex items-center gap-3">
-          <SignedOut>
-            <SignInButton mode="redirect">
-              <button className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
-                Sign in
-              </button>
-            </SignInButton>
-            <SignUpButton mode="redirect">
-              <button className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
-                Get started →
-              </button>
-            </SignUpButton>
-          </SignedOut>
-          <SignedIn>
-            <Link href="/dashboard" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
-              Dashboard →
-            </Link>
-            <UserButton />
-          </SignedIn>
+          {isLoaded && !isSignedIn && (
+            <>
+              <SignInButton mode="redirect">
+                <button className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="redirect">
+                <button className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
+                  Get started →
+                </button>
+              </SignUpButton>
+            </>
+          )}
+          {isLoaded && isSignedIn && (
+            <>
+              <Link href="/dashboard" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
+                Dashboard →
+              </Link>
+              <UserButton />
+            </>
+          )}
         </div>
       </nav>
 
