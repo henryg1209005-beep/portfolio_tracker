@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useUser, UserButton } from "@clerk/nextjs";
 import { submitWaitlist } from "@/lib/api";
 
 // ── Feature data ──────────────────────────────────────────────────────────────
@@ -165,6 +166,7 @@ function WaitlistForm() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const { isSignedIn, isLoaded } = useUser();
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -181,12 +183,23 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/sign-in" className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
-              Sign in
-            </Link>
-            <Link href="/sign-up" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
-              Get started →
-            </Link>
+            {isLoaded && isSignedIn ? (
+              <>
+                <Link href="/dashboard" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
+                  Dashboard →
+                </Link>
+                <UserButton />
+              </>
+            ) : (
+              <>
+                <Link href="/sign-in" className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
+                  Sign in
+                </Link>
+                <Link href="/sign-up" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
+                  Get started →
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
