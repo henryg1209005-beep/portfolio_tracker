@@ -164,6 +164,28 @@ export async function submitWaitlist(email: string): Promise<{ status: string; p
   return res.json();
 }
 
+export type InvestorProfile = {
+  risk_appetite: "conservative" | "balanced" | "growth";
+  goal: "long_term_growth" | "income" | "preservation";
+  time_horizon: "<2" | "2-5" | "5-10" | "10+";
+};
+
+export async function getProfile(): Promise<{ exists: boolean } & Partial<InvestorProfile>> {
+  const res = await fetch(`${BASE}/profile`, { headers: authHeader() });
+  if (!res.ok) throw new Error("Failed to fetch profile");
+  return res.json();
+}
+
+export async function saveProfile(profile: InvestorProfile): Promise<{ status: string }> {
+  const res = await fetch(`${BASE}/profile`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(profile),
+  });
+  if (!res.ok) throw new Error("Failed to save profile");
+  return res.json();
+}
+
 export async function submitFeedback(message: string, rating: number | null): Promise<{ status: string }> {
   const res = await fetch(`${BASE}/feedback/submit`, {
     method: "POST",

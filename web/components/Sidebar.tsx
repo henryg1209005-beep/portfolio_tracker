@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import FeedbackModal from "@/components/FeedbackModal";
+import OnboardingModal from "@/components/OnboardingModal";
 
 const links = [
   { href: "/dashboard",             label: "Overview",    icon: "▦" },
@@ -23,6 +24,7 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
   const path = usePathname();
   const { signOut } = useClerk();
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   return (
     <>
@@ -56,6 +58,15 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
             </Link>
           );
         })}
+
+        {/* Profile */}
+        <button
+          onClick={() => setShowProfile(true)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-muted hover:text-text hover:bg-white/5 w-full text-left"
+        >
+          <span className="text-base">◉</span>
+          Investor profile
+        </button>
 
         {/* Feedback */}
         <button
@@ -102,6 +113,7 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
       </aside>
 
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+      {showProfile && <OnboardingModal onDone={() => setShowProfile(false)} />}
     </>
   );
 }

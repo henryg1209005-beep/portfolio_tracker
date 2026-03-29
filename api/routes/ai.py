@@ -11,6 +11,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from .market import _refresh_data
+from .profile import _load_profile
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -220,13 +221,25 @@ def _compute_scores(holdings: list, metrics: dict | None) -> dict:
     }
 
 
-def _build_context(market_data: dict) -> str:
+_RISK_LABELS = {"conservative": "Conservative", "balanced": "Balanced", "growth": "Growth"}
+_GOAL_LABELS  = {"long_term_growth": "Long-term capital growth", "income": "Income generation", "preservation": "Capital preservation"}
+_HORIZON_LABELS = {"<2": "Less than 2 years", "2-5": "2–5 years", "5-10": "5–10 years", "10+": "10+ years"}
+
+
+def _build_context(market_data: dict, profile: dict | None = None) -> str:
     holdings = market_data.get("holdings", [])
     summary = market_data.get("summary", {})
     metrics = market_data.get("metrics") or {}
     scores = _compute_scores(holdings, metrics)
 
     lines = ["=== PORTFOLIO DATA FOR ANALYSIS ===\n"]
+
+    if profile:
+        lines.append("--- INVESTOR PROFILE ---")
+        lines.append(f"Risk Appetite:  {_RISK_LABELS.get(profile.get('risk_appetite',''), profile.get('risk_appetite','Unknown'))}")
+        lines.append(f"Investment Goal: {_GOAL_LABELS.get(profile.get('goal',''), profile.get('goal','Unknown'))}")
+        lines.append(f"Time Horizon:   {_HORIZON_LABELS.get(profile.get('time_horizon',''), profile.get('time_horizon','Unknown'))}")
+        lines.append("(Tailor every observation to this investor's stated profile — flag misalignments explicitly)\n")
 
     lines.append(f"Total Value: £{summary.get('total_value', 0):,.2f}")
     lines.append(f"Total Cost:  £{summary.get('total_cost', 0):,.2f}")
@@ -306,7 +319,8 @@ def analysis(token: str):
     token: portfolio token passed as query param (EventSource doesn't support headers)
     """
     market_data = _refresh_data(token)
-    context = _build_context(market_data)
+    profile = _load_profile(token)
+    context = _build_context(market_data, profile)
     api_key = _get_api_key()
 
     def generate():
