@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import portfolio, market, ai, waitlist, auth
+from api.routes import portfolio, market, ai, waitlist, auth, feedback
 
 app = FastAPI(title="Portfolio Tracker API", version="1.0.0")
 
@@ -21,6 +21,7 @@ app.include_router(market.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(waitlist.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(feedback.router, prefix="/api")
 
 
 @app.get("/api/health")

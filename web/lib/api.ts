@@ -164,6 +164,16 @@ export async function submitWaitlist(email: string): Promise<{ status: string; p
   return res.json();
 }
 
+export async function submitFeedback(message: string, rating: number | null): Promise<{ status: string }> {
+  const res = await fetch(`${BASE}/feedback/submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ message, rating, token: getToken() }),
+  });
+  if (!res.ok) throw new Error("Failed to submit feedback");
+  return res.json();
+}
+
 /** Stream AI analysis via SSE. Token passed as query param (EventSource has no header support). */
 export function streamAnalysis(
   onChunk: (text: string) => void,
