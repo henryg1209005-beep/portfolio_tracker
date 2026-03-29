@@ -373,9 +373,15 @@ export default function LandingPage() {
         </p>
 
         {/* CTA */}
-        <div className="animate-fade-up w-full flex flex-col items-center" style={{ animationDelay: "360ms" }}>
-          <WaitlistForm />
-          <div className="flex items-center gap-2 mt-4">
+        <div className="animate-fade-up flex flex-col items-center gap-4" style={{ animationDelay: "360ms" }}>
+          <Link
+            href="/sign-up"
+            className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all"
+            style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}
+          >
+            Get started free →
+          </Link>
+          <div className="flex items-center gap-2">
             <span
               className="text-xs font-mono px-2.5 py-1 rounded-full"
               style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}
@@ -574,9 +580,15 @@ export default function LandingPage() {
           Ready to see what your portfolio is really doing?
         </h2>
         <p className="text-sm mb-8 max-w-sm" style={{ color: "#6b5e7e" }}>
-          Join the waitlist. Early access opens to UK investors first.
+          Free during early access. No card required.
         </p>
-        <WaitlistForm />
+        <Link
+          href="/sign-up"
+          className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all"
+          style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}
+        >
+          Get started free →
+        </Link>
       </section>
 
       {/* ── Footer ── */}
