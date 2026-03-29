@@ -12,10 +12,26 @@ _lse_currency_cache: dict = {}
 
 # Known LSE-listed tickers that need a .L suffix on Yahoo Finance
 _LSE_KNOWN = {
-    "VFEM", "VUSA", "HUKX", "VWRL", "VEVE", "VUAG", "VHVG",
-    "ISF",  "IUSA", "SWLD", "HMWO", "IGLT", "INRG", "RBTX",
-    "SMT",  "FCSS", "RIO",  "SHEL", "BP",   "HSBA", "LLOY",
-    "BARC", "GSK",  "AZN",  "ULVR", "DGE",  "REL",  "NG",
+    # Vanguard / iShares / BlackRock ETFs
+    "VFEM", "VUSA", "HUKX", "VWRL", "VEVE", "VUAG", "VHVG", "VUKE",
+    "VGOV", "VVAL", "VMID", "VFEM", "VERX", "VAGP", "VAGS",
+    "ISF",  "IUSA", "IWRD", "IEMA", "IUKD", "IUKP", "IGLT", "SLXX",
+    "CSPX", "SWLD", "HMWO", "INRG", "CORP", "IGLS",
+    # FTSE 100 blue chips
+    "SHEL", "BP",   "HSBA", "LLOY", "BARC", "GSK",  "AZN",  "ULVR",
+    "DGE",  "REL",  "NG",   "RIO",  "AAL",  "BHP",  "GLEN", "ANTO",
+    "NWG",  "STAN", "LGEN", "PHNX", "AVV",  "PRU",  "HLMA", "IMB",
+    "BATS", "BTI",  "VOD",  "BT",   "SKY",  "ITV",  "WPP",  "PUB",
+    "EXPN", "RELX", "LSEG", "ICG",  "MNG",  "ABDN", "JUP",  "SCHO",
+    "SGE",  "AUTO", "MKS",  "NEXT", "JD",   "FRAS", "SPX",  "KGF",
+    "TSCO", "SBRY", "MRW",  "OCO",  "OCDO", "DCC",  "CRH",  "SMDS",
+    "RKT",  "BDEV", "PSN",  "TW",   "BWY",  "BKG",  "CRDA", "ECM",
+    "FRES", "HOC",  "CEY",  "SLP",  "POG",  "CAML",
+    # FTSE 250 / popular mid-caps
+    "SMT",  "FCSS", "RBTX", "PCT",  "ATT",  "MNKS", "EWI",  "BRIG",
+    "THRG", "SSON", "ELM",  "HGT",  "IPAY", "AUGM", "BRWM",
+    "III",  "MERI", "RCP",  "GRIO", "HICL", "INPP", "TRIG", "BSIF",
+    "UKW",  "NESF", "GRID", "ORIT",
 }
 
 
