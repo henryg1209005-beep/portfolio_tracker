@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
 import {
-  parseCSV, detectBroker, parseRevolut, parseWithMapping, inferAssetType,
+  parseCSV, detectBroker, parseRevolut, parseTrading212, parseFreetrade, parseHL,
+  parseWithMapping, inferAssetType, BROKER_LABELS,
   type BrokerFormat, type ColumnMapping, type Currency, type MappedTransaction,
 } from "@/lib/csvImport";
 import { importTransactions } from "@/lib/api";
@@ -246,11 +247,19 @@ export default function ImportCSVModal({ onClose, onImported }: { onClose: () =>
       setBroker(detected);
 
       if (detected === "revolut") {
-        const txns = parseRevolut(r);
-        setTransactions(txns);
+        setTransactions(parseRevolut(r));
+        setStep("preview");
+      } else if (detected === "trading212") {
+        setTransactions(parseTrading212(r));
+        setStep("preview");
+      } else if (detected === "freetrade") {
+        setTransactions(parseFreetrade(r));
+        setStep("preview");
+      } else if (detected === "hl") {
+        setTransactions(parseHL(r));
         setStep("preview");
       } else {
-        // Auto-populate mapping for obvious column names
+        // Generic: auto-populate mapping for obvious column names
         const find = (...candidates: string[]) =>
           candidates.find(c => h.some(hh => hh.toLowerCase() === c.toLowerCase())) ?? "";
         setMapping({
@@ -334,7 +343,7 @@ export default function ImportCSVModal({ onClose, onImported }: { onClose: () =>
           <div>
             <h2 className="font-bold text-base text-text">Import Transactions</h2>
             <p className="text-[11px] text-muted font-mono mt-0.5">
-              {broker === "revolut" && step !== "upload" ? "Revolut Investing detected" : "CSV file import"}
+              {step !== "upload" && broker !== "generic" ? `${BROKER_LABELS[broker]} detected` : "CSV file import"}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -360,7 +369,8 @@ export default function ImportCSVModal({ onClose, onImported }: { onClose: () =>
           {step === "upload" && (
             <div className="flex flex-col gap-5">
               <p className="text-sm text-muted leading-relaxed">
-                Export your transaction history from Revolut Investing (or any broker) as a CSV file, then upload it here.
+                Export your transaction history from your broker as a CSV file, then upload it here.
+                Revolut, Trading 212, Freetrade, and Hargreaves Lansdown are auto-detected.
                 Transactions already in your portfolio are automatically skipped.
               </p>
 
@@ -382,14 +392,43 @@ export default function ImportCSVModal({ onClose, onImported }: { onClose: () =>
                 <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFileInput} />
               </div>
 
-              {/* Revolut instructions */}
-              <div className="rounded-xl p-4 text-xs leading-relaxed" style={{ background: "#0d0020", border: "1px solid #1a0030" }}>
-                <div className="font-mono text-muted mb-2 uppercase tracking-wider text-[10px]">How to export from Revolut</div>
-                <ol className="text-muted space-y-1 list-decimal list-inside">
-                  <li>Open Revolut app → Investing tab</li>
-                  <li>Tap your profile icon → <span style={{ color: "#bf5af2" }}>Statements</span></li>
-                  <li>Select <span style={{ color: "#bf5af2" }}>Trading statement</span> → choose date range → Export as CSV</li>
-                </ol>
+              {/* Broker export instructions */}
+              <div className="rounded-xl p-4 text-xs leading-relaxed flex flex-col gap-4" style={{ background: "#0d0020", border: "1px solid #1a0030" }}>
+                <div className="font-mono uppercase tracking-wider text-[10px]" style={{ color: "#bf5af2" }}>Supported brokers — how to export</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <div className="font-mono text-muted mb-1.5 uppercase tracking-wider text-[10px]">Revolut Investing</div>
+                    <ol className="text-muted space-y-1 list-decimal list-inside">
+                      <li>Investing tab → profile icon</li>
+                      <li>Statements → <span style={{ color: "#bf5af2" }}>Trading statement</span></li>
+                      <li>Choose date range → Export CSV</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <div className="font-mono text-muted mb-1.5 uppercase tracking-wider text-[10px]">Trading 212</div>
+                    <ol className="text-muted space-y-1 list-decimal list-inside">
+                      <li>History tab → filter icon</li>
+                      <li>Select date range</li>
+                      <li>Export → <span style={{ color: "#bf5af2" }}>CSV</span></li>
+                    </ol>
+                  </div>
+                  <div>
+                    <div className="font-mono text-muted mb-1.5 uppercase tracking-wider text-[10px]">Freetrade</div>
+                    <ol className="text-muted space-y-1 list-decimal list-inside">
+                      <li>Profile → <span style={{ color: "#bf5af2" }}>Statements</span></li>
+                      <li>Activity statement → date range</li>
+                      <li>Download CSV</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <div className="font-mono text-muted mb-1.5 uppercase tracking-wider text-[10px]">Hargreaves Lansdown</div>
+                    <ol className="text-muted space-y-1 list-decimal list-inside">
+                      <li>My Accounts → Transactions</li>
+                      <li>Select account and date range</li>
+                      <li><span style={{ color: "#bf5af2" }}>Export to CSV</span></li>
+                    </ol>
+                  </div>
+                </div>
               </div>
             </div>
           )}
