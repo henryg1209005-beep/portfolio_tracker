@@ -75,6 +75,17 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
           Feedback
         </button>
 
+        {/* Discord */}
+        <a
+          href="https://discord.gg/MabTm9Z4zR"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-muted hover:text-text hover:bg-white/5 w-full text-left"
+        >
+          <span className="text-base">◈</span>
+          Discord
+        </a>
+
         {/* Sign out */}
         <button
           onClick={() => signOut({ redirectUrl: "/" })}
