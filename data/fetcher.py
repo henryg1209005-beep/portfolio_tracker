@@ -226,7 +226,10 @@ def fetch_current_prices(tickers, gbpusd=None):
                         )
 
             if sym.endswith(".L"):
-                price = _lse_price_to_gbp(sym, price)
+                # yfinance download() returns LSE prices in pence — always divide by 100.
+                # fast_info currency detection is unreliable and caused intermittent
+                # 100x overstatement when it returned "GBP" instead of "GBp".
+                price = price / 100
             else:
                 # Assume USD → convert to GBP
                 price = price / gbpusd
