@@ -39,9 +39,18 @@ export default function OverviewPage() {
   return (
     <div className="p-6 max-w-screen-xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h1 className="text-2xl font-bold">Overview</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Overview</h1>
+            {!loading && data && (
+              <span className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full animate-fade-up"
+                style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4", animationDelay: "400ms" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse" />
+                LIVE
+              </span>
+            )}
+          </div>
           <p className="text-muted text-sm mt-0.5">Your portfolio at a glance</p>
         </div>
         <div className="flex gap-3">

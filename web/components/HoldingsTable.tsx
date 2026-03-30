@@ -93,9 +93,10 @@ export default function HoldingsTable({ holdings, onRemove }: {
               return (
                 <tr
                   key={h.ticker}
-                  className="transition-colors"
+                  className="animate-fade-row transition-colors"
                   style={{
                     borderTop: i > 0 ? "1px solid #1a0030" : undefined,
+                    animationDelay: `${i * 40}ms`,
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#bf5af208")}
                   onMouseLeave={e => (e.currentTarget.style.background = "")}
