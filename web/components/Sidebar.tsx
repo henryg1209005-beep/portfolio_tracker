@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import FeedbackModal from "@/components/FeedbackModal";
@@ -33,11 +34,7 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
 
         {/* Logo */}
         <div className="mb-8 px-2">
-          <div className="text-lg font-bold tracking-tight">
-            <span className="text-pink glow-pink">Porti</span>
-            <span className="text-text">vex</span>
-          </div>
-          <div className="text-xs text-muted mt-0.5 font-mono">v1.0</div>
+          <Image src="/logo.png" alt="Portivex" width={120} height={40} className="object-contain" />
         </div>
 
         {links.map((l) => {

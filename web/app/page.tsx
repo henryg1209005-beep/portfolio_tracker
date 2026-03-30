@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { submitWaitlist } from "@/lib/api";
 
@@ -297,10 +298,7 @@ export default function LandingPage() {
         className="sticky top-0 z-50 flex items-center justify-between px-6 py-4"
         style={{ background: "#08001299", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}
       >
-        <div className="text-base font-bold tracking-tight">
-          <span style={{ color: "#ff2d78", textShadow: "0 0 12px #ff2d7866" }}>Porti</span>
-          <span style={{ color: "#e2d9f3" }}>vex</span>
-        </div>
+        <Image src="/logo.png" alt="Portivex" width={110} height={36} className="object-contain" />
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3">
             {isLoaded && isSignedIn ? (
