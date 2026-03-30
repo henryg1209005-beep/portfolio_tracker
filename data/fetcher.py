@@ -282,7 +282,7 @@ def fetch_historical_data(tickers, period="1y", start=None, gbpusd_series=None):
                     close = close / 100      # pence → GBP
                 # else: already in GBP
             elif gbpusd_series is not None and not gbpusd_series.empty:
-                aligned = gbpusd_series.reindex(close.index, method="ffill")
+                aligned = gbpusd_series.reindex(close.index).ffill()
                 close   = close / aligned    # USD → GBP (historical rate)
             else:
                 gbpusd = fetch_gbp_usd_rate()
@@ -314,7 +314,7 @@ def fetch_benchmark_data(period="1y", start=None):
             return pd.Series(dtype=float)
 
         if not fx_close.empty:
-            fx_aligned = fx_close.reindex(sp_close.index, method="ffill")
+            fx_aligned = fx_close.reindex(sp_close.index).ffill()
             return (sp_close / fx_aligned).dropna()
 
         return (sp_close / fetch_gbp_usd_rate()).dropna()
