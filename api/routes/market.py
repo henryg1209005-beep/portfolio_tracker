@@ -1,8 +1,11 @@
 import sys
+import time
+import threading
 from pathlib import Path
+from collections import defaultdict
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 import numpy as np
 import pandas as pd
 
@@ -10,6 +13,29 @@ from typing import Annotated
 from fastapi import Header
 from api.routes.cache import (get_cached_refresh, set_cached_refresh,
                               get_cached_performance, set_cached_performance)
+
+# ── Simple token-bucket rate limiter for market endpoints ─────────────────────
+# Max 20 requests per token per minute across all market endpoints
+
+_rate_lock = threading.Lock()
+_rate_buckets: dict = defaultdict(lambda: {"count": 0, "window_start": 0.0})
+_RATE_LIMIT = 20
+_RATE_WINDOW = 60  # seconds
+
+
+def _check_rate_limit(token: str):
+    now = time.time()
+    with _rate_lock:
+        bucket = _rate_buckets[token]
+        if now - bucket["window_start"] > _RATE_WINDOW:
+            bucket["count"] = 0
+            bucket["window_start"] = now
+        bucket["count"] += 1
+        if bucket["count"] > _RATE_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many requests. Please wait a moment before refreshing again."
+            )
 
 from data.fetcher import (
     fetch_current_prices,
@@ -70,6 +96,7 @@ def _avg_cost_gbp(holding: dict, gbpusd: float, gbpeur: float) -> float:
 
 @router.get("/correlation")
 def correlation(x_portfolio_token: Annotated[str, Header()], period: str = "1Y"):
+    _check_rate_limit(x_portfolio_token)
     """
     Return a pairwise correlation matrix for all active holdings.
     period: 1M | 3M | 6M | 1Y | 5Y  (default 1Y)
@@ -237,11 +264,13 @@ def _refresh_data(token: str) -> dict:
 
 @router.get("/refresh")
 def refresh(x_portfolio_token: Annotated[str, Header()]):
+    _check_rate_limit(x_portfolio_token)
     return _refresh_data(x_portfolio_token)
 
 
 @router.get("/performance")
 def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y"):
+    _check_rate_limit(x_portfolio_token)
     """
     Return portfolio vs S&P 500 cumulative performance (indexed to 100).
     period: 1M | 3M | 6M | 1Y | 5Y  (default 1Y)

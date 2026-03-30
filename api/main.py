@@ -18,11 +18,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Portfolio Tracker API", version="1.0.0", lifespan=lifespan)
 
+ALLOWED_ORIGINS = [
+    "https://portivex.co.uk",
+    "https://www.portivex.co.uk",
+    "http://localhost:3000",  # local dev
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten this when you have a real domain
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Portfolio-Token"],
 )
 
 app.include_router(portfolio.router, prefix="/api")

@@ -43,6 +43,16 @@ class Transaction(BaseModel):
     type: Literal["buy", "sell"]
     price_currency: Literal["GBP", "USD", "EUR"] = "GBP"
 
+    model_config = {"str_strip_whitespace": True}
+
+    @property
+    def validated(self):
+        if self.shares <= 0:
+            raise ValueError("shares must be positive")
+        if self.price <= 0:
+            raise ValueError("price must be positive")
+        return self
+
 
 class ImportTransaction(BaseModel):
     ticker: str
