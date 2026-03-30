@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
-import { streamAnalysis, fetchRefresh } from "@/lib/api";
+import { streamAnalysis, fetchRefresh, fetchAIUsage } from "@/lib/api";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 interface Section { title: string; body: string }
@@ -282,6 +282,7 @@ export default function AiPage() {
   const [status, setStatus]     = useState<Status>("idle");
   const [error, setError]       = useState("");
   const [holdingCount, setHoldingCount] = useState<number | null>(null);
+  const [usage, setUsage]       = useState<{ used: number; limit: number; remaining: number } | null>(null);
   const cleanupRef              = useRef<(() => void) | null>(null);
   const bottomRef               = useRef<HTMLDivElement>(null);
 
@@ -289,6 +290,9 @@ export default function AiPage() {
     fetchRefresh()
       .then(d => setHoldingCount(d.holdings.length))
       .catch(() => setHoldingCount(0));
+    fetchAIUsage()
+      .then(setUsage)
+      .catch(() => {});
   }, []);
 
   function start() {
@@ -299,15 +303,23 @@ export default function AiPage() {
         setText(t => t + chunk);
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       },
-      () => setStatus("done"),
-      (msg) => { setError(msg); setStatus("error"); }
+      () => {
+        setStatus("done");
+        fetchAIUsage().then(setUsage).catch(() => {});
+      },
+      (msg) => {
+        setError(msg);
+        setStatus("error");
+        fetchAIUsage().then(setUsage).catch(() => {});
+      }
     );
     cleanupRef.current = cleanup;
   }
 
-  const busy       = status === "loading" || status === "streaming";
-  const hasHoldings = holdingCount === null || holdingCount > 0; // optimistic until loaded
-  const sections   = parseSections(text);
+  const busy        = status === "loading" || status === "streaming";
+  const hasHoldings = holdingCount === null || holdingCount > 0;
+  const limitHit    = usage !== null && usage.remaining === 0;
+  const sections    = parseSections(text);
 
   return (
     <>
@@ -327,6 +339,13 @@ export default function AiPage() {
             <p className="text-white/35 text-sm mt-1">
               Private-wealth-grade analysis · Live data
             </p>
+            {usage && (
+              <p className="text-[11px] mt-1 font-mono" style={{ color: limitHit ? "#ff2d78" : "#3a2a50" }}>
+                {limitHit
+                  ? "Daily limit reached — resets at midnight"
+                  : `${usage.remaining} of ${usage.limit} analyses remaining today`}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3 shrink-0 mt-0.5">
             {status !== "idle" && (
@@ -339,18 +358,18 @@ export default function AiPage() {
             )}
             <button
               onClick={start}
-              disabled={busy || !hasHoldings || holdingCount === 0}
+              disabled={busy || !hasHoldings || holdingCount === 0 || limitHit}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all disabled:opacity-40"
               style={{
-                background: busy
+                background: busy || limitHit
                   ? "rgba(191,90,242,0.3)"
                   : "linear-gradient(135deg, #bf5af2 0%, #9d3fd4 100%)",
                 color: "#fff",
-                boxShadow: busy ? "none" : "0 0 20px rgba(191,90,242,0.35)",
+                boxShadow: busy || limitHit ? "none" : "0 0 20px rgba(191,90,242,0.35)",
               }}
             >
               <span style={{ fontSize: 13 }}>✦</span>
-              {status === "done" || status === "error" ? "Re-analyse" : "Run Analysis"}
+              {limitHit ? "Limit reached" : status === "done" || status === "error" ? "Re-analyse" : "Run Analysis"}
             </button>
           </div>
         </div>

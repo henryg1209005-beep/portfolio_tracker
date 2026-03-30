@@ -196,6 +196,13 @@ export async function submitFeedback(message: string, rating: number | null): Pr
   return res.json();
 }
 
+export async function fetchAIUsage(): Promise<{ used: number; limit: number; remaining: number }> {
+  const token = getToken();
+  const res = await fetch(`${BASE}/ai/usage?token=${encodeURIComponent(token)}`);
+  if (!res.ok) throw new Error("Failed to fetch AI usage");
+  return res.json();
+}
+
 /** Stream AI analysis via SSE. Token passed as query param (EventSource has no header support). */
 export function streamAnalysis(
   onChunk: (text: string) => void,
