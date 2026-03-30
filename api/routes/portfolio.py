@@ -1,33 +1,17 @@
-import json
-from pathlib import Path
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Literal, Annotated
-from api.routes.cache import invalidate_refresh_cache, _paths
+
+from api import db
+from api.routes.cache import invalidate_refresh_cache
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 
-# ── Token dependency ──────────────────────────────────────────────────────────
-
-def _token(x_portfolio_token: Annotated[str, Header()]) -> str:
-    return x_portfolio_token
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Kept for market.py which imports these directly ───────────────────────────
 
 def _load(token: str) -> dict:
-    p = _paths(token)["portfolio"]
-    if not p.exists():
-        return {"holdings": []}
-    with open(p, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save(token: str, data: dict):
-    p = _paths(token)["portfolio"]
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    return db.load_portfolio(token)
 
 
 def _compute_stats(holding: dict) -> dict:
@@ -84,8 +68,7 @@ class AddHoldingRequest(BaseModel):
 
 @router.get("")
 def get_portfolio(x_portfolio_token: Annotated[str, Header()]):
-    token = x_portfolio_token
-    data = _load(token)
+    data = db.load_portfolio(x_portfolio_token)
     holdings = []
     for h in data.get("holdings", []):
         stats = _compute_stats(h)
@@ -101,77 +84,28 @@ def get_portfolio(x_portfolio_token: Annotated[str, Header()]):
 
 @router.post("/holdings")
 def add_holding(req: AddHoldingRequest, x_portfolio_token: Annotated[str, Header()]):
-    token = x_portfolio_token
-    data  = _load(token)
+    token  = x_portfolio_token
     ticker = req.ticker.upper()
-
-    for h in data["holdings"]:
-        if h["ticker"] == ticker:
-            h["transactions"].append(req.transaction.model_dump())
-            _save(token, data)
-            invalidate_refresh_cache(token)
-            return {"ok": True, "action": "transaction_added"}
-
-    data["holdings"].append({
-        "ticker":       ticker,
-        "type":         req.type,
-        "transactions": [req.transaction.model_dump()],
-        "dividends":    [],
-    })
-    _save(token, data)
+    action = db.add_transaction(token, ticker, req.type, req.transaction.model_dump())
     invalidate_refresh_cache(token)
-    return {"ok": True, "action": "holding_created"}
+    return {"ok": True, "action": action}
 
 
 @router.post("/import")
 def import_holdings(req: ImportRequest, x_portfolio_token: Annotated[str, Header()]):
     token = x_portfolio_token
-    data  = _load(token)
-    imported = 0
-    skipped  = 0
-
-    for txn in req.transactions:
-        ticker  = txn.ticker.upper()
-        holding = next((h for h in data["holdings"] if h["ticker"] == ticker), None)
-
-        if holding is None:
-            holding = {"ticker": ticker, "type": txn.asset_type, "transactions": [], "dividends": []}
-            data["holdings"].append(holding)
-
-        t_date = txn.date[:10]
-
-        duplicate = any(
-            t.get("date", "")[:10] == t_date
-            and t.get("type") == txn.type
-            and abs(t.get("shares", 0) - txn.shares) < 0.001
-            and abs(t.get("price",  0) - txn.price)  < 0.01
-            for t in holding["transactions"]
-        )
-
-        if duplicate:
-            skipped += 1
-            continue
-
-        holding["transactions"].append({
-            "date":           t_date,
-            "shares":         txn.shares,
-            "price":          txn.price,
-            "price_currency": txn.price_currency,
-            "type":           txn.type,
-        })
-        imported += 1
-
-    _save(token, data)
+    result = db.import_transactions(
+        token,
+        [t.model_dump() for t in req.transactions],
+    )
     invalidate_refresh_cache(token)
-    return {"imported": imported, "skipped": skipped}
+    return result
 
 
 @router.delete("/holdings")
 def clear_all_holdings(x_portfolio_token: Annotated[str, Header()]):
     token = x_portfolio_token
-    data  = _load(token)
-    data["holdings"] = []
-    _save(token, data)
+    db.clear_holdings(token)
     invalidate_refresh_cache(token)
     return {"ok": True}
 
@@ -179,11 +113,8 @@ def clear_all_holdings(x_portfolio_token: Annotated[str, Header()]):
 @router.delete("/holdings/{ticker}")
 def remove_holding(ticker: str, x_portfolio_token: Annotated[str, Header()]):
     token = x_portfolio_token
-    data  = _load(token)
-    original = len(data["holdings"])
-    data["holdings"] = [h for h in data["holdings"] if h["ticker"] != ticker.upper()]
-    if len(data["holdings"]) == original:
+    found = db.remove_holding(token, ticker)
+    if not found:
         raise HTTPException(status_code=404, detail=f"{ticker} not found")
-    _save(token, data)
     invalidate_refresh_cache(token)
     return {"ok": True}

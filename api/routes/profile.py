@@ -1,29 +1,15 @@
-import json
-from pathlib import Path
 from typing import Annotated
 from fastapi import APIRouter, Header
 from pydantic import BaseModel
 
+from api import db
+
 router = APIRouter(prefix="/profile", tags=["profile"])
-
-PORTFOLIOS_DIR = Path(__file__).parent.parent.parent / "portfolios"
-
-
-def _profile_path(token: str) -> Path:
-    d = PORTFOLIOS_DIR / token
-    d.mkdir(parents=True, exist_ok=True)
-    return d / "profile.json"
 
 
 def _load_profile(token: str) -> dict | None:
-    path = _profile_path(token)
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
+    """Public helper used by ai.py."""
+    return db.load_profile(token)
 
 
 class Profile(BaseModel):
@@ -34,7 +20,7 @@ class Profile(BaseModel):
 
 @router.get("")
 def get_profile(x_portfolio_token: Annotated[str, Header()]):
-    profile = _load_profile(x_portfolio_token)
+    profile = db.load_profile(x_portfolio_token)
     if profile is None:
         return {"exists": False}
     return {"exists": True, **profile}
@@ -42,7 +28,10 @@ def get_profile(x_portfolio_token: Annotated[str, Header()]):
 
 @router.post("")
 def save_profile(profile: Profile, x_portfolio_token: Annotated[str, Header()]):
-    path = _profile_path(x_portfolio_token)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(profile.model_dump(), f, indent=2)
+    db.save_profile(
+        x_portfolio_token,
+        profile.risk_appetite,
+        profile.goal,
+        profile.time_horizon,
+    )
     return {"status": "ok"}

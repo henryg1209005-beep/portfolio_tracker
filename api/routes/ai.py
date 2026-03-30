@@ -3,7 +3,6 @@ import sys
 import json
 import queue
 import threading
-from datetime import date
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -11,6 +10,7 @@ import anthropic
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from api import db
 from .market import _refresh_data
 from .profile import _load_profile
 
@@ -300,35 +300,8 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
 DAILY_LIMIT = 3  # analyses per user per day
 
 
-def _rate_limit_path(token: str) -> Path:
-    folder = PROJECT_ROOT / "portfolios" / token
-    folder.mkdir(parents=True, exist_ok=True)
-    return folder / "ai_usage.json"
-
-
 def _check_and_increment(token: str) -> tuple[bool, int]:
-    """Returns (allowed, remaining_after). Raises nothing — caller checks allowed."""
-    today = date.today().isoformat()
-    path = _rate_limit_path(token)
-    usage = {}
-    if path.exists():
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                usage = json.load(f)
-        except Exception:
-            usage = {}
-
-    if usage.get("date") != today:
-        usage = {"date": today, "count": 0}
-
-    if usage["count"] >= DAILY_LIMIT:
-        return False, 0
-
-    usage["count"] += 1
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(usage, f)
-
-    return True, DAILY_LIMIT - usage["count"]
+    return db.check_and_increment_usage(token, DAILY_LIMIT)
 
 
 def _get_api_key() -> str | None:
@@ -348,17 +321,7 @@ def _get_api_key() -> str | None:
 @router.get("/usage")
 def usage(token: str):
     """Return today's analysis usage for the token."""
-    today = date.today().isoformat()
-    path = _rate_limit_path(token)
-    usage_data = {}
-    if path.exists():
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                usage_data = json.load(f)
-        except Exception:
-            pass
-    count = usage_data.get("count", 0) if usage_data.get("date") == today else 0
-    return {"used": count, "limit": DAILY_LIMIT, "remaining": DAILY_LIMIT - count}
+    return db.get_usage(token, DAILY_LIMIT)
 
 
 @router.get("/analysis")
