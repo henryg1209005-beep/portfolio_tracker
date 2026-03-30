@@ -196,6 +196,14 @@ export async function submitFeedback(message: string, rating: number | null): Pr
   return res.json();
 }
 
+export async function searchTickers(q: string): Promise<{ ticker: string; name: string; exchange: string }[]> {
+  if (!q || q.length < 1) return [];
+  const res = await fetch(`${BASE}/market/search?q=${encodeURIComponent(q)}`, { headers: authHeader() });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.results ?? [];
+}
+
 export async function fetchAIUsage(): Promise<{ used: number; limit: number; remaining: number }> {
   const token = getToken();
   const res = await fetch(`${BASE}/ai/usage?token=${encodeURIComponent(token)}`);

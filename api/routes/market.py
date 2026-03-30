@@ -1,6 +1,7 @@
 import sys
 import time
 import threading
+import httpx
 from pathlib import Path
 from collections import defaultdict
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -358,3 +359,28 @@ def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
     }
     set_cached_performance(token, period, result)
     return result
+
+
+@router.get("/search")
+def search_tickers(q: str, x_portfolio_token: Annotated[str, Header()]):
+    """Search for tickers via Yahoo Finance. Returns [{ticker, name, exchange}]."""
+    q = q.strip()
+    if not q or len(q) > 20:
+        return {"results": []}
+    try:
+        url = "https://query1.finance.yahoo.com/v1/finance/search"
+        params = {"q": q, "quotesCount": 8, "newsCount": 0, "listsCount": 0}
+        headers = {"User-Agent": "Mozilla/5.0"}
+        with httpx.Client(timeout=5) as client:
+            resp = client.get(url, params=params, headers=headers)
+        data = resp.json()
+        results = []
+        for item in data.get("quotes", []):
+            symbol = item.get("symbol", "")
+            name   = item.get("shortname") or item.get("longname") or ""
+            exch   = item.get("exchDisp") or item.get("exchange") or ""
+            if symbol:
+                results.append({"ticker": symbol, "name": name, "exchange": exch})
+        return {"results": results}
+    except Exception:
+        return {"results": []}
