@@ -7,9 +7,6 @@ RISK_FREE_TICKER = "^IRX"   # 13-week T-bill
 GBPUSD_TICKER    = "GBPUSD=X"
 GBPEUR_TICKER    = "GBPEUR=X"
 
-# Cache LSE ticker currencies so we only call yfinance once per session
-_lse_currency_cache: dict = {}
-
 # Known LSE-listed tickers that need a .L suffix on Yahoo Finance
 _LSE_KNOWN = {
     # Vanguard / iShares / BlackRock ETFs
@@ -50,21 +47,18 @@ def resolve_ticker(ticker):
 def _lse_get_currency(sym: str) -> str:
     """
     Return the currency code for a .L ticker: 'GBp' (pence) or 'GBP' (pounds).
-    Uses fast_info for a lightweight check; caches the result per session.
+    Not cached — caching caused wrong values to persist for the entire Railway
+    process lifetime, producing intermittent 100x price overstatement.
     """
-    if sym in _lse_currency_cache:
-        return _lse_currency_cache[sym]
     cur = "GBp"  # safe default – most LSE tickers quote in pence
     try:
         fi = yf.Ticker(sym).fast_info
-        # fast_info supports both attribute and dict access depending on version
         try:
             cur = fi["currency"]
         except (KeyError, TypeError):
             cur = getattr(fi, "currency", "GBp")
     except Exception:
         pass
-    _lse_currency_cache[sym] = cur
     return cur
 
 
@@ -226,10 +220,7 @@ def fetch_current_prices(tickers, gbpusd=None):
                         )
 
             if sym.endswith(".L"):
-                # yfinance download() returns LSE prices in pence — always divide by 100.
-                # fast_info currency detection is unreliable and caused intermittent
-                # 100x overstatement when it returned "GBP" instead of "GBp".
-                price = price / 100
+                price = _lse_price_to_gbp(sym, price)
             else:
                 # Assume USD → convert to GBP
                 price = price / gbpusd
