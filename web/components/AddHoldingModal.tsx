@@ -5,6 +5,15 @@ import { inferAssetType } from "@/lib/csvImport";
 
 type Props = { onClose: () => void; onAdded: () => void };
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs text-muted uppercase tracking-wider">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 export default function AddHoldingModal({ onClose, onAdded }: Props) {
   const [form, setForm] = useState({
     ticker: "",
@@ -49,15 +58,6 @@ export default function AddHoldingModal({ onClose, onAdded }: Props) {
     } finally {
       setLoading(false);
     }
-  }
-
-  function Field({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs text-muted uppercase tracking-wider">{label}</span>
-        {children}
-      </div>
-    );
   }
 
   const inputCls = "rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors font-mono"
