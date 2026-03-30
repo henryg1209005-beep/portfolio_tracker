@@ -34,7 +34,7 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
 
         {/* Logo */}
         <div className="mb-8 px-2">
-          <Image src="/logo.png" alt="Portivex" width={120} height={40} className="object-contain" />
+          <Image src="/logo.png" alt="Portivex" width={150} height={50} className="object-contain" />
         </div>
 
         {links.map((l) => {

@@ -298,7 +298,7 @@ export default function LandingPage() {
         className="sticky top-0 z-50 flex items-center justify-between px-6 py-4"
         style={{ background: "#08001299", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}
       >
-        <Image src="/logo.png" alt="Portivex" width={110} height={36} className="object-contain" />
+        <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3">
             {isLoaded && isSignedIn ? (
