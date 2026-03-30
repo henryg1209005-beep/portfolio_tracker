@@ -43,3 +43,22 @@ app.include_router(profile.router, prefix="/api")
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/admin/feedback")
+def admin_feedback(key: str):
+    import os
+    admin_key = os.environ.get("ADMIN_KEY", "")
+    if not admin_key or key != admin_key:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Forbidden")
+    with db._conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, message, rating, token, created_at FROM feedback ORDER BY created_at DESC"
+            )
+            rows = cur.fetchall()
+    return [
+        {"id": r[0], "message": r[1], "rating": r[2], "token": r[3], "created_at": str(r[4])}
+        for r in rows
+    ]
