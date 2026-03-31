@@ -33,8 +33,8 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
         style={{ background: "linear-gradient(180deg, #10001e 0%, #080012 100%)", borderRight: "1px solid #2a0050" }}>
 
         {/* Logo */}
-        <div className="mb-8 px-2">
-          <Image src="/logo.png" alt="Portivex" width={150} height={50} className="object-contain" />
+        <div className="mb-6 px-1">
+          <Image src="/logo.png" alt="Portivex" width={180} height={60} className="object-contain w-full" />
         </div>
 
         {links.map((l) => {
