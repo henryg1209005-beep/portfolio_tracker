@@ -40,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen overflow-hidden font-sans">
       <Sidebar token={getToken()} copied={copied} onCopyToken={copyToken} />
-      <main className="flex-1 overflow-y-auto bg-bg">
+      <main className="flex-1 overflow-y-auto bg-bg pb-16 md:pb-0">
         {children}
       </main>
       {showOnboarding && <OnboardingModal onDone={() => setShowOnboarding(false)} />}

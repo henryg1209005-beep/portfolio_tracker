@@ -8,11 +8,11 @@ import FeedbackModal from "@/components/FeedbackModal";
 import OnboardingModal from "@/components/OnboardingModal";
 
 const links = [
-  { href: "/dashboard",             label: "Overview",    icon: "▦" },
+  { href: "/dashboard",             label: "Overview",     icon: "▦" },
   { href: "/dashboard/metrics",     label: "Risk Metrics", icon: "◈" },
-  { href: "/dashboard/correlation", label: "Correlation", icon: "⬡" },
-  { href: "/dashboard/charts",      label: "Charts",      icon: "↗" },
-  { href: "/dashboard/ai",          label: "AI Overview", icon: "✦" },
+  { href: "/dashboard/correlation", label: "Correlation",  icon: "⬡" },
+  { href: "/dashboard/charts",      label: "Charts",       icon: "↗" },
+  { href: "/dashboard/ai",          label: "AI",           icon: "✦" },
 ];
 
 type Props = {
@@ -26,10 +26,12 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
   const { signOut } = useClerk();
   const [showFeedback, setShowFeedback] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   return (
     <>
-      <aside className="w-52 shrink-0 flex flex-col py-6 px-4 gap-1 relative"
+      {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
+      <aside className="hidden md:flex w-52 shrink-0 flex-col py-6 px-4 gap-1 relative"
         style={{ background: "linear-gradient(180deg, #10001e 0%, #080012 100%)", borderRight: "1px solid #2a0050" }}>
 
         {/* Logo */}
@@ -119,6 +121,92 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
           </div>
         )}
       </aside>
+
+      {/* ── Mobile bottom nav ────────────────────────────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch"
+        style={{ background: "#10001e", borderTop: "1px solid #2a0050", paddingBottom: "env(safe-area-inset-bottom)" }}>
+
+        {links.map((l) => {
+          const active = path === l.href;
+          return (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-all"
+              style={{ color: active ? "#00f5d4" : "#4a3a5e" }}
+            >
+              <span className="text-lg leading-none" style={active ? { textShadow: "0 0 12px #00f5d488" } : {}}>{l.icon}</span>
+              <span className="text-[9px] font-mono tracking-wide">{l.label}</span>
+            </Link>
+          );
+        })}
+
+        {/* More tab */}
+        <button
+          onClick={() => setShowMore(true)}
+          className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-all"
+          style={{ color: "#4a3a5e" }}
+        >
+          <span className="text-lg leading-none">⋯</span>
+          <span className="text-[9px] font-mono tracking-wide">More</span>
+        </button>
+      </nav>
+
+      {/* ── Mobile "More" slide-up sheet ─────────────────────────────────────── */}
+      {showMore && (
+        <div className="md:hidden fixed inset-0 z-50" onClick={() => setShowMore(false)}>
+          {/* Backdrop */}
+          <div className="absolute inset-0" style={{ background: "rgba(8,0,18,0.7)", backdropFilter: "blur(4px)" }} />
+          {/* Sheet */}
+          <div
+            className="absolute bottom-0 left-0 right-0 rounded-t-2xl px-4 pt-4 pb-8 flex flex-col gap-1"
+            style={{ background: "#10001e", border: "1px solid #2a0050", borderBottom: "none" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: "#2a0050" }} />
+
+            <button
+              onClick={() => { setShowProfile(true); setShowMore(false); }}
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-muted w-full text-left"
+              style={{ background: "#0d0020" }}
+            >
+              <span className="text-base">◉</span>
+              Investor Profile
+            </button>
+
+            <button
+              onClick={() => { setShowFeedback(true); setShowMore(false); }}
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-muted w-full text-left"
+              style={{ background: "#0d0020" }}
+            >
+              <span className="text-base">◎</span>
+              Feedback
+            </button>
+
+            <a
+              href="https://discord.gg/MabTm9Z4zR"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-muted w-full text-left"
+              style={{ background: "#0d0020" }}
+              onClick={() => setShowMore(false)}
+            >
+              <span className="text-base">◈</span>
+              Discord Community
+            </a>
+
+            <button
+              onClick={() => signOut({ redirectUrl: "/" })}
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all w-full text-left mt-1"
+              style={{ background: "#0d0020", color: "#ff2d7888" }}
+            >
+              <span className="text-base">→</span>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
 
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
       {showProfile && <OnboardingModal onDone={() => setShowProfile(false)} />}

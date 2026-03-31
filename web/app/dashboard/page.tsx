@@ -37,9 +37,9 @@ export default function OverviewPage() {
   }
 
   return (
-    <div className="p-6 max-w-screen-xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between animate-fade-up">
+      <div className="flex flex-col gap-3 animate-fade-up sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Overview</h1>
@@ -53,11 +53,11 @@ export default function OverviewPage() {
           </div>
           <p className="text-muted text-sm mt-0.5">Your portfolio at a glance</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={load}
             disabled={loading}
-            className="px-4 py-2 text-sm rounded-lg font-mono transition-all disabled:opacity-40"
+            className="px-3 py-2 text-sm rounded-lg font-mono transition-all disabled:opacity-40"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#e2d9f3"; (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#6b5e7e"; (e.currentTarget as HTMLElement).style.borderColor = "#2a0050"; }}
@@ -72,12 +72,12 @@ export default function OverviewPage() {
                 await clearAllHoldings();
                 load();
               }}
-              className="px-4 py-2 text-sm font-mono rounded-lg transition-all"
+              className="px-3 py-2 text-sm font-mono rounded-lg transition-all"
               style={{ border: "1px solid #ff2d7833", color: "#ff2d7866" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#ff2d78"; (e.currentTarget as HTMLElement).style.borderColor = "#ff2d78"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#ff2d7866"; (e.currentTarget as HTMLElement).style.borderColor = "#ff2d7833"; }}
             >
-              ✕ Clear All
+              ✕ Clear
             </button>
           )}
 
@@ -88,33 +88,33 @@ export default function OverviewPage() {
               setTimeout(() => { setFixLoading(false); setShowFix(true); }, 120);
             }}
             disabled={!data || loading || fixLoading}
-            className="px-4 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
+            className="px-3 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
             style={{ background: "linear-gradient(90deg, #3d005e, #1a0030)", border: "1px solid #bf5af266", color: "#bf5af2" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 16px #bf5af244"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#bf5af266"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
           >
             {fixLoading
               ? <><span className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#bf5af266", borderTopColor: "transparent" }} />Analysing…</>
-              : <>✦ Portfolio Review</>
+              : <>✦ Review</>
             }
           </button>
 
           <button
             onClick={() => setShowImport(true)}
-            className="px-4 py-2 text-sm font-mono rounded-lg transition-all"
+            className="px-3 py-2 text-sm font-mono rounded-lg transition-all"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#e2d9f3"; (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#6b5e7e"; (e.currentTarget as HTMLElement).style.borderColor = "#2a0050"; }}
           >
-            ↑ Import CSV
+            ↑ Import
           </button>
 
           <button
             onClick={() => setShowAdd(true)}
-            className="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
+            className="px-3 py-2 text-sm font-semibold rounded-lg transition-all"
             style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff" }}
           >
-            + Add Holding
+            + Add
           </button>
         </div>
       </div>
