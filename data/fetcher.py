@@ -187,8 +187,10 @@ def validate_ticker(ticker):
 def fetch_current_prices(tickers, gbpusd=None):
     """
     Fetch current prices in GBP.
-    USD-denominated prices are converted using the live GBP/USD rate.
-    Prices already in GBP pence (LSE .L tickers) are divided by 100.
+    - LSE (.L) tickers: use fast_info for BOTH price and currency so they are
+      always internally consistent — eliminates the mismatch between yf.download()
+      and a separate fast_info currency call that caused intermittent 100x overstatement.
+    - USD-denominated prices are converted using the live GBP/USD rate.
     """
     if gbpusd is None:
         gbpusd = fetch_gbp_usd_rate()
@@ -197,31 +199,47 @@ def fetch_current_prices(tickers, gbpusd=None):
     for ticker in tickers:
         sym = resolve_ticker(ticker)
         try:
-            data  = yf.download(sym, period="2d", auto_adjust=True, progress=False)
-            close = _extract_close(data, sym)
-            if close.empty:
-                prices[ticker] = None
-                continue
-
-            price = float(close.iloc[-1])
-
-            # Sanity check: flag if raw price moves >50% in one session
-            # (catches unit-change bugs like pence↔GBP switching)
-            if len(close) >= 2:
-                prev = float(close.iloc[-2])
-                if prev > 0:
-                    ratio = price / prev
-                    if ratio < 0.5 or ratio > 2.0:
-                        print(
-                            f"PRICE WARNING [{sym}]: raw price moved "
-                            f"{(ratio-1):+.0%} in one session "
-                            f"({prev:.4f} → {price:.4f}). "
-                            "Check for unit change in yfinance data."
-                        )
-
             if sym.endswith(".L"):
-                price = _lse_price_to_gbp(sym, price)
+                # fast_info gives price + currency from the same API call → always consistent
+                fi = yf.Ticker(sym).fast_info
+                try:
+                    raw_price = fi["last_price"]
+                    currency  = fi["currency"]
+                except (KeyError, TypeError):
+                    raw_price = getattr(fi, "last_price", None)
+                    currency  = getattr(fi, "currency", "GBp")
+
+                if raw_price is None or float(raw_price) <= 0:
+                    prices[ticker] = None
+                    continue
+
+                price = float(raw_price)
+                # Convert pence → GBP; keep > 500 heuristic as a safety net
+                if currency == "GBp" or price > 500:
+                    price = price / 100
+
             else:
+                data  = yf.download(sym, period="2d", auto_adjust=True, progress=False)
+                close = _extract_close(data, sym)
+                if close.empty:
+                    prices[ticker] = None
+                    continue
+
+                price = float(close.iloc[-1])
+
+                # Sanity check: flag if raw price moves >50% in one session
+                if len(close) >= 2:
+                    prev = float(close.iloc[-2])
+                    if prev > 0:
+                        ratio = price / prev
+                        if ratio < 0.5 or ratio > 2.0:
+                            print(
+                                f"PRICE WARNING [{sym}]: raw price moved "
+                                f"{(ratio-1):+.0%} in one session "
+                                f"({prev:.4f} → {price:.4f}). "
+                                "Check for unit change in yfinance data."
+                            )
+
                 # Assume USD → convert to GBP
                 price = price / gbpusd
 
