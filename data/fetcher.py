@@ -1,3 +1,4 @@
+import time
 import requests
 import yfinance as yf
 import pandas as pd
@@ -6,6 +7,15 @@ BENCHMARK        = "^GSPC"
 RISK_FREE_TICKER = "^IRX"   # 13-week T-bill
 GBPUSD_TICKER    = "GBPUSD=X"
 GBPEUR_TICKER    = "GBPEUR=X"
+
+# ── Price cache ───────────────────────────────────────────────────────────────
+# Stores (price_in_gbp, fetched_at_timestamp) per resolved symbol.
+# Prices are reused for PRICE_CACHE_TTL seconds before re-fetching.
+# This prevents hammering yfinance on every refresh and reduces the chance
+# of a transient bad response affecting the user's session.
+
+PRICE_CACHE_TTL: int = 300  # 5 minutes
+_price_cache: dict[str, tuple[float, float]] = {}  # sym → (price, timestamp)
 
 # Known LSE-listed tickers that need a .L suffix on Yahoo Finance
 _LSE_KNOWN = {
@@ -195,9 +205,19 @@ def fetch_current_prices(tickers, gbpusd=None):
     if gbpusd is None:
         gbpusd = fetch_gbp_usd_rate()
 
+    now = time.time()
     prices = {}
     for ticker in tickers:
         sym = resolve_ticker(ticker)
+
+        # Return cached price if still fresh
+        cached = _price_cache.get(sym)
+        if cached is not None:
+            cached_price, fetched_at = cached
+            if now - fetched_at < PRICE_CACHE_TTL:
+                prices[ticker] = cached_price
+                continue
+
         try:
             if sym.endswith(".L"):
                 # fast_info gives price + currency from the same API call → always consistent
@@ -243,9 +263,14 @@ def fetch_current_prices(tickers, gbpusd=None):
                 # Assume USD → convert to GBP
                 price = price / gbpusd
 
+            _price_cache[sym] = (price, now)
             prices[ticker] = price
         except Exception:
-            prices[ticker] = None
+            # On error, serve stale cache rather than returning None
+            if cached is not None:
+                prices[ticker] = cached[0]
+            else:
+                prices[ticker] = None
 
     return prices
 
