@@ -204,10 +204,10 @@ export default function ChartsPage() {
   const perfNetworkError = !perfLoading && perfError;
 
   return (
-    <div className="p-6 max-w-screen-xl mx-auto flex flex-col gap-8">
+    <div className="p-4 md:p-6 max-w-screen-xl mx-auto flex flex-col gap-6 md:gap-8">
 
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text">Charts</h1>
           <p className="text-muted text-sm mt-0.5 font-mono">
@@ -215,14 +215,14 @@ export default function ChartsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex overflow-x-auto" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
             {TIMEFRAMES.map(tf => (
               <button
                 key={tf}
                 onClick={() => setTimeframe(tf)}
                 disabled={perfLoading}
-                className="px-3 py-1.5 text-xs font-mono font-semibold transition-all disabled:opacity-40"
+                className="px-3 py-1.5 text-xs font-mono font-semibold transition-all disabled:opacity-40 shrink-0"
                 style={{
                   borderRadius: "0.45rem",
                   color:      tf === timeframe ? "#080012" : "#6b5e7e",
@@ -238,12 +238,12 @@ export default function ChartsPage() {
           <button
             onClick={() => { loadPerf(timeframe); loadPort(); }}
             disabled={loading}
-            className="px-4 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
+            className="px-3 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#e2d9f3"; (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#6b5e7e"; (e.currentTarget as HTMLElement).style.borderColor = "#2a0050"; }}
           >
-            {loading ? "Loading…" : "↻ Refresh"}
+            {loading ? "Loading…" : "↻"}
           </button>
         </div>
       </div>

@@ -72,7 +72,51 @@ export default function HoldingsTable({ holdings, onRemove }: {
 
   return (
     <div className="synth-card rounded-xl overflow-hidden" style={{ borderColor: "#2a0050" }}>
-      <div className="overflow-x-auto">
+
+      {/* ── Mobile card view ── */}
+      <div className="md:hidden">
+        {sorted.map((h, i) => {
+          const badge = TYPE_BADGE[h.type] ?? TYPE_BADGE.stock;
+          return (
+            <div
+              key={h.ticker}
+              className="px-4 py-3.5 flex items-center justify-between gap-3"
+              style={{ borderTop: i > 0 ? "1px solid #1a0030" : undefined }}
+            >
+              <div className="flex flex-col gap-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold font-mono" style={{ color: "#e2d9f3" }}>{h.ticker.replace(".L", "")}</span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium shrink-0"
+                    style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
+                  >
+                    {h.type}
+                  </span>
+                </div>
+                <span className="text-xs font-mono" style={{ color: "#4a3a5e" }}>
+                  {h.net_shares?.toFixed(4)} shares · avg {typeof fmt(h.avg_cost) === "string" ? fmt(h.avg_cost) : "—"}
+                </span>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className="font-mono font-semibold text-sm text-text">{fmt(h.market_value)}</span>
+                <PnL val={h.pnl} pct={h.pnl_pct} />
+              </div>
+              <button
+                onClick={() => onRemove(h.ticker)}
+                className="text-xs shrink-0 px-2 py-1.5 rounded transition-all"
+                style={{ color: "#2a1a40" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#ff2d78"; (e.currentTarget as HTMLElement).style.background = "#ff2d7811"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#2a1a40"; (e.currentTarget as HTMLElement).style.background = ""; }}
+              >
+                ✕
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop table view ── */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead style={{ borderBottom: "1px solid #2a0050" }}>
             <tr>
