@@ -3,8 +3,10 @@ import { useEffect, useState, useCallback } from "react";
 import { fetchRefresh, fetchPerformance, type RefreshData, type PerformanceData } from "@/lib/api";
 import SummaryCards from "@/components/SummaryCards";
 import MetricsGrid from "@/components/MetricsGrid";
+import { useCurrency } from "@/lib/currencyContext";
 
 export default function MetricsPage() {
+  const { currency } = useCurrency();
   const [data, setData] = useState<RefreshData | null>(null);
   const [perfData, setPerfData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export default function MetricsPage() {
         </div>
       ) : data ? (
         <>
-          <SummaryCards summary={data.summary} />
+          <SummaryCards summary={data.summary} currency={currency} />
           {data.metrics ? (
             <MetricsGrid metrics={data.metrics} summary={data.summary} perfData={perfData} />
           ) : (

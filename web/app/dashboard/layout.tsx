@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import OnboardingModal from "@/components/OnboardingModal";
 import { setToken, getToken, getProfile } from "@/lib/api";
+import { CurrencyProvider } from "@/lib/currencyContext";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, isLoaded } = useAuth();
@@ -38,12 +39,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen overflow-hidden font-sans">
-      <Sidebar token={getToken()} copied={copied} onCopyToken={copyToken} />
-      <main className="flex-1 overflow-y-auto bg-bg pb-16 md:pb-0">
-        {children}
-      </main>
-      {showOnboarding && <OnboardingModal onDone={() => setShowOnboarding(false)} />}
-    </div>
+    <CurrencyProvider>
+      <div className="flex h-screen overflow-hidden font-sans">
+        <Sidebar token={getToken()} copied={copied} onCopyToken={copyToken} />
+        <main className="flex-1 overflow-y-auto bg-bg pb-16 md:pb-0">
+          {children}
+        </main>
+        {showOnboarding && <OnboardingModal onDone={() => setShowOnboarding(false)} />}
+      </div>
+    </CurrencyProvider>
   );
 }

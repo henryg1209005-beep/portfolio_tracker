@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { fetchPerformance, fetchRefresh, type PerformanceData, type RefreshData } from "@/lib/api";
+import { useCurrency, CURRENCY_SYMBOL } from "@/lib/currencyContext";
 import {
   LineChart, Line, AreaChart, Area,
   BarChart, Bar, Cell, ReferenceLine,
@@ -31,7 +32,7 @@ function formatDate(dateStr: string, tf: Timeframe) {
 }
 
 function sign(n: number) { return n >= 0 ? "+" : ""; }
-function gbp(n: number)  { return `£${Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; }
+function fmtCurrency(n: number, symbol: string) { return `${symbol}${Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; }
 
 // ── Shared tooltip ────────────────────────────────────────────────────────────
 
@@ -92,8 +93,9 @@ function ActiveShape(props: {
   cx: number; cy: number; innerRadius: number; outerRadius: number;
   startAngle: number; endAngle: number; fill: string;
   payload: { name: string }; percent: number; value: number;
+  symbol?: string; fxRate?: number;
 }) {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value, symbol = "£", fxRate = 1 } = props;
   return (
     <g>
       <text x={cx} y={cy - 10} textAnchor="middle" fill="#e2d9f3" fontSize={13} fontFamily="monospace" fontWeight="700">
@@ -103,7 +105,7 @@ function ActiveShape(props: {
         {(percent * 100).toFixed(1)}%
       </text>
       <text x={cx} y={cy + 28} textAnchor="middle" fill="#6b5e7e" fontSize={11} fontFamily="monospace">
-        {gbp(value)}
+        {fmtCurrency(value * fxRate, symbol)}
       </text>
       <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6}
         startAngle={startAngle} endAngle={endAngle} fill={fill} />
@@ -116,8 +118,15 @@ function ActiveShape(props: {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ChartsPage() {
+  const { currency } = useCurrency();
+  const symbol = CURRENCY_SYMBOL[currency] ?? "£";
   const [perfData,    setPerfData]    = useState<PerformanceData | null>(null);
   const [portData,    setPortData]    = useState<RefreshData | null>(null);
+  const fxRate = portData?.summary
+    ? currency === "EUR" ? (portData.summary.gbpeur ?? 1)
+    : currency === "USD" ? (portData.summary.gbpusd ?? 1)
+    : 1
+    : 1;
   const [perfLoading, setPerfLoading] = useState(true);
   const [portLoading, setPortLoading] = useState(true);
   const [perfError,   setPerfError]   = useState(false);
@@ -429,7 +438,7 @@ export default function ChartsPage() {
                   <Pie
                     activeIndex={activeSlice}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  activeShape={(props: any) => <ActiveShape {...props} />}
+                  activeShape={(props: any) => <ActiveShape {...props} symbol={symbol} fxRate={fxRate} />}
                     data={allocationData}
                     dataKey="value"
                     nameKey="name"
