@@ -13,7 +13,8 @@ import pandas as pd
 from typing import Annotated
 from fastapi import Header
 from api.routes.cache import (get_cached_refresh, set_cached_refresh,
-                              get_cached_performance, set_cached_performance)
+                              get_cached_performance, set_cached_performance,
+                              get_cached_correlation, set_cached_correlation)
 
 # ── Simple token-bucket rate limiter for market endpoints ─────────────────────
 # Max 20 requests per token per minute across all market endpoints
@@ -96,12 +97,119 @@ def _avg_cost_gbp(holding: dict, gbpusd: float, gbpeur: float) -> float:
     return total_gbp_cost / total_bought
 
 @router.get("/correlation")
-def correlation(x_portfolio_token: Annotated[str, Header()], period: str = "1Y"):
-    _check_rate_limit(x_portfolio_token)
+def correlation(
+    x_portfolio_token: Annotated[str, Header()],
+    period: str = "1Y",
+    method: str = "pearson",
+):
     """
     Return a pairwise correlation matrix for all active holdings.
     period: 1M | 3M | 6M | 1Y | 5Y  (default 1Y)
+    method: pearson | spearman  (default pearson)
+
+    Response includes portfolio weights and per-pair overlap days for
+    weight-adjusted diversification and statistical-confidence scoring.
     """
+    _check_rate_limit(x_portfolio_token)
+    token = x_portfolio_token
+    corr_method = method.lower() if method.lower() in ("pearson", "spearman") else "pearson"
+    yf_period = _PERIOD_MAP.get(period.upper(), "1y")
+
+    # ── Cache check ──────────────────────────────────────────────────────────
+    cached = get_cached_correlation(token, period.upper(), corr_method)
+    if cached is not None:
+        return cached
+
+    data = _load(token)
+    holdings_raw = data.get("holdings", [])
+    stats_map = {h["ticker"]: _compute_stats(h) for h in holdings_raw}
+    tickers = [h["ticker"] for h in holdings_raw if stats_map[h["ticker"]]["net_shares"] > 0]
+
+    if len(tickers) < 2:
+        return {"tickers": tickers, "matrix": [], "weights": {}, "method": corr_method}
+
+    gbpusd_hist = fetch_gbpusd_history(period=yf_period)
+    hist = fetch_historical_data(tickers, period=yf_period, gbpusd_series=gbpusd_hist)
+    if hist.empty or hist.shape[1] < 2:
+        return {"tickers": tickers, "matrix": [], "weights": {}, "method": corr_method}
+
+    # ── Pairwise correlation with min_periods (no global dropna) ─────────────
+    returns = hist.pct_change()
+    min_obs = max(30, int(returns.shape[0] * 0.15))  # at least 30 or 15% of period
+    corr = returns.corr(method=corr_method, min_periods=min_obs)
+
+    valid = [t for t in tickers if t in corr.columns]
+    matrix = []
+    for row_t in valid:
+        for col_t in valid:
+            val = corr.loc[row_t, col_t]
+            # Compute pairwise overlap: count of non-NaN rows for both columns
+            if row_t == col_t:
+                overlap = int(returns[row_t].dropna().shape[0])
+            else:
+                pair = returns[[row_t, col_t]].dropna()
+                overlap = int(pair.shape[0])
+            matrix.append({
+                "row": row_t,
+                "col": col_t,
+                "value": _safe_float(val),
+                "overlap": overlap,
+            })
+
+    # ── Portfolio weights (from current market values) ───────────────────────
+    gbpusd = fetch_gbp_usd_rate()
+    gbpeur = fetch_gbp_eur_rate()
+    prices = fetch_current_prices(valid, gbpusd=gbpusd)
+    holding_by_ticker = {h["ticker"]: h for h in holdings_raw}
+
+    mkt_values = {}
+    for t in valid:
+        s = stats_map[t]
+        p = prices.get(t)
+        if p and s["net_shares"] > 0:
+            mkt_values[t] = p * s["net_shares"]
+    total_val = sum(mkt_values.values()) or 1.0
+    weights = {t: round(mkt_values.get(t, 0) / total_val, 6) for t in valid}
+
+    result = {
+        "tickers": valid,
+        "matrix": matrix,
+        "weights": weights,
+        "method": corr_method,
+    }
+    set_cached_correlation(token, period.upper(), result, corr_method)
+    return result
+
+
+# ── Diversification candidates ("What should I add?") ───────────────────────
+
+# Common diversifying assets across major asset classes
+_DIVERSIFIER_CANDIDATES = {
+    "IGLT.L":  {"name": "UK Gilts (iShares)",        "class": "Bonds"},
+    "SLXX.L":  {"name": "Corp Bonds (iShares £)",     "class": "Bonds"},
+    "SGLN.L":  {"name": "Physical Gold (iShares)",     "class": "Commodities"},
+    "ISAC.L":  {"name": "MSCI ACWI (iShares)",       "class": "Global Equity"},
+    "IEMA.L":  {"name": "EM Equity (iShares)",        "class": "Emerging Markets"},
+    "INRG.L":  {"name": "Clean Energy (iShares)",     "class": "Thematic"},
+    "ISF.L":   {"name": "FTSE 100 (iShares)",         "class": "UK Equity"},
+    "CSPX.L":  {"name": "S&P 500 (iShares £)",        "class": "US Equity"},
+    "REIT.L":  {"name": "UK Property (iShares)",       "class": "Real Estate"},
+    "VWRL.L":  {"name": "FTSE All-World (Vanguard)",   "class": "Global Equity"},
+    "VGOV.L":  {"name": "UK Govt Bonds (Vanguard)",    "class": "Bonds"},
+    "VERX.L":  {"name": "Europe ex-UK (Vanguard)",     "class": "European Equity"},
+}
+
+
+@router.get("/correlation/suggestions")
+def correlation_suggestions(
+    x_portfolio_token: Annotated[str, Header()],
+    period: str = "1Y",
+):
+    """
+    Suggest diversifying assets the user doesn't hold, ranked by how much
+    they'd reduce portfolio average correlation.
+    """
+    _check_rate_limit(x_portfolio_token)
     token = x_portfolio_token
     yf_period = _PERIOD_MAP.get(period.upper(), "1y")
 
@@ -111,26 +219,157 @@ def correlation(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
     tickers = [h["ticker"] for h in holdings_raw if stats_map[h["ticker"]]["net_shares"] > 0]
 
     if len(tickers) < 2:
-        return {"tickers": tickers, "matrix": []}
+        return {"suggestions": []}
+
+    # Filter candidates to those not already held
+    held_set = set(tickers)
+    candidates = {k: v for k, v in _DIVERSIFIER_CANDIDATES.items()
+                  if k not in held_set and k.replace(".L", "") not in held_set}
+    if not candidates:
+        return {"suggestions": []}
+
+    # Fetch all data in one batch: user holdings + candidates
+    all_tickers = tickers + list(candidates.keys())
+    gbpusd_hist = fetch_gbpusd_history(period=yf_period)
+    hist = fetch_historical_data(all_tickers, period=yf_period, gbpusd_series=gbpusd_hist)
+    if hist.empty:
+        return {"suggestions": []}
+
+    returns = hist.pct_change()
+
+    # Current portfolio avg correlation (among held assets only)
+    held_in_hist = [t for t in tickers if t in returns.columns]
+    if len(held_in_hist) < 2:
+        return {"suggestions": []}
+    curr_corr = returns[held_in_hist].corr(min_periods=30)
+    n = len(held_in_hist)
+    curr_avg = curr_corr.values[np.triu_indices(n, k=1)].mean() if n >= 2 else 0
+
+    suggestions = []
+    for cand_ticker, info in candidates.items():
+        if cand_ticker not in returns.columns:
+            continue
+
+        # Compute avg correlation of candidate vs all held assets
+        avg_vs_held = 0.0
+        valid_pairs = 0
+        for t in held_in_hist:
+            pair = returns[[t, cand_ticker]].dropna()
+            if len(pair) < 30:
+                continue
+            r = pair.corr().iloc[0, 1]
+            if r == r:  # not NaN
+                avg_vs_held += r
+                valid_pairs += 1
+
+        if valid_pairs == 0:
+            continue
+        avg_vs_held /= valid_pairs
+
+        # Estimate new portfolio avg correlation if this asset were added
+        # (n existing pairs stay the same, add n new pairs with avg_vs_held)
+        existing_pairs = n * (n - 1) / 2
+        new_pairs = existing_pairs + n
+        new_avg = (curr_avg * existing_pairs + avg_vs_held * n) / new_pairs if new_pairs > 0 else curr_avg
+        reduction = curr_avg - new_avg
+
+        suggestions.append({
+            "ticker": cand_ticker,
+            "name": info["name"],
+            "asset_class": info["class"],
+            "avg_corr_vs_portfolio": _safe_float(round(avg_vs_held, 4)),
+            "estimated_new_avg": _safe_float(round(new_avg, 4)),
+            "correlation_reduction": _safe_float(round(reduction, 4)),
+        })
+
+    # Sort by largest reduction (most diversifying first)
+    suggestions.sort(key=lambda s: s["correlation_reduction"] or 0, reverse=True)
+
+    return {
+        "current_avg_correlation": _safe_float(round(curr_avg, 4)),
+        "suggestions": suggestions[:6],
+    }
+
+
+@router.get("/correlation/rolling")
+def correlation_rolling(
+    x_portfolio_token: Annotated[str, Header()],
+    period: str = "1Y",
+    window: int = 60,
+):
+    """
+    Return rolling correlation time series for the top 3 most-correlated pairs.
+    window: rolling window in trading days (default 60)
+    """
+    _check_rate_limit(x_portfolio_token)
+    token = x_portfolio_token
+    yf_period = _PERIOD_MAP.get(period.upper(), "1y")
+
+    data = _load(token)
+    holdings_raw = data.get("holdings", [])
+    stats_map = {h["ticker"]: _compute_stats(h) for h in holdings_raw}
+    tickers = [h["ticker"] for h in holdings_raw if stats_map[h["ticker"]]["net_shares"] > 0]
+
+    if len(tickers) < 2:
+        return {"pairs": [], "dates": []}
 
     gbpusd_hist = fetch_gbpusd_history(period=yf_period)
     hist = fetch_historical_data(tickers, period=yf_period, gbpusd_series=gbpusd_hist)
     if hist.empty or hist.shape[1] < 2:
-        return {"tickers": tickers, "matrix": []}
+        return {"pairs": [], "dates": []}
 
-    corr = hist.pct_change().dropna().corr()
-    valid = [t for t in tickers if t in corr.columns]
-    matrix = []
-    for row_t in valid:
-        for col_t in valid:
-            val = corr.loc[row_t, col_t]
-            matrix.append({
-                "row": row_t,
-                "col": col_t,
-                "value": _safe_float(val),
-            })
+    returns = hist.pct_change()
+    valid = [t for t in tickers if t in returns.columns]
+    if len(valid) < 2:
+        return {"pairs": [], "dates": []}
 
-    return {"tickers": valid, "matrix": matrix}
+    # Identify top 3 most-correlated pairs from static correlation
+    static_corr = returns[valid].corr(min_periods=30)
+    pairs_ranked = []
+    for i in range(len(valid)):
+        for j in range(i + 1, len(valid)):
+            val = static_corr.iloc[i, j]
+            if val == val:  # not NaN
+                pairs_ranked.append((valid[i], valid[j], float(val)))
+    pairs_ranked.sort(key=lambda x: abs(x[2]), reverse=True)
+    top_pairs = pairs_ranked[:3]
+
+    if not top_pairs:
+        return {"pairs": [], "dates": []}
+
+    # Compute rolling correlation for each top pair
+    window = max(20, min(window, 120))
+    result_pairs = []
+    all_dates = None
+
+    for t1, t2, static_val in top_pairs:
+        pair_returns = returns[[t1, t2]].dropna()
+        if len(pair_returns) < window:
+            continue
+        rolling = pair_returns[t1].rolling(window).corr(pair_returns[t2]).dropna()
+        if rolling.empty:
+            continue
+
+        dates = []
+        for d in rolling.index:
+            try:
+                dates.append(str(d.date()))
+            except AttributeError:
+                dates.append(str(d))
+
+        if all_dates is None:
+            all_dates = dates
+
+        result_pairs.append({
+            "pair": f"{t1} / {t2}",
+            "ticker_a": t1,
+            "ticker_b": t2,
+            "static_correlation": _safe_float(round(static_val, 4)),
+            "values": [_safe_float(round(v, 4)) for v in rolling.values],
+            "dates": dates,
+        })
+
+    return {"pairs": result_pairs, "window": window}
 
 
 def _refresh_data(token: str, benchmark: str = "sp500") -> dict:

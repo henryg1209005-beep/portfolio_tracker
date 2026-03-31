@@ -140,12 +140,57 @@ export async function removeHolding(ticker: string) {
   return res.json();
 }
 
-export type CorrelationCell = { row: string; col: string; value: number };
-export type CorrelationData = { tickers: string[]; matrix: CorrelationCell[] };
+export type CorrelationCell = { row: string; col: string; value: number; overlap?: number };
+export type CorrelationData = {
+  tickers: string[];
+  matrix: CorrelationCell[];
+  weights: Record<string, number>;
+  method: "pearson" | "spearman";
+};
 
-export async function fetchCorrelation(period = "1Y"): Promise<CorrelationData> {
-  const res = await fetch(`${BASE}/market/correlation?period=${period}`, { headers: authHeader() });
+export async function fetchCorrelation(period = "1Y", method = "pearson"): Promise<CorrelationData> {
+  const res = await fetch(`${BASE}/market/correlation?period=${period}&method=${method}`, { headers: authHeader() });
   if (!res.ok) throw new Error("Failed to fetch correlation data");
+  return res.json();
+}
+
+export type DiversifierSuggestion = {
+  ticker: string;
+  name: string;
+  asset_class: string;
+  avg_corr_vs_portfolio: number;
+  estimated_new_avg: number;
+  correlation_reduction: number;
+};
+
+export type SuggestionsData = {
+  current_avg_correlation: number;
+  suggestions: DiversifierSuggestion[];
+};
+
+export async function fetchCorrelationSuggestions(period = "1Y"): Promise<SuggestionsData> {
+  const res = await fetch(`${BASE}/market/correlation/suggestions?period=${period}`, { headers: authHeader() });
+  if (!res.ok) throw new Error("Failed to fetch suggestions");
+  return res.json();
+}
+
+export type RollingPair = {
+  pair: string;
+  ticker_a: string;
+  ticker_b: string;
+  static_correlation: number;
+  values: number[];
+  dates: string[];
+};
+
+export type RollingCorrelationData = {
+  pairs: RollingPair[];
+  window: number;
+};
+
+export async function fetchRollingCorrelation(period = "1Y", window = 60): Promise<RollingCorrelationData> {
+  const res = await fetch(`${BASE}/market/correlation/rolling?period=${period}&window=${window}`, { headers: authHeader() });
+  if (!res.ok) throw new Error("Failed to fetch rolling correlation");
   return res.json();
 }
 

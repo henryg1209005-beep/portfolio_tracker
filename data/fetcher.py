@@ -305,6 +305,9 @@ def fetch_historical_data(tickers, period="1y", start=None, gbpusd_series=None):
     """
     Fetch historical closing prices normalised to GBP.
 
+    Uses batch yf.download() for all tickers in a single HTTP call, falling back
+    to per-ticker downloads only for tickers that fail in the batch.
+
     Pass start (a date string "YYYY-MM-DD") to fetch from a specific date instead
     of using the period shorthand — used to align metrics with the user's actual
     holding period rather than an arbitrary trailing window.
@@ -312,9 +315,49 @@ def fetch_historical_data(tickers, period="1y", start=None, gbpusd_series=None):
     Pass gbpusd_series (a pd.Series of daily GBP/USD rates) to correctly
     convert USD-denominated tickers to GBP using the rate on each day.
     """
+    resolved = {t: resolve_ticker(t) for t in tickers}
+    syms = list(set(resolved.values()))
+
+    # ── Batch download all tickers in one call ───────────────────────────────
+    batch_data = pd.DataFrame()
+    try:
+        if start:
+            batch_data = yf.download(syms, start=start, auto_adjust=True, progress=False, group_by="ticker", threads=True)
+        else:
+            batch_data = yf.download(syms, period=period, auto_adjust=True, progress=False, group_by="ticker", threads=True)
+    except Exception:
+        batch_data = pd.DataFrame()
+
     frames = {}
+    fallback_tickers = []
+
     for ticker in tickers:
-        sym = resolve_ticker(ticker)
+        sym = resolved[ticker]
+        close = pd.Series(dtype=float)
+
+        # Try extracting from batch result
+        if not batch_data.empty:
+            try:
+                if isinstance(batch_data.columns, pd.MultiIndex) and len(syms) > 1:
+                    if sym in batch_data.columns.get_level_values(0):
+                        close = batch_data[sym]["Close"].dropna()
+                else:
+                    # Single ticker batch — columns are just Price fields
+                    close = _extract_close(batch_data, sym)
+            except Exception:
+                close = pd.Series(dtype=float)
+
+        if close.empty:
+            fallback_tickers.append(ticker)
+            continue
+
+        close = _normalise_close_to_gbp(close, sym, gbpusd_series)
+        if not close.empty:
+            frames[ticker] = close
+
+    # ── Per-ticker fallback for anything the batch missed ────────────────────
+    for ticker in fallback_tickers:
+        sym = resolved[ticker]
         try:
             if start:
                 data = yf.download(sym, start=start, auto_adjust=True, progress=False)
@@ -323,26 +366,27 @@ def fetch_historical_data(tickers, period="1y", start=None, gbpusd_series=None):
             close = _extract_close(data, sym)
             if close.empty:
                 continue
-
-            if sym.endswith(".L"):
-                # yf.download() returns LSE prices in GBp (pence) consistently —
-                # the currency inconsistency only affects fast_info.
-                # Always divide by 100 for the historical series.
-                close = close / 100
-            elif gbpusd_series is not None and not gbpusd_series.empty:
-                aligned = gbpusd_series.reindex(close.index).ffill()
-                close   = close / aligned    # USD → GBP (historical rate)
-            else:
-                gbpusd = fetch_gbp_usd_rate()
-                close  = close / gbpusd      # USD → GBP (spot rate fallback)
-
-            frames[ticker] = close
+            close = _normalise_close_to_gbp(close, sym, gbpusd_series)
+            if not close.empty:
+                frames[ticker] = close
         except Exception:
             pass
 
     if not frames:
         return pd.DataFrame()
     return pd.DataFrame(frames).dropna(how="all")
+
+
+def _normalise_close_to_gbp(close, sym, gbpusd_series=None):
+    """Convert a close-price Series to GBP."""
+    if sym.endswith(".L"):
+        return close / 100
+    elif gbpusd_series is not None and not gbpusd_series.empty:
+        aligned = gbpusd_series.reindex(close.index).ffill()
+        return close / aligned
+    else:
+        gbpusd = fetch_gbp_usd_rate()
+        return close / gbpusd
 
 
 def fetch_benchmark_data(period="1y", start=None, benchmark="sp500"):

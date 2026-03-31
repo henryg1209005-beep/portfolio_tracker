@@ -1,12 +1,17 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { fetchCorrelation, type CorrelationData } from "@/lib/api";
+import {
+  fetchCorrelation, fetchCorrelationSuggestions, fetchRollingCorrelation,
+  type CorrelationData, type SuggestionsData, type RollingCorrelationData,
+} from "@/lib/api";
 import { computeCorrelationAnalytics, type CorrelationAnalytics, type PairResult } from "@/lib/correlationAnalytics";
 import CorrelationHeatmap from "@/components/CorrelationHeatmap";
+import RollingCorrelationChart from "@/components/RollingCorrelationChart";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Timeframe = "1M" | "3M" | "6M" | "1Y" | "5Y";
+type CorrMethod = "pearson" | "spearman";
 
 const TIMEFRAMES: Timeframe[] = ["1M", "3M", "6M", "1Y", "5Y"];
 
@@ -30,27 +35,39 @@ function MetricCard({ label, value, sub, accent }: {
 }
 
 function SummaryRow({ analytics }: { analytics: CorrelationAnalytics }) {
+  const avgCorr = analytics.weightedAvgCorrelation;
   const flagColor = analytics.concentrationFlag ? "#ff2d78" : "#00f5d4";
   const scoreColor =
     analytics.diversificationScore >= 60 ? "#00f5d4" :
     analytics.diversificationScore >= 40 ? "#bf5af2" : "#ff2d78";
+  const drColor =
+    analytics.diversificationRatio === null ? "#6b5e7e" :
+    analytics.diversificationRatio >= 1.5 ? "#00f5d4" :
+    analytics.diversificationRatio >= 1.15 ? "#bf5af2" : "#ff2d78";
 
   return (
     <div className="flex gap-3 flex-wrap">
       <MetricCard
         label="Avg Correlation"
-        value={analytics.avgCorrelation >= 0 ? `+${analytics.avgCorrelation.toFixed(2)}` : analytics.avgCorrelation.toFixed(2)}
-        sub={analytics.avgCorrelation > 0.6 ? "High synchronisation" : analytics.avgCorrelation > 0.3 ? "Moderate" : "Low"}
-        accent={analytics.avgCorrelation > 0.6 ? "#ff2d78" : analytics.avgCorrelation > 0.3 ? "#bf5af2" : "#00f5d4"}
+        value={avgCorr >= 0 ? `+${avgCorr.toFixed(2)}` : avgCorr.toFixed(2)}
+        sub={
+          analytics.method === "spearman" ? "Spearman (rank)" :
+          avgCorr > 0.6 ? "High synchronisation" : avgCorr > 0.3 ? "Moderate" : "Low"
+        }
+        accent={avgCorr > 0.6 ? "#ff2d78" : avgCorr > 0.3 ? "#bf5af2" : "#00f5d4"}
       />
       <MetricCard
-        label="Diversification Score"
+        label="Diversification"
         value={`${analytics.diversificationScore} / 100`}
-        sub={analytics.diversificationScore >= 60 ? "Well diversified" : analytics.diversificationScore >= 40 ? "Moderate" : "Needs improvement"}
+        sub={
+          analytics.diversificationRatio !== null
+            ? `DR: ${analytics.diversificationRatio.toFixed(2)}x`
+            : analytics.diversificationScore >= 60 ? "Well diversified" : analytics.diversificationScore >= 40 ? "Moderate" : "Needs improvement"
+        }
         accent={scoreColor}
       />
       <MetricCard
-        label="Concentration Flag"
+        label="Concentration"
         value={analytics.concentrationFlag ? "High" : "OK"}
         sub={analytics.concentrationFlag ? "Portfolio moves together" : "Acceptable spread"}
         accent={flagColor}
@@ -61,6 +78,17 @@ function SummaryRow({ analytics }: { analytics: CorrelationAnalytics }) {
         sub={analytics.diversifiers.length > 0 ? analytics.diversifiers.join(", ") : "None detected"}
         accent={analytics.diversifiers.length > 0 ? "#00f5d4" : "#6b5e7e"}
       />
+      {analytics.diversificationRatio !== null && (
+        <MetricCard
+          label="Diversification Ratio"
+          value={`${analytics.diversificationRatio.toFixed(2)}x`}
+          sub={
+            analytics.diversificationRatio >= 1.5 ? "Strong risk reduction" :
+            analytics.diversificationRatio >= 1.15 ? "Moderate benefit" : "Weak — acts like one asset"
+          }
+          accent={drColor}
+        />
+      )}
     </div>
   );
 }
@@ -90,6 +118,68 @@ function PairRow({ pair, rank }: { pair: PairResult; rank: number }) {
       >
         {pair.level.toUpperCase()}
       </span>
+      {!pair.confident && (
+        <span
+          className="text-[9px] font-mono px-1 py-0.5 rounded shrink-0"
+          style={{ background: "#f5a62318", color: "#f5a623", border: "1px solid #f5a62333" }}
+          title={`Only ${pair.overlap} overlapping days — low confidence`}
+        >
+          LOW DATA
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ── Suggestions panel ────────────────────────────────────────────────────────
+
+function SuggestionsPanel({ data }: { data: SuggestionsData }) {
+  if (!data.suggestions || data.suggestions.length === 0) return null;
+
+  return (
+    <div
+      className="synth-card rounded-xl flex flex-col overflow-hidden"
+      style={{ borderColor: "#2a0050", width: "100%" }}
+    >
+      <div className="px-5 py-4" style={{ borderBottom: "1px solid #1a0030" }}>
+        <div className="text-[11px] font-mono uppercase tracking-widest" style={{ color: "#00f5d4" }}>
+          What Should I Add?
+        </div>
+        <div className="text-xs mt-0.5" style={{ color: "#4a3a5e" }}>
+          Assets that would improve your diversification
+        </div>
+      </div>
+
+      <div className="px-5 py-3 flex flex-col gap-0.5">
+        {data.suggestions.map((s) => {
+          const reductionPct = ((s.correlation_reduction / Math.max(0.01, data.current_avg_correlation)) * 100);
+          const impactColor = s.correlation_reduction > 0.05 ? "#00f5d4" : s.correlation_reduction > 0.02 ? "#bf5af2" : "#6b5e7e";
+          return (
+            <div key={s.ticker} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid #1a0030" }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-bold text-text">{s.ticker.replace(".L", "")}</span>
+                  <span
+                    className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                    style={{ background: "#bf5af218", color: "#bf5af2", border: "1px solid #bf5af233" }}
+                  >
+                    {s.asset_class}
+                  </span>
+                </div>
+                <div className="text-[11px] mt-0.5" style={{ color: "#4a3a5e" }}>{s.name}</div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-mono text-sm font-bold" style={{ color: impactColor }}>
+                  {s.avg_corr_vs_portfolio >= 0 ? "+" : ""}{s.avg_corr_vs_portfolio.toFixed(2)}
+                </div>
+                <div className="text-[10px] font-mono" style={{ color: impactColor }}>
+                  {s.correlation_reduction > 0 ? `-${reductionPct.toFixed(0)}% avg corr` : "minimal impact"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -105,7 +195,9 @@ function InsightsPanel({ analytics }: { analytics: CorrelationAnalytics }) {
       {/* Header */}
       <div className="px-5 py-4" style={{ borderBottom: "1px solid #1a0030" }}>
         <div className="text-[11px] font-mono uppercase tracking-widest text-muted">Correlation Insights</div>
-        <div className="text-xs text-muted/50 mt-0.5">Deterministic analysis · No estimates</div>
+        <div className="text-xs text-muted/50 mt-0.5">
+          {analytics.method === "spearman" ? "Spearman rank · " : ""}Deterministic analysis · No estimates
+        </div>
       </div>
 
       <div className="flex flex-col gap-0 divide-y" style={{ borderColor: "#1a0030" }}>
@@ -209,16 +301,26 @@ function InsightsPanel({ analytics }: { analytics: CorrelationAnalytics }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CorrelationPage() {
-  const [data,      setData]      = useState<CorrelationData | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState("");
-  const [timeframe, setTimeframe] = useState<Timeframe>("1Y");
+  const [data,        setData]        = useState<CorrelationData | null>(null);
+  const [suggestions, setSuggestions]  = useState<SuggestionsData | null>(null);
+  const [rolling,     setRolling]     = useState<RollingCorrelationData | null>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState("");
+  const [timeframe,   setTimeframe]   = useState<Timeframe>("1Y");
+  const [method,      setMethod]      = useState<CorrMethod>("pearson");
 
-  const load = useCallback(async (tf: Timeframe) => {
+  const load = useCallback(async (tf: Timeframe, m: CorrMethod) => {
     setLoading(true);
     setError("");
     try {
-      setData(await fetchCorrelation(tf));
+      const [corrData, sugData, rollData] = await Promise.all([
+        fetchCorrelation(tf, m),
+        fetchCorrelationSuggestions(tf).catch(() => null),
+        fetchRollingCorrelation(tf).catch(() => null),
+      ]);
+      setData(corrData);
+      setSuggestions(sugData);
+      setRolling(rollData);
     } catch {
       setError("Could not reach the API. Make sure the Python server is running on port 8000.");
     } finally {
@@ -226,11 +328,11 @@ export default function CorrelationPage() {
     }
   }, []);
 
-  useEffect(() => { load(timeframe); }, [timeframe, load]);
+  useEffect(() => { load(timeframe, method); }, [timeframe, method, load]);
 
   const analytics = useMemo<CorrelationAnalytics | null>(() => {
     if (!data || data.tickers.length < 2) return null;
-    return computeCorrelationAnalytics(data.tickers, data.matrix);
+    return computeCorrelationAnalytics(data.tickers, data.matrix, data.weights, data.method);
   }, [data]);
 
   return (
@@ -241,11 +343,31 @@ export default function CorrelationPage() {
         <div>
           <h1 className="text-2xl font-bold text-text">Correlation</h1>
           <p className="text-muted text-sm mt-0.5 font-mono">
-            Pairwise price correlations · {timeframe} daily returns
+            Pairwise {method === "spearman" ? "rank " : ""}correlations · {timeframe} daily returns
           </p>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Method toggle */}
+          <div className="flex" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
+            {(["pearson", "spearman"] as CorrMethod[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setMethod(m)}
+                disabled={loading}
+                className="px-3 py-1.5 text-xs font-mono font-semibold transition-all disabled:opacity-40 capitalize"
+                style={{
+                  borderRadius: "0.45rem",
+                  color:      m === method ? "#080012" : "#6b5e7e",
+                  background: m === method ? "linear-gradient(90deg,#00f5d4,#00b89c)" : "transparent",
+                  boxShadow:  m === method ? "0 0 10px #00f5d444" : undefined,
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
           {/* Timeframe selector */}
           <div className="flex" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
             {TIMEFRAMES.map(tf => (
@@ -268,14 +390,14 @@ export default function CorrelationPage() {
 
           {/* Refresh */}
           <button
-            onClick={() => load(timeframe)}
+            onClick={() => load(timeframe, method)}
             disabled={loading}
             className="px-4 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color="#e2d9f3"; (e.currentTarget as HTMLElement).style.borderColor="#bf5af2"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color="#6b5e7e"; (e.currentTarget as HTMLElement).style.borderColor="#2a0050"; }}
           >
-            {loading ? "Loading…" : "↻ Refresh"}
+            {loading ? "Loading\u2026" : "\u21BB Refresh"}
           </button>
         </div>
       </div>
@@ -293,7 +415,7 @@ export default function CorrelationPage() {
       )}
       {loading && (
         <div className="flex gap-3">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(5)].map((_, i) => (
             <div key={i} className="synth-card rounded-xl h-16 flex-1 animate-pulse" style={{ borderColor: "#2a0050" }} />
           ))}
         </div>
@@ -303,19 +425,31 @@ export default function CorrelationPage() {
       {loading && !data ? (
         <div className="synth-card rounded-xl h-96 animate-pulse" style={{ borderColor: "#2a0050" }} />
       ) : data && data.tickers.length >= 2 ? (
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
-          {/* Matrix — takes all available space */}
-          <div className="flex-1 min-w-0">
-            <CorrelationHeatmap data={data} />
+        <>
+          <div className="flex flex-col xl:flex-row gap-6 items-start">
+            {/* Matrix */}
+            <div className="flex-1 min-w-0">
+              <CorrelationHeatmap data={data} />
+            </div>
+
+            {/* Insights */}
+            {analytics && (
+              <div className="w-full xl:w-80 shrink-0">
+                <InsightsPanel analytics={analytics} />
+              </div>
+            )}
           </div>
 
-          {/* Insights — fixed width on desktop */}
-          {analytics && (
-            <div className="w-full xl:w-80 shrink-0">
-              <InsightsPanel analytics={analytics} />
-            </div>
+          {/* ── Rolling Correlation Chart ── */}
+          {rolling && rolling.pairs.length > 0 && (
+            <RollingCorrelationChart data={rolling} />
           )}
-        </div>
+
+          {/* ── Diversification Suggestions ── */}
+          {suggestions && suggestions.suggestions && suggestions.suggestions.length > 0 && (
+            <SuggestionsPanel data={suggestions} />
+          )}
+        </>
       ) : !loading ? (
         <div
           className="rounded-2xl flex flex-col items-center justify-center py-20 gap-5 text-center"

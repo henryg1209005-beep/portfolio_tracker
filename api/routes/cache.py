@@ -8,6 +8,7 @@ import threading
 _lock = threading.Lock()
 _refresh: dict = {}          # (token, benchmark) -> data
 _perf: dict    = {}          # (token, period) -> data
+_corr: dict    = {}          # (token, period, method) -> data
 
 
 def get_cached_refresh(token: str, benchmark: str = "sp500"):
@@ -30,9 +31,21 @@ def set_cached_performance(token: str, period: str, data: dict):
         _perf[(token, period)] = data
 
 
+def get_cached_correlation(token: str, period: str, method: str = "pearson"):
+    with _lock:
+        return _corr.get((token, period, method))
+
+
+def set_cached_correlation(token: str, period: str, data: dict, method: str = "pearson"):
+    with _lock:
+        _corr[(token, period, method)] = data
+
+
 def invalidate_refresh_cache(token: str):
     with _lock:
         for key in [k for k in _refresh if k[0] == token]:
             del _refresh[key]
         for key in [k for k in _perf if k[0] == token]:
             del _perf[key]
+        for key in [k for k in _corr if k[0] == token]:
+            del _corr[key]

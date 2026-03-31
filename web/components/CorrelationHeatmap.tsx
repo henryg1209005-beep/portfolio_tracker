@@ -34,7 +34,7 @@ function levelColor(v: number): string {
   return "#6b5e7e";
 }
 
-type Tooltip = { row: string; col: string; value: number; x: number; y: number } | null;
+type Tooltip = { row: string; col: string; value: number; overlap?: number; x: number; y: number } | null;
 
 export default function CorrelationHeatmap({ data }: { data: CorrelationData }) {
   const [tooltip, setTooltip] = useState<Tooltip>(null);
@@ -50,7 +50,11 @@ export default function CorrelationHeatmap({ data }: { data: CorrelationData }) 
   }
 
   const lookup = new Map<string, number>();
-  matrix.forEach(c => lookup.set(`${c.row}|${c.col}`, c.value));
+  const overlapLookup = new Map<string, number>();
+  matrix.forEach(c => {
+    lookup.set(`${c.row}|${c.col}`, c.value);
+    if (c.overlap !== undefined) overlapLookup.set(`${c.row}|${c.col}`, c.overlap);
+  });
 
   const CELL    = Math.min(76, Math.max(48, Math.floor(520 / n)));
   const LABEL_W = 70;
@@ -144,7 +148,7 @@ export default function CorrelationHeatmap({ data }: { data: CorrelationData }) 
                     cursor: isdiag ? "default" : "crosshair",
                     filter: isdiag ? "drop-shadow(0 0 4px #bf5af244)" : undefined,
                   }}
-                  onMouseEnter={e => !isdiag && setTooltip({ row: rowT, col: colT, value: v, x: e.clientX, y: e.clientY })}
+                  onMouseEnter={e => !isdiag && setTooltip({ row: rowT, col: colT, value: v, overlap: overlapLookup.get(`${rowT}|${colT}`), x: e.clientX, y: e.clientY })}
                   onMouseMove={e => !isdiag && setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
                 />
                 {CELL >= 44 && (
@@ -199,6 +203,11 @@ export default function CorrelationHeatmap({ data }: { data: CorrelationData }) 
               {levelLabel(tooltip.value)}
             </span>
           </div>
+          {tooltip.overlap !== undefined && (
+            <div className="text-[10px] font-mono mt-1" style={{ color: tooltip.overlap < 60 ? "#f5a623" : "#4a3a5e" }}>
+              {tooltip.overlap} overlapping days{tooltip.overlap < 60 ? " — low confidence" : ""}
+            </div>
+          )}
         </div>
       )}
     </div>
