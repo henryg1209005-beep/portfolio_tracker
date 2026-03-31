@@ -2,17 +2,19 @@
 import { useState } from "react";
 import type { Holding } from "@/lib/api";
 
-function fmt(n: number | null | undefined, decimals = 2) {
+const CURRENCY_SYMBOL: Record<string, string> = { GBP: "£", EUR: "€", USD: "$" };
+
+function fmt(n: number | null | undefined, symbol = "£", decimals = 2) {
   if (n == null) return <span className="text-muted">—</span>;
-  return `£${n.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+  return `${symbol}${n.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 }
 
-function PnL({ val, pct }: { val: number | null; pct: number | null }) {
+function PnL({ val, pct, symbol = "£" }: { val: number | null; pct: number | null; symbol?: string }) {
   if (val == null) return <span className="text-muted">—</span>;
   const pos = val >= 0;
   return (
     <div style={{ color: pos ? "#00f5d4" : "#ff2d78" }}>
-      <div className="font-mono text-sm">{pos ? "+" : ""}£{Math.abs(val).toFixed(2)}</div>
+      <div className="font-mono text-sm">{pos ? "+" : ""}{symbol}{Math.abs(val).toFixed(2)}</div>
       <div className="text-xs opacity-70">{pos ? "+" : ""}{pct?.toFixed(2)}%</div>
     </div>
   );
@@ -26,10 +28,13 @@ const TYPE_BADGE: Record<string, { bg: string; color: string; border: string }> 
 
 type SortKey = keyof Holding;
 
-export default function HoldingsTable({ holdings, onRemove }: {
+export default function HoldingsTable({ holdings, onRemove, currency = "GBP", fxRate = 1 }: {
   holdings: Holding[];
   onRemove: (ticker: string) => void;
+  currency?: string;
+  fxRate?: number;
 }) {
+  const symbol = CURRENCY_SYMBOL[currency] ?? "£";
   const [sort, setSort] = useState<{ key: SortKey; asc: boolean }>({ key: "market_value", asc: false });
 
   const sorted = [...holdings].sort((a, b) => {
@@ -94,12 +99,12 @@ export default function HoldingsTable({ holdings, onRemove }: {
                   </span>
                 </div>
                 <span className="text-xs font-mono" style={{ color: "#4a3a5e" }}>
-                  {h.net_shares?.toFixed(4)} shares · avg {typeof fmt(h.avg_cost) === "string" ? fmt(h.avg_cost) : "—"}
+                  {h.net_shares?.toFixed(4)} shares · avg {typeof fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) === "string" ? fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) : "—"}
                 </span>
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="font-mono font-semibold text-sm text-text">{fmt(h.market_value)}</span>
-                <PnL val={h.pnl} pct={h.pnl_pct} />
+                <span className="font-mono font-semibold text-sm text-text">{fmt(h.market_value != null ? h.market_value * fxRate : null, symbol)}</span>
+                <PnL val={h.pnl != null ? h.pnl * fxRate : null} pct={h.pnl_pct} symbol={symbol} />
               </div>
               <button
                 onClick={() => onRemove(h.ticker)}
@@ -157,14 +162,14 @@ export default function HoldingsTable({ holdings, onRemove }: {
                     </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-muted">{h.net_shares?.toFixed(4)}</td>
-                  <td className="px-4 py-3 font-mono text-text">{fmt(h.avg_cost)}</td>
-                  <td className="px-4 py-3 font-mono text-text">{fmt(h.current_price)}</td>
-                  <td className="px-4 py-3 font-mono font-semibold text-text">{fmt(h.market_value)}</td>
-                  <td className="px-4 py-3"><PnL val={h.pnl} pct={h.pnl_pct} /></td>
+                  <td className="px-4 py-3 font-mono text-text">{fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol)}</td>
+                  <td className="px-4 py-3 font-mono text-text">{fmt(h.current_price != null ? h.current_price * fxRate : null, symbol)}</td>
+                  <td className="px-4 py-3 font-mono font-semibold text-text">{fmt(h.market_value != null ? h.market_value * fxRate : null, symbol)}</td>
+                  <td className="px-4 py-3"><PnL val={h.pnl != null ? h.pnl * fxRate : null} pct={h.pnl_pct} symbol={symbol} /></td>
                   <td className="px-4 py-3 font-mono text-muted">
                     {h.weight != null ? `${(h.weight * 100).toFixed(1)}%` : "—"}
                   </td>
-                  <td className="px-4 py-3 font-mono text-muted">{fmt(h.total_dividends)}</td>
+                  <td className="px-4 py-3 font-mono text-muted">{fmt(h.total_dividends != null ? h.total_dividends * fxRate : null, symbol)}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => onRemove(h.ticker)}

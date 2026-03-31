@@ -7,6 +7,8 @@ import AddHoldingModal from "@/components/AddHoldingModal";
 import ImportCSVModal from "@/components/ImportCSVModal";
 import FixMyPortfolioPanel from "@/components/FixMyPortfolioPanel";
 
+type Currency = "GBP" | "EUR" | "USD";
+
 export default function OverviewPage() {
   const [data, setData]       = useState<RefreshData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,7 @@ export default function OverviewPage() {
   const [showImport, setShowImport] = useState(false);
   const [showFix, setShowFix]     = useState(false);
   const [fixLoading, setFixLoading] = useState(false);
+  const [currency, setCurrency] = useState<Currency>("GBP");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,6 +57,26 @@ export default function OverviewPage() {
           <p className="text-muted text-sm mt-0.5">Your portfolio at a glance</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Currency toggle */}
+          {data && (
+            <div className="flex items-center rounded-lg overflow-hidden font-mono text-xs"
+              style={{ border: "1px solid #2a0050" }}>
+              {(["GBP", "EUR", "USD"] as Currency[]).map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCurrency(c)}
+                  className="px-3 py-2 transition-all"
+                  style={{
+                    background: currency === c ? "linear-gradient(90deg,#bf5af2,#ff2d78)" : "transparent",
+                    color: currency === c ? "#fff" : "#6b5e7e",
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+
           <button
             onClick={load}
             disabled={loading}
@@ -138,8 +161,8 @@ export default function OverviewPage() {
         </div>
       ) : data ? (
         <>
-          <SummaryCards summary={data.summary} />
-          <HoldingsTable holdings={data.holdings} onRemove={handleRemove} />
+          <SummaryCards summary={data.summary} currency={currency} />
+          <HoldingsTable holdings={data.holdings} onRemove={handleRemove} currency={currency} fxRate={currency === "EUR" ? (data.summary.gbpeur ?? 1) : currency === "USD" ? (data.summary.gbpusd ?? 1) : 1} />
         </>
       ) : null}
 

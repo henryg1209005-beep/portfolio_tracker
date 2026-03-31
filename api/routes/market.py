@@ -215,6 +215,7 @@ def _refresh_data(token: str) -> dict:
         "total_dividends": _safe_float(total_dividends),
         "holding_count": len(enriched),
         "gbpusd": _safe_float(gbpusd),
+        "gbpeur": _safe_float(gbpeur),
     }
 
     # ── Risk metrics ──────────────────────────────────────────────────────────

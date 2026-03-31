@@ -37,19 +37,16 @@ function useCountUp(target: number, duration = 900, delay = 0): number {
 
 // ── Formatter ─────────────────────────────────────────────────────────────────
 
-function fmtAnimated(n: number): string {
-  return `£${Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+const CURRENCY_SYMBOL: Record<string, string> = { GBP: "£", EUR: "€", USD: "$" };
 
-function fmtStatic(n: number | null | undefined): string {
-  if (n == null) return "—";
-  return `£${Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function fmtAnimated(n: number, symbol = "£"): string {
+  return `${symbol}${Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
 function Card({
-  label, rawValue, displayValue, sub, accent, index,
+  label, rawValue, displayValue, sub, accent, index, symbol,
 }: {
   label: string;
   rawValue: number;
@@ -57,6 +54,7 @@ function Card({
   sub?: string;
   accent: "pink" | "cyan" | "purple" | "default";
   index: number;
+  symbol?: string;
 }) {
   const animated = useCountUp(rawValue, 900, index * 80);
 
@@ -82,7 +80,7 @@ function Card({
         className="text-2xl font-bold font-mono mt-1 tabular-nums"
         style={{ color: a.color }}
       >
-        {displayValue ?? fmtAnimated(animated)}
+        {displayValue ?? fmtAnimated(animated, symbol)}
       </span>
       {sub && <span className="text-xs text-muted">{sub}</span>}
     </div>
@@ -91,37 +89,51 @@ function Card({
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export default function SummaryCards({ summary }: { summary: Summary }) {
-  const pos = summary.total_pnl >= 0;
-  const pnlPct = summary.total_pnl_pct?.toFixed(2) ?? "0.00";
+export default function SummaryCards({ summary, currency = "GBP" }: { summary: Summary; currency?: string }) {
+  const fxRate = currency === "EUR" ? (summary.gbpeur ?? 1) : currency === "USD" ? (summary.gbpusd ?? 1) : 1;
+  const symbol = CURRENCY_SYMBOL[currency] ?? "£";
+
+  const value     = summary.total_value * fxRate;
+  const pnl       = summary.total_pnl * fxRate;
+  const dividends = summary.total_dividends * fxRate;
+  const pos       = pnl >= 0;
+  const pnlPct    = summary.total_pnl_pct?.toFixed(2) ?? "0.00";
+
+  const fxLabel   = currency === "EUR" ? "GBP / EUR" : "GBP / USD";
+  const fxValue   = currency === "EUR"
+    ? (summary.gbpeur != null ? summary.gbpeur.toFixed(4) : "—")
+    : (summary.gbpusd != null ? summary.gbpusd.toFixed(4) : "—");
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <Card
         index={0}
         label="Portfolio Value"
-        rawValue={summary.total_value}
+        rawValue={value}
         accent="cyan"
+        symbol={symbol}
       />
       <Card
         index={1}
         label="Unrealised P&L"
-        rawValue={summary.total_pnl}
-        displayValue={`${pos ? "+" : "-"}${fmtAnimated(Math.abs(summary.total_pnl))}`}
+        rawValue={pnl}
+        displayValue={`${pos ? "+" : "-"}${fmtAnimated(Math.abs(pnl), symbol)}`}
         sub={`${pos ? "+" : ""}${pnlPct}% overall`}
         accent={pos ? "cyan" : "pink"}
+        symbol={symbol}
       />
       <Card
         index={2}
         label="Dividends Received"
-        rawValue={summary.total_dividends}
+        rawValue={dividends}
         accent="purple"
+        symbol={symbol}
       />
       <Card
         index={3}
-        label="GBP / USD"
+        label={fxLabel}
         rawValue={0}
-        displayValue={summary.gbpusd != null ? summary.gbpusd.toFixed(4) : "—"}
+        displayValue={fxValue}
         sub={`${summary.holding_count} holding${summary.holding_count !== 1 ? "s" : ""}`}
         accent="default"
       />

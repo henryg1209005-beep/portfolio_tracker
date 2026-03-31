@@ -50,6 +50,7 @@ export type Summary = {
   total_dividends: number;
   holding_count: number;
   gbpusd: number;
+  gbpeur: number;
 };
 
 export type Metrics = {
