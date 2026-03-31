@@ -288,6 +288,8 @@ export default function LandingPage() {
   const { isSignedIn, isLoaded } = useUser();
   const featuresRef = useRef<HTMLDivElement>(null);
   const featuresVisible = useInView(featuresRef);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -295,11 +297,35 @@ export default function LandingPage() {
     >
       {/* ── Nav ── */}
       <nav
-        className="sticky top-0 z-50 flex items-center justify-between px-6 py-4"
+        className="sticky top-0 z-50 flex flex-col"
         style={{ background: "#08001299", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}
       >
-        <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />
-        <div className="flex items-center gap-3">
+        {/* Main row */}
+        <div className="flex items-center justify-between px-6 py-4">
+          <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />
+
+          {/* Desktop anchor links */}
+          <div className="hidden md:flex items-center gap-7">
+            {[
+              { label: "Features", href: "#features" },
+              { label: "How it works", href: "#how-it-works" },
+              { label: "Discord", href: "https://discord.gg/MabTm9Z4zR", external: true },
+            ].map(({ label, href, external }) => (
+              <a
+                key={label}
+                href={href}
+                {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className="text-sm transition-colors"
+                style={{ color: "#6b5e7e" }}
+                onMouseEnter={e => (e.currentTarget.style.color = label === "Discord" ? "#bf5af2" : "#e2d9f3")}
+                onMouseLeave={e => (e.currentTarget.style.color = "#6b5e7e")}
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+
+          {/* Auth + mobile hamburger */}
           <div className="flex items-center gap-3">
             {isLoaded && isSignedIn ? (
               <>
@@ -310,16 +336,65 @@ export default function LandingPage() {
               </>
             ) : (
               <>
-                <Link href="/sign-in" className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
+                <Link href="/sign-in" className="hidden sm:block px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
                   Sign in
                 </Link>
                 <Link href="/sign-up" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
                   Get started →
                 </Link>
+                <button
+                  className="md:hidden p-2 rounded-lg transition-colors text-base leading-none"
+                  style={{ color: "#6b5e7e", border: "1px solid #1a0030" }}
+                  onClick={() => setMobileMenuOpen(m => !m)}
+                  aria-label="Menu"
+                >
+                  {mobileMenuOpen ? "✕" : "☰"}
+                </button>
               </>
             )}
           </div>
         </div>
+
+        {/* Mobile dropdown */}
+        {mobileMenuOpen && (
+          <div
+            className="md:hidden flex flex-col px-6 pb-4 gap-1"
+            style={{ borderTop: "1px solid #1a0030" }}
+          >
+            {[
+              { label: "Features", href: "#features" },
+              { label: "How it works", href: "#how-it-works" },
+            ].map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-3 text-sm border-b transition-colors"
+                style={{ color: "#6b5e7e", borderColor: "#1a0030" }}
+              >
+                {label}
+              </a>
+            ))}
+            <a
+              href="https://discord.gg/MabTm9Z4zR"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-3 text-sm border-b transition-colors"
+              style={{ color: "#bf5af2", borderColor: "#1a0030" }}
+            >
+              Discord →
+            </a>
+            <Link
+              href="/sign-in"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-3 text-sm transition-colors"
+              style={{ color: "#6b5e7e" }}
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}
@@ -428,7 +503,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section className="px-6 py-20 max-w-6xl mx-auto w-full">
+      <section id="features" className="px-6 py-20 max-w-6xl mx-auto w-full">
         <div className="text-center mb-14">
           <div
             className="text-[11px] font-mono uppercase tracking-widest mb-3"
@@ -522,6 +597,7 @@ export default function LandingPage() {
 
       {/* ── How it works ── */}
       <section
+        id="how-it-works"
         className="px-6 py-20"
         style={{ background: "linear-gradient(180deg, transparent, #0d001888, transparent)" }}
       >
