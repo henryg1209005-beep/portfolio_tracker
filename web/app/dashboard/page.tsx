@@ -8,6 +8,24 @@ import ImportCSVModal from "@/components/ImportCSVModal";
 import FixMyPortfolioPanel from "@/components/FixMyPortfolioPanel";
 
 type Currency = "GBP" | "EUR" | "USD";
+const CURRENCIES: Currency[] = ["GBP", "EUR", "USD"];
+const STORAGE_KEY = "portivex_currency";
+
+function useCurrency(): [Currency, (c: Currency) => void] {
+  const [currency, setCurrencyState] = useState<Currency>("GBP");
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY) as Currency | null;
+    if (saved && CURRENCIES.includes(saved)) setCurrencyState(saved);
+  }, []);
+
+  function setCurrency(c: Currency) {
+    setCurrencyState(c);
+    localStorage.setItem(STORAGE_KEY, c);
+  }
+
+  return [currency, setCurrency];
+}
 
 export default function OverviewPage() {
   const [data, setData]       = useState<RefreshData | null>(null);
@@ -17,7 +35,7 @@ export default function OverviewPage() {
   const [showImport, setShowImport] = useState(false);
   const [showFix, setShowFix]     = useState(false);
   const [fixLoading, setFixLoading] = useState(false);
-  const [currency, setCurrency] = useState<Currency>("GBP");
+  const [currency, setCurrency] = useCurrency();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,7 +79,7 @@ export default function OverviewPage() {
           {data && (
             <div className="flex items-center rounded-lg overflow-hidden font-mono text-xs"
               style={{ border: "1px solid #2a0050" }}>
-              {(["GBP", "EUR", "USD"] as Currency[]).map(c => (
+              {CURRENCIES.map(c => (
                 <button
                   key={c}
                   onClick={() => setCurrency(c)}
