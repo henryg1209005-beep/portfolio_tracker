@@ -121,7 +121,7 @@ export default function SummaryCards({ summary }: { summary: Summary }) {
         index={3}
         label="GBP / USD"
         rawValue={0}
-        displayValue={`${summary.gbpusd?.toFixed(4)}`}
+        displayValue={summary.gbpusd != null ? summary.gbpusd.toFixed(4) : "—"}
         sub={`${summary.holding_count} holding${summary.holding_count !== 1 ? "s" : ""}`}
         accent="default"
       />
