@@ -31,7 +31,7 @@ function rollingVol(returns: number[], w = 21): number[] {
   return out;
 }
 
-function rollingSharpe(returns: number[], w = 21, rfDaily = 0.045 / 252): number[] {
+function rollingSharpe(returns: number[], w = 21, rfDaily = 0): number[] {
   const out: number[] = [];
   for (let i = w; i <= returns.length; i++) {
     const sl  = returns.slice(i - w, i);
@@ -132,6 +132,7 @@ const STATUS_COLORS: Record<Status, string> = {
 
 const STATUS_LABELS: Record<string, Record<Status, string>> = {
   sharpe:  { good: "Efficient",       ok: "Moderate",     bad: "Inefficient",   neutral: "No data" },
+  sortino: { good: "Efficient",       ok: "Moderate",     bad: "Inefficient",   neutral: "No data" },
   alpha:   { good: "Outperforming",   ok: "Tracking",     bad: "Lagging",       neutral: "No data" },
   vol:     { good: "Low volatility",  ok: "Moderate",     bad: "High vol",      neutral: "No data" },
   var:     { good: "Within bounds",   ok: "Slightly high",bad: "At risk",       neutral: "No data" },
@@ -247,6 +248,12 @@ function sharpeStatus(s: number | null): Status {
   if (s >= 0.3)  return "ok";
   return "bad";
 }
+function sortinoStatus(s: number | null): Status {
+  if (s == null) return "neutral";
+  if (s >= 1.5)  return "good";
+  if (s >= 0.5)  return "ok";
+  return "bad";
+}
 function alphaStatus(a: number | null): Status {
   if (a == null) return "neutral";
   if (a > 0.03)  return "good";
@@ -272,10 +279,12 @@ export default function MetricsGrid({
   metrics,
   summary,
   perfData,
+  benchmarkLabel = "S&P 500",
 }: {
   metrics: Metrics;
   summary: Summary;
   perfData?: PerformanceData | null;
+  benchmarkLabel?: string;
 }) {
   if (metrics.error) {
     return (
@@ -287,14 +296,18 @@ export default function MetricsGrid({
 
   const totalValue = summary.total_value ?? 0;
   const varGbp     = metrics.var_95       != null ? Math.abs(metrics.var_95)       * totalValue : null;
+  const cfVarGbp   = metrics.var_95_cf    != null ? Math.abs(metrics.var_95_cf)    * totalValue : null;
   const mddGbp     = metrics.max_drawdown != null ? Math.abs(metrics.max_drawdown) * totalValue : null;
   const sharpe     = metrics.sharpe_ratio;
+  const sortino    = metrics.sortino_ratio;
   const alpha      = metrics.alpha;
   const vol        = metrics.volatility;
   const beta       = metrics.beta;
   const actRet     = metrics.actual_return;
   const expRet     = metrics.capm_expected_return;
   const volPct     = vol != null ? `${(vol * 100).toFixed(1)}%` : "—";
+  const ddRecovery = metrics.drawdown_recovery_days;
+  const rfDaily    = (metrics.rf_annual ?? 0.0425) / 252;
 
   // ── Rolling series from performance data ──────────────────────────────────
   let sharpeSpark: number[] | undefined;
@@ -309,7 +322,7 @@ export default function MetricsGrid({
   if (perfData && perfData.portfolio.length > 30) {
     const portR  = dailyReturns(perfData.portfolio);
     const benchR = dailyReturns(perfData.benchmark);
-    const rs     = rollingSharpe(portR);
+    const rs     = rollingSharpe(portR, 21, rfDaily);
     const rv     = rollingVol(portR);
     const rb     = rollingBeta(portR, benchR);
     const dd     = drawdownSeries(perfData.portfolio);
@@ -320,12 +333,12 @@ export default function MetricsGrid({
     ddSpark     = dd.slice(-90);
 
     sharpeTrend = trendArrow(rs, true);
-    volTrend    = trendArrow(rv, false);    // lower vol = improving
-    betaTrend   = trendArrow(rb, false);    // lower beta = improving
-    ddTrend     = trendArrow(dd, true);     // less negative = improving
+    volTrend    = trendArrow(rv, false);
+    betaTrend   = trendArrow(rb, false);
+    ddTrend     = trendArrow(dd, true);
   }
 
-  // ── Copy ──────────────────────────────────────────────────────────────────
+  // ── Explanations ─────────────────────────────────────────────────────────
 
   const sharpeExplain = sharpe == null
     ? "Not enough data yet."
@@ -335,11 +348,19 @@ export default function MetricsGrid({
     ? `Earning ${sharpe.toFixed(2)} units of return per unit of risk. Decent, but below the 1.0 target. Reducing concentration may push this higher.`
     : `Only ${sharpe.toFixed(2)} units of return per unit of risk. The portfolio is taking on more risk than its returns justify.`;
 
+  const sortinoExplain = sortino == null
+    ? "Not enough data yet."
+    : sortino >= 1.5
+    ? `Sortino of ${sortino.toFixed(2)} — strong downside-adjusted return. The portfolio's bad days are small relative to its average gains.`
+    : sortino >= 0.5
+    ? `Sortino of ${sortino.toFixed(2)} — moderate downside-adjusted return. Some improvement possible by reducing the largest loss contributors.`
+    : `Sortino of ${sortino.toFixed(2)} — the portfolio's downside moves are large relative to average returns. Concentrated losers are the likely drag.`;
+
   const alphaExplain = alpha == null
     ? "Not enough data to compare against the market."
     : alpha > 0
     ? `Returned ${pct(actRet ?? 0)}, beating the CAPM-expected ${pct(expRet ?? 0)} by ${pct(alpha)}. You're generating excess return above market compensation.`
-    : `Returned ${pct(actRet ?? 0)}, ${pct(Math.abs(alpha ?? 0))} below the CAPM-expected ${pct(expRet ?? 0)}. The market benchmark has outpaced this period's performance.`;
+    : `Returned ${pct(actRet ?? 0)}, ${pct(Math.abs(alpha ?? 0))} below the CAPM-expected ${pct(expRet ?? 0)}. The ${benchmarkLabel} has outpaced this period's performance.`;
 
   const riskExplain = vol == null
     ? "Not enough data to measure volatility."
@@ -352,18 +373,27 @@ export default function MetricsGrid({
   const betaExplain = beta == null
     ? "Not enough market data to compute beta."
     : beta < 0.8
-    ? `Beta of ${beta.toFixed(2)} — portfolio moves less sharply than the market. When the S&P falls 10%, this portfolio is statistically expected to fall ~${(beta * 10).toFixed(0)}%.`
+    ? `Beta of ${beta.toFixed(2)} — portfolio moves less sharply than ${benchmarkLabel}. When ${benchmarkLabel} falls 10%, this portfolio is statistically expected to fall ~${(beta * 10).toFixed(0)}%.`
     : beta < 1.3
-    ? `Beta of ${beta.toFixed(2)} — tracks the market closely. When the S&P moves 10%, this portfolio is expected to move ~${(beta * 10).toFixed(0)}%.`
-    : `Beta of ${beta.toFixed(2)} — portfolio amplifies market moves. When the S&P falls 10%, this portfolio is statistically expected to fall ~${(beta * 10).toFixed(0)}%.`;
+    ? `Beta of ${beta.toFixed(2)} — tracks ${benchmarkLabel} closely. When ${benchmarkLabel} moves 10%, this portfolio is expected to move ~${(beta * 10).toFixed(0)}%.`
+    : `Beta of ${beta.toFixed(2)} — portfolio amplifies market moves. When ${benchmarkLabel} falls 10%, this portfolio is statistically expected to fall ~${(beta * 10).toFixed(0)}%.`;
 
+  // VaR explanation — show both historical and parametric
   const varExplain = varGbp == null
     ? "Not enough data to estimate worst-case scenarios."
-    : `On the worst 1-in-20 trading days (95% VaR), this portfolio has historically lost more than ${gbp(varGbp)}. This is a statistical estimate based on observed daily moves.`;
+    : cfVarGbp != null
+    ? `Historical VaR: ${gbp(varGbp)} — the 5th percentile of observed daily losses. Cornish-Fisher VaR: ${gbp(cfVarGbp)} — adjusted for skew and fat tails in your return distribution.${cfVarGbp > varGbp * 1.1 ? " The parametric estimate is higher, suggesting tail risk beyond what recent history shows." : ""}`
+    : `On the worst 1-in-20 trading days (95% VaR), this portfolio has historically lost more than ${gbp(varGbp)}.`;
+
+  // Drawdown explanation — include recovery time
+  const ddRecoveryText = ddRecovery == null ? ""
+    : ddRecovery < 0 ? ` Currently in drawdown — ${Math.abs(ddRecovery)} trading days since the trough with no full recovery yet.`
+    : ddRecovery === 0 ? " The trough was a single-day event with immediate recovery."
+    : ` Recovery took ${ddRecovery} trading days from trough back to the previous peak.`;
 
   const mddExplain = mddGbp == null
     ? "Not enough data to calculate the maximum drawdown."
-    : `The largest peak-to-trough decline over the last 12 months was ${gbp(mddGbp)}. This is the number that tests whether you'd have held on through the worst stretch.`;
+    : `The largest peak-to-trough decline over the measurement period was ${gbp(mddGbp)}.${ddRecoveryText}`;
 
   const mddStatus: Status = (metrics.max_drawdown ?? 0) > -0.15 ? "good" : (metrics.max_drawdown ?? 0) > -0.30 ? "ok" : "bad";
   const varStatus: Status = varGbp != null && varGbp < totalValue * 0.03 ? "good" : varGbp != null && varGbp < totalValue * 0.06 ? "ok" : "bad";
@@ -377,12 +407,19 @@ export default function MetricsGrid({
     ? `Sharpe of ${sharpe.toFixed(2)} is below the 1.0 institutional target. Volatility is likely the drag. Trimming the highest-vol position is the most direct lever without cutting expected returns.`
     : `Only ${sharpe.toFixed(2)} units of return per unit of risk taken. The portfolio is over-exposed relative to its rewards. Reducing single-stock concentration would have the largest impact here.`;
 
+  const sortinoTip = sortino == null ? undefined
+    : sortino >= 1.5
+    ? "Strong downside-adjusted return. The distinction between Sortino and Sharpe tells you how symmetric your risk is — if Sortino is much higher than Sharpe, most of your volatility is upside, which is desirable."
+    : sortino >= 0.5
+    ? `Compare with Sharpe (${sharpe?.toFixed(2) ?? "—"}). If Sortino is notably higher, your volatility is skewed to the upside — that's good. If similar, downside and upside volatility are roughly equal.`
+    : "Low Sortino means downside moves are frequent and large relative to returns. Look at your biggest single-day losses — the top 2–3 positions by weight are usually the source.";
+
   const alphaTip = alpha == null ? undefined
     : alpha > 0.03
-    ? "Positive alpha is rare — protect it by avoiding pure index overlap. If multiple holdings track the same index, genuine excess return gets diluted."
+    ? `Positive alpha against ${benchmarkLabel} is rare — protect it by avoiding pure index overlap. If multiple holdings track the same index, genuine excess return gets diluted.`
     : alpha > -0.02
-    ? "Alpha near zero means returns are roughly what market exposure predicts. To generate genuine excess return, differentiated holdings away from index overlap are key."
-    : `Negative alpha suggests the benchmark has outperformed on a risk-adjusted basis. High overlap between ETFs (e.g. multiple S&P 500 trackers) is a common cause — check for redundant holdings.`;
+    ? `Alpha near zero means returns are roughly what ${benchmarkLabel} exposure predicts. To generate genuine excess return, differentiated holdings away from index overlap are key.`
+    : `Negative alpha suggests ${benchmarkLabel} has outperformed on a risk-adjusted basis. High overlap between ETFs (e.g. multiple S&P 500 trackers) is a common cause — check for redundant holdings.`;
 
   const volTip = vol == null ? undefined
     : vol < 0.15
@@ -393,10 +430,10 @@ export default function MetricsGrid({
 
   const betaTip = beta == null ? undefined
     : beta < 0.8
-    ? "Defensive beta provides downside cushion in corrections. If this is intentional, it's working as designed. If not, check whether low-beta ETFs are suppressing growth exposure unintentionally."
+    ? `Defensive beta provides downside cushion in corrections. If this is intentional, it's working as designed. If not, check whether low-beta ETFs are suppressing growth exposure unintentionally.`
     : beta < 1.3
-    ? `Beta of ${beta.toFixed(2)} tracks the market closely — typical for a diversified equity portfolio. Acceptable unless you want explicit downside protection, which would require lower-beta or defensive assets.`
-    : `Beta of ${beta.toFixed(2)} means corrections amplify beyond the index. When the S&P drops 10%, this portfolio is expected to drop ~${(beta * 10).toFixed(0)}%. Adding lower-beta assets (bonds, defensive ETFs) is the most direct fix.`;
+    ? `Beta of ${beta.toFixed(2)} tracks ${benchmarkLabel} closely — typical for a diversified equity portfolio. Acceptable unless you want explicit downside protection, which would require lower-beta or defensive assets.`
+    : `Beta of ${beta.toFixed(2)} means corrections amplify beyond the index. When ${benchmarkLabel} drops 10%, this portfolio is expected to drop ~${(beta * 10).toFixed(0)}%. Adding lower-beta assets (bonds, defensive ETFs) is the most direct fix.`;
 
   const varTip = varGbp == null ? undefined
     : varGbp < totalValue * 0.03
@@ -438,22 +475,35 @@ export default function MetricsGrid({
           value={sharpe != null ? sharpe.toFixed(2) : "—"}
           status={sharpeStatus(sharpe)}
           explain={sharpeExplain}
-          detail="Above 1.0 is considered strong. Most diversified funds sit between 0.5 and 1.0. Calculated as excess return over the 13-week T-bill rate, divided by portfolio volatility."
+          detail="Above 1.0 is considered strong. Most diversified funds sit between 0.5 and 1.0. Calculated as excess return over the short-term risk-free rate, divided by portfolio volatility."
           tip={sharpeTip}
           sparkData={sharpeSpark}
           trend={sharpeTrend ?? sharpeTrendFallback}
+        />
+
+        {/* Sortino Ratio */}
+        <MetricCard
+          metricKey="sortino"
+          name="Sortino Ratio"
+          period="1Y rolling"
+          question="Is the downside risk worth it?"
+          value={sortino != null ? (sortino > 99 ? "99+" : sortino.toFixed(2)) : "—"}
+          status={sortinoStatus(sortino)}
+          explain={sortinoExplain}
+          detail="Like Sharpe, but only penalises downside volatility. Upside swings don't count against you. Above 1.5 is strong. More relevant for retail investors who care about losses, not gains."
+          tip={sortinoTip}
         />
 
         {/* Jensen's Alpha */}
         <MetricCard
           metricKey="alpha"
           name="Jensen's Alpha"
-          period="vs S&P 500"
+          period={`vs ${benchmarkLabel}`}
           question="Are you beating the market?"
           value={alpha != null ? pct(alpha) : "—"}
           status={alphaStatus(alpha)}
           explain={alphaExplain}
-          detail="Alpha measures return above what CAPM predicts given your beta exposure. Positive alpha means you outperformed on a risk-adjusted basis. Beating it consistently is rare — most professional funds don't."
+          detail={`Alpha measures return above what CAPM predicts given your beta exposure to ${benchmarkLabel}. Positive alpha means you outperformed on a risk-adjusted basis. Beating it consistently is rare — most professional funds don't.`}
           tip={alphaTip}
         />
 
@@ -472,16 +522,16 @@ export default function MetricsGrid({
           trend={volTrend ?? volTrendFallback}
         />
 
-        {/* Beta — separated from volatility */}
+        {/* Beta */}
         <MetricCard
           metricKey="beta"
           name="Market Beta"
-          period="vs S&P 500"
+          period={`vs ${benchmarkLabel}`}
           question="How much does the market move you?"
           value={beta != null ? beta.toFixed(2) : "—"}
           status={betaStatus(beta)}
           explain={betaExplain}
-          detail="Beta of 1.0 = moves exactly with the S&P 500. Below 1.0 = more defensive. Above 1.3 = amplified market swings. Concentration in high-beta stocks (NVDA, PLTR) raises this significantly."
+          detail={`Beta of 1.0 = moves exactly with ${benchmarkLabel}. Below 1.0 = more defensive. Above 1.3 = amplified market swings. Concentration in high-beta stocks raises this significantly.`}
           tip={betaTip}
           sparkData={betaSpark}
           trend={betaTrend}
@@ -496,7 +546,9 @@ export default function MetricsGrid({
           value={varGbp != null ? gbp(varGbp) : "—"}
           status={varStatus}
           explain={varExplain}
-          detail="On a typical bad day — the kind that happens roughly once a month — losses are expected to stay below this figure. 5% of days historically exceed it."
+          detail={cfVarGbp != null
+            ? `Historical: ${gbp(varGbp ?? 0)} (raw 5th percentile). Cornish-Fisher: ${gbp(cfVarGbp)} (adjusted for skew & kurtosis). The gap between them indicates how fat-tailed your returns are.`
+            : "On a typical bad day — the kind that happens roughly once a month — losses are expected to stay below this figure. 5% of days historically exceed it."}
           tip={varTip}
         />
 
@@ -509,7 +561,11 @@ export default function MetricsGrid({
           value={mddGbp != null ? gbp(mddGbp) : "—"}
           status={mddStatus}
           explain={mddExplain}
-          detail="Peak-to-trough decline over the measurement period. This is the figure that tests emotional discipline — it's what investors lived through before any recovery began."
+          detail={ddRecovery != null
+            ? ddRecovery < 0
+              ? `Still in drawdown — ${Math.abs(ddRecovery)} trading days since the trough. No full recovery yet. This is the figure that tests emotional discipline.`
+              : `Recovery took ${ddRecovery} trading day${ddRecovery !== 1 ? "s" : ""}. Quick recoveries suggest resilient portfolio structure.`
+            : "Peak-to-trough decline over the measurement period. This is the figure that tests emotional discipline — it's what investors lived through before any recovery began."}
           tip={mddTip}
           sparkData={ddSpark}
           trend={ddTrend}
@@ -524,7 +580,7 @@ export default function MetricsGrid({
       >
         <span style={{ color: "#bf5af266" }} className="shrink-0 mt-0.5">⚠</span>
         <span>
-          Performance may not persist — current alpha and Sharpe may be driven by concentrated positions rather than structural edge. Metrics are based on a 1-year rolling window and will shift as the holding period extends. Past performance is not indicative of future results.
+          Performance may not persist — current alpha and Sharpe may be driven by concentrated positions rather than structural edge. Metrics are benchmarked against {benchmarkLabel} over a 1-year rolling window and will shift as the holding period extends. Past performance is not indicative of future results.
         </span>
       </div>
     </div>

@@ -133,9 +133,9 @@ def correlation(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
     return {"tickers": valid, "matrix": matrix}
 
 
-def _refresh_data(token: str) -> dict:
+def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
     """Core refresh logic, callable by other routes (e.g. AI analysis)."""
-    cached = get_cached_refresh(token)
+    cached = get_cached_refresh(token, benchmark)
     if cached is not None:
         return cached
 
@@ -240,7 +240,7 @@ def _refresh_data(token: str) -> dict:
         rf = fetch_risk_free_rate()
         gbpusd_hist = fetch_gbpusd_history(period="1y")
         hist = fetch_historical_data(tickers, start=earliest_date, gbpusd_series=gbpusd_hist)
-        bench = fetch_benchmark_data(start=earliest_date)
+        bench = fetch_benchmark_data(start=earliest_date, benchmark=benchmark)
 
         if not hist.empty and not bench.empty and cost_weights:
             raw = calculate_all_metrics(hist, cost_weights, bench, rf,
@@ -252,6 +252,8 @@ def _refresh_data(token: str) -> dict:
                     for k, v in raw.items()
                     if not isinstance(v, (pd.Series, pd.DataFrame))
                 }
+                metrics["rf_annual"] = _safe_float(rf)
+                metrics["benchmark_used"] = benchmark
     except Exception as exc:
         metrics = {"error": str(exc)}
 
@@ -260,14 +262,14 @@ def _refresh_data(token: str) -> dict:
         "summary": summary,
         "metrics": metrics,
     }
-    set_cached_refresh(token, result)
+    set_cached_refresh(token, result, benchmark)
     return result
 
 
 @router.get("/refresh")
-def refresh(x_portfolio_token: Annotated[str, Header()]):
+def refresh(x_portfolio_token: Annotated[str, Header()], benchmark: str = "sp500"):
     _check_rate_limit(x_portfolio_token)
-    return _refresh_data(x_portfolio_token)
+    return _refresh_data(x_portfolio_token, benchmark=benchmark)
 
 
 @router.get("/performance")
@@ -294,7 +296,7 @@ def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
 
     gbpusd_hist = fetch_gbpusd_history(period=yf_period)
     hist  = fetch_historical_data(tickers, period=yf_period, gbpusd_series=gbpusd_hist)
-    bench = fetch_benchmark_data(period=yf_period)
+    bench = fetch_benchmark_data(period=yf_period, benchmark="sp500")
 
     if hist.empty or bench.empty:
         return {"dates": [], "portfolio": [], "benchmark": []}

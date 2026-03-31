@@ -3,10 +3,16 @@ import requests
 import yfinance as yf
 import pandas as pd
 
-BENCHMARK        = "^GSPC"
-RISK_FREE_TICKER = "^IRX"   # 13-week T-bill
 GBPUSD_TICKER    = "GBPUSD=X"
 GBPEUR_TICKER    = "GBPEUR=X"
+
+# Benchmarks — user-selectable
+BENCHMARKS = {
+    "sp500": "^GSPC",
+    "ftse100": "^FTSE",
+    "msci_world": "URTH",
+}
+DEFAULT_BENCHMARK = "sp500"
 
 # ── Price cache ───────────────────────────────────────────────────────────────
 # Stores (price_in_gbp, fetched_at_timestamp) per resolved symbol.
@@ -319,11 +325,10 @@ def fetch_historical_data(tickers, period="1y", start=None, gbpusd_series=None):
                 continue
 
             if sym.endswith(".L"):
-                # Use same heuristic as spot prices: price > 500 = pence
-                cur = _lse_get_currency(sym)
-                if cur == "GBp" or (close.max() > 500):
-                    close = close / 100      # pence → GBP
-                # else: already in GBP
+                # yf.download() returns LSE prices in GBp (pence) consistently —
+                # the currency inconsistency only affects fast_info.
+                # Always divide by 100 for the historical series.
+                close = close / 100
             elif gbpusd_series is not None and not gbpusd_series.empty:
                 aligned = gbpusd_series.reindex(close.index).ffill()
                 close   = close / aligned    # USD → GBP (historical rate)
@@ -340,21 +345,28 @@ def fetch_historical_data(tickers, period="1y", start=None, gbpusd_series=None):
     return pd.DataFrame(frames).dropna(how="all")
 
 
-def fetch_benchmark_data(period="1y", start=None):
-    """Fetch S&P 500 in GBP terms."""
+def fetch_benchmark_data(period="1y", start=None, benchmark="sp500"):
+    """Fetch benchmark index in GBP terms."""
+    bench_ticker = BENCHMARKS.get(benchmark, BENCHMARKS[DEFAULT_BENCHMARK])
     try:
         if start:
-            sp_data = yf.download(BENCHMARK,     start=start, auto_adjust=True, progress=False)
+            sp_data = yf.download(bench_ticker,  start=start, auto_adjust=True, progress=False)
             fx_data = yf.download(GBPUSD_TICKER, start=start, auto_adjust=True, progress=False)
         else:
-            sp_data = yf.download(BENCHMARK,     period=period, auto_adjust=True, progress=False)
+            sp_data = yf.download(bench_ticker,  period=period, auto_adjust=True, progress=False)
             fx_data = yf.download(GBPUSD_TICKER, period=period, auto_adjust=True, progress=False)
 
-        sp_close = _extract_close(sp_data, BENCHMARK)
+        sp_close = _extract_close(sp_data, bench_ticker)
         fx_close = _extract_close(fx_data, GBPUSD_TICKER)
 
         if sp_close.empty:
             return pd.Series(dtype=float)
+
+        # FTSE 100 is already in GBP — no FX conversion needed
+        if benchmark == "ftse100":
+            if getattr(sp_close.index, "tz", None) is not None:
+                sp_close.index = sp_close.tz_localize(None)
+            return sp_close.dropna()
 
         if not fx_close.empty:
             fx_aligned = fx_close.reindex(sp_close.index).ffill()
@@ -368,17 +380,30 @@ def fetch_benchmark_data(period="1y", start=None):
 
 def fetch_risk_free_rate():
     """
-    Fetch annualised risk-free rate for a GBP portfolio.
-    Tries UK 10-year Gilt yield first, falls back to UK base rate.
+    Fetch annualised short-term risk-free rate for a GBP portfolio.
+
+    Uses UK 3-month Gilt / SONIA (short-duration) — correct for Sharpe ratio
+    and daily VaR, which measure risk over short horizons.  The 10-year Gilt
+    is the wrong maturity for these metrics.
     """
-    # UK 10-year Gilt (most liquid UK government bond benchmark)
+    # UK 3-month / short-term instruments
+    for ticker in ("^IRX", "GB3M=RR"):
+        try:
+            hist = yf.Ticker(ticker).history(period="5d")
+            if not hist.empty:
+                rate = float(hist["Close"].iloc[-1]) / 100
+                if 0.005 < rate < 0.15:
+                    return rate
+        except Exception:
+            continue
+    # Fallback to UK 10-year Gilt (better than nothing)
     for ticker in ("^GUKG10", "GBGB10YR=RR"):
         try:
             hist = yf.Ticker(ticker).history(period="5d")
             if not hist.empty:
                 rate = float(hist["Close"].iloc[-1]) / 100
-                if 0.01 < rate < 0.15:   # sanity check: 1%–15%
+                if 0.01 < rate < 0.15:
                     return rate
         except Exception:
             continue
-    return 0.0425  # Fallback: approx UK base rate as of early 2026
+    return 0.0425  # Fallback: approx UK base rate

@@ -55,13 +55,18 @@ export type Summary = {
 
 export type Metrics = {
   sharpe_ratio: number | null;
+  sortino_ratio: number | null;
   actual_return: number | null;
   volatility: number | null;
   beta: number | null;
   capm_expected_return: number | null;
   alpha: number | null;
   var_95: number | null;
+  var_95_cf: number | null;
   max_drawdown: number | null;
+  drawdown_recovery_days: number | null;
+  rf_annual: number | null;
+  benchmark_used: string | null;
   error?: string;
 };
 
@@ -73,8 +78,8 @@ export type RefreshData = {
 
 // ── API calls ─────────────────────────────────────────────────────────────────
 
-export async function fetchRefresh(): Promise<RefreshData> {
-  const res = await fetch(`${BASE}/market/refresh`, { headers: authHeader() });
+export async function fetchRefresh(benchmark = "sp500"): Promise<RefreshData> {
+  const res = await fetch(`${BASE}/market/refresh?benchmark=${benchmark}`, { headers: authHeader() });
   if (!res.ok) throw new Error("Failed to fetch market data");
   return res.json();
 }
