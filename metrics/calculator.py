@@ -30,19 +30,23 @@ def _portfolio_returns(prices_df, weights, first_buy_dates=None):
     ret_sub = returns[tickers]
 
     # Dynamic weighting: on each day, re-normalise weights across only
-    # the tickers that have valid (non-NaN) returns
-    port = np.empty(len(ret_sub))
+    # the tickers that have valid (non-NaN) returns.
+    # Days where NO ticker has a valid return are skipped entirely —
+    # inserting 0.0 would create phantom zero-return days that lower
+    # return std and artificially inflate Sharpe on some fetches.
+    port_vals = []
+    port_idx  = []
     for i in range(len(ret_sub)):
-        row = ret_sub.iloc[i].values
+        row  = ret_sub.iloc[i].values
         mask = ~np.isnan(row)
         if not mask.any():
-            port[i] = 0.0
             continue
         w_day = w_raw[mask]
         w_day = w_day / w_day.sum()
-        port[i] = np.nansum(row[mask] * w_day)
+        port_vals.append(np.nansum(row[mask] * w_day))
+        port_idx.append(ret_sub.index[i])
 
-    return pd.Series(port, index=returns.index)
+    return pd.Series(port_vals, index=port_idx)
 
 
 def sharpe_ratio(port_returns, rf_annual):

@@ -422,6 +422,10 @@ def fetch_benchmark_data(period="1y", start=None, benchmark="sp500"):
         return pd.Series(dtype=float)
 
 
+_rf_cache: tuple[float, float] | None = None  # (rate, fetched_at)
+_RF_CACHE_TTL = 86_400  # 24 hours — rate shouldn't jump between normal refreshes
+
+
 def fetch_risk_free_rate():
     """
     Fetch annualised short-term risk-free rate for a GBP portfolio.
@@ -429,7 +433,15 @@ def fetch_risk_free_rate():
     Uses UK 3-month Gilt / SONIA (short-duration) — correct for Sharpe ratio
     and daily VaR, which measure risk over short horizons.  The 10-year Gilt
     is the wrong maturity for these metrics.
+
+    Cached for 24 hours — prevents the rf jumping between the primary and
+    fallback ticker on consecutive cache misses, which would cause Sharpe spikes.
     """
+    global _rf_cache
+    now = time.time()
+    if _rf_cache is not None and now - _rf_cache[1] < _RF_CACHE_TTL:
+        return _rf_cache[0]
+
     # UK 3-month / short-term instruments
     for ticker in ("^IRX", "GB3M=RR"):
         try:
@@ -437,6 +449,7 @@ def fetch_risk_free_rate():
             if not hist.empty:
                 rate = float(hist["Close"].iloc[-1]) / 100
                 if 0.005 < rate < 0.15:
+                    _rf_cache = (rate, now)
                     return rate
         except Exception:
             continue
@@ -447,7 +460,10 @@ def fetch_risk_free_rate():
             if not hist.empty:
                 rate = float(hist["Close"].iloc[-1]) / 100
                 if 0.01 < rate < 0.15:
+                    _rf_cache = (rate, now)
                     return rate
         except Exception:
             continue
-    return 0.0425  # Fallback: approx UK base rate
+    rate = 0.0425  # Fallback: approx UK base rate
+    _rf_cache = (rate, now)
+    return rate
