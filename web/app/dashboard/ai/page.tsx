@@ -1,9 +1,43 @@
 "use client";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { streamAnalysis, fetchRefresh, fetchAIUsage } from "@/lib/api";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 interface Section { title: string; body: string }
+
+// ─── Typewriter hook ─────────────────────────────────────────────────────────
+function useTypewriter(target: string, active: boolean): string {
+  const [displayed, setDisplayed] = useState("");
+  const r = useRef({ target, displayed: "", active, timer: null as ReturnType<typeof setTimeout> | null, running: false });
+
+  const scheduleNext = useCallback(() => {
+    const s = r.current;
+    if (s.displayed.length >= s.target.length) { s.running = false; return; }
+    const nextChar = s.target[s.displayed.length] ?? "";
+    const isPunct  = ".,:;!?".includes(nextChar);
+    const delay    = isPunct ? Math.random() * 55 + 35 : Math.random() * 18 + 7;
+    const chunk    = isPunct ? 1 : Math.floor(Math.random() * 4) + 1;
+    s.timer = setTimeout(() => {
+      s.displayed = s.target.slice(0, s.displayed.length + chunk);
+      setDisplayed(s.displayed);
+      scheduleNext();
+    }, delay);
+  }, []);
+
+  useEffect(() => {
+    r.current.target = target;
+    r.current.active = active;
+    if (!active) {
+      if (r.current.timer) clearTimeout(r.current.timer);
+      r.current.displayed = target; r.current.running = false;
+      setDisplayed(target); return;
+    }
+    if (!r.current.running) { r.current.running = true; scheduleNext(); }
+  }, [target, active, scheduleNext]);
+
+  useEffect(() => () => { if (r.current.timer) clearTimeout(r.current.timer); }, []);
+  return displayed;
+}
 
 // ─── Parser ──────────────────────────────────────────────────────────────────
 function parseSections(raw: string): Section[] {
@@ -29,6 +63,21 @@ function parseSections(raw: string): Section[] {
     i++;
   }
   return sections;
+}
+
+// Extracts the section currently being written (header complete, body still streaming)
+function parsePartial(raw: string): Section | null {
+  const divRe = /^━{10,}$/;
+  const lines  = raw.split("\n");
+  for (let i = lines.length - 1; i >= 2; i--) {
+    if (divRe.test(lines[i]?.trim()) && !divRe.test(lines[i - 1]?.trim()) && divRe.test(lines[i - 2]?.trim())) {
+      const title    = lines[i - 1].trim();
+      const bodyLines = lines.slice(i + 1);
+      if (bodyLines.some(l => divRe.test(l.trim()))) return null; // already closed
+      return { title, body: bodyLines.join("\n") };
+    }
+  }
+  return null;
 }
 
 // ─── Rich text helpers ────────────────────────────────────────────────────────
@@ -187,6 +236,31 @@ function SectionCard({ section, isLast, isStreaming }: {
   );
 }
 
+// ─── Streaming section card (typewriter body) ─────────────────────────────────
+function StreamingSectionCard({ section }: { section: Section }) {
+  const meta   = SECTION_META[section.title.toUpperCase()] ?? { icon: "◈" };
+  const accent = meta.accent ?? "#bf5af2";
+  const isTldr = section.title.toUpperCase() === "TL;DR";
+  const typed  = useTypewriter(section.body, true);
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-border"
+      style={{ background: "rgba(255,255,255,0.02)", animation: "ai-fadein 0.35s ease both" }}>
+      <div className="flex items-center gap-2.5 px-6 py-3.5 border-b border-border/50"
+        style={{ background: `linear-gradient(90deg, ${accent}08 0%, transparent 60%)` }}>
+        <span style={{ color: accent, fontSize: 13 }}>{meta.icon}</span>
+        <span className="text-xs font-bold tracking-[0.14em] uppercase" style={{ color: accent }}>
+          {section.title}
+        </span>
+      </div>
+      <div className="px-6 py-5">
+        {typed ? (isTldr ? <TldrSection body={typed} /> : renderBody(typed)) : null}
+        <span className="inline-block w-1.5 h-4 rounded-sm bg-cyan animate-pulse align-text-bottom ml-1" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 const LOADING_STEPS = [
   { icon: "◈", label: "Fetching live prices" },
@@ -320,6 +394,7 @@ export default function AiPage() {
   const hasHoldings = holdingCount === null || holdingCount > 0;
   const limitHit    = usage !== null && usage.remaining === 0;
   const sections    = parseSections(text);
+  const partial     = busy ? parsePartial(text) : null;
 
   return (
     <>
@@ -391,16 +466,19 @@ export default function AiPage() {
           <div className="bg-surface border border-border rounded-2xl px-6">
             <LoadingState status={status} />
           </div>
-        ) : sections.length > 0 ? (
+        ) : sections.length > 0 || partial ? (
           <div className="space-y-4">
             {sections.map((s, i) => (
               <SectionCard
                 key={i}
                 section={s}
-                isLast={i === sections.length - 1}
+                isLast={i === sections.length - 1 && !partial}
                 isStreaming={busy}
               />
             ))}
+            {partial && (
+              <StreamingSectionCard key={partial.title} section={partial} />
+            )}
           </div>
         ) : null}
 
