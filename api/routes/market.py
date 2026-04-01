@@ -187,18 +187,14 @@ def correlation(
 
 # Common diversifying assets across major asset classes
 _DIVERSIFIER_CANDIDATES = {
-    "IGLT.L":  {"name": "UK Gilts (iShares)",        "class": "Bonds"},
-    "SLXX.L":  {"name": "Corp Bonds (iShares £)",     "class": "Bonds"},
-    "SGLN.L":  {"name": "Physical Gold (iShares)",     "class": "Commodities"},
-    "ISAC.L":  {"name": "MSCI ACWI (iShares)",       "class": "Global Equity"},
-    "IEMA.L":  {"name": "EM Equity (iShares)",        "class": "Emerging Markets"},
-    "INRG.L":  {"name": "Clean Energy (iShares)",     "class": "Thematic"},
-    "ISF.L":   {"name": "FTSE 100 (iShares)",         "class": "UK Equity"},
+    "VWRL.L":  {"name": "FTSE All-World (Vanguard)",  "class": "Global Equity"},
     "CSPX.L":  {"name": "S&P 500 (iShares £)",        "class": "US Equity"},
-    "REIT.L":  {"name": "UK Property (iShares)",       "class": "Real Estate"},
-    "VWRL.L":  {"name": "FTSE All-World (Vanguard)",   "class": "Global Equity"},
-    "VGOV.L":  {"name": "UK Govt Bonds (Vanguard)",    "class": "Bonds"},
-    "VERX.L":  {"name": "Europe ex-UK (Vanguard)",     "class": "European Equity"},
+    "IEMA.L":  {"name": "EM Equity (iShares)",        "class": "Emerging Markets"},
+    "SGLN.L":  {"name": "Physical Gold (iShares)",    "class": "Commodities"},
+    "IGLT.L":  {"name": "UK Gilts (iShares)",         "class": "Bonds"},
+    "REIT.L":  {"name": "Global Property (iShares)", "class": "Real Estate"},
+    "INRG.L":  {"name": "Clean Energy (iShares)",    "class": "Thematic"},
+    "ISAC.L":  {"name": "MSCI ACWI (iShares)",       "class": "Global Equity"},
 }
 
 
