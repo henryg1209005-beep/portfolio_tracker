@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import anthropic
+import pydantic
 from fastapi import APIRouter, HTTPException, Header
 from fastapi.responses import StreamingResponse
 
@@ -618,3 +619,35 @@ def analysis(x_portfolio_token: str = Header(default="")):
         t.join()
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+# ── Saved Reports ─────────────────────────────────────────────────────────────
+
+class _SaveReportBody(pydantic.BaseModel):
+    text: str
+
+
+@router.get("/reports")
+def get_reports(x_portfolio_token: str = Header(default="")):
+    """List saved AI reports for the token, newest first."""
+    _validate_token(x_portfolio_token)
+    return {"reports": db.list_ai_reports(x_portfolio_token)}
+
+
+@router.post("/reports")
+def save_report(body: _SaveReportBody, x_portfolio_token: str = Header(default="")):
+    """Save an AI report. Enforces a max of 10 per token."""
+    _validate_token(x_portfolio_token)
+    if not body.text or not body.text.strip():
+        raise HTTPException(status_code=400, detail="Report text is empty")
+    report_id = db.save_ai_report(x_portfolio_token, body.text.strip())
+    return {"id": report_id, "status": "saved"}
+
+
+@router.delete("/reports/{report_id}")
+def delete_report(report_id: int, x_portfolio_token: str = Header(default="")):
+    """Delete a saved report by id, scoped to the token."""
+    _validate_token(x_portfolio_token)
+    if not db.delete_ai_report(x_portfolio_token, report_id):
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"status": "deleted"}

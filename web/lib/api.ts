@@ -368,3 +368,36 @@ export function streamAnalysis(
     controller.abort();
   };
 }
+
+// ── Saved AI Reports ──────────────────────────────────────────────────────────
+
+export type AiReport = {
+  id: number;
+  created_at: string;
+  text: string;
+};
+
+export async function listAiReports(): Promise<AiReport[]> {
+  const res = await fetch(`${BASE}/ai/reports`, { headers: authHeader() });
+  if (!res.ok) throw new Error("Failed to fetch reports");
+  const data = await res.json();
+  return data.reports;
+}
+
+export async function saveAiReport(text: string): Promise<{ id: number }> {
+  const res = await fetch(`${BASE}/ai/reports`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error("Failed to save report");
+  return res.json();
+}
+
+export async function deleteAiReport(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/ai/reports/${id}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to delete report");
+}

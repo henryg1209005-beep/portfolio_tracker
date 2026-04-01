@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
-import { streamAnalysis, fetchRefresh, fetchAIUsage } from "@/lib/api";
+import { streamAnalysis, fetchRefresh, fetchAIUsage, saveAiReport, listAiReports, deleteAiReport, type AiReport } from "@/lib/api";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 interface Section { title: string; body: string }
@@ -380,6 +380,9 @@ export default function AiPage() {
   const cleanupRef              = useRef<(() => void) | null>(null);
   const bottomRef               = useRef<HTMLDivElement>(null);
   const lastScrollRef           = useRef(0);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [savedReports, setSavedReports]     = useState<AiReport[]>([]);
+  const [expandedReport, setExpandedReport] = useState<number | null>(null);
 
   useEffect(() => {
     fetchRefresh()
@@ -388,10 +391,26 @@ export default function AiPage() {
     fetchAIUsage()
       .then(setUsage)
       .catch(() => {});
+    listAiReports()
+      .then(setSavedReports)
+      .catch(() => {});
   }, []);
 
+  async function handleSave() {
+    if (!text || saveState === "saving" || saveState === "saved") return;
+    setSaveState("saving");
+    try {
+      await saveAiReport(text);
+      const reports = await listAiReports();
+      setSavedReports(reports);
+      setSaveState("saved");
+    } catch {
+      setSaveState("error");
+    }
+  }
+
   function start() {
-    setText(""); setError(""); setStatus("loading");
+    setText(""); setError(""); setStatus("loading"); setSaveState("idle");
     const cleanup = streamAnalysis(
       (chunk) => {
         setStatus("streaming");
@@ -459,6 +478,21 @@ export default function AiPage() {
                 {busy ? "Analysing…" : status === "done" ? "Complete" : "Error"}
               </div>
             )}
+            {status === "done" && (
+              <button
+                onClick={handleSave}
+                disabled={saveState === "saving" || saveState === "saved"}
+                className="px-3 py-2 text-xs font-mono rounded-lg transition-all disabled:opacity-50"
+                style={{
+                  border: saveState === "saved" ? "1px solid #00f5d433" : "1px solid #2a0050",
+                  color:  saveState === "saved" ? "#00f5d4" : saveState === "error" ? "#ff2d78" : "#6b5e7e",
+                }}
+                onMouseEnter={e => { if (saveState === "idle") { (e.currentTarget as HTMLElement).style.color = "#e2d9f3"; (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; }}}
+                onMouseLeave={e => { if (saveState === "idle") { (e.currentTarget as HTMLElement).style.color = "#6b5e7e"; (e.currentTarget as HTMLElement).style.borderColor = "#2a0050"; }}}
+              >
+                {saveState === "saving" ? "Saving…" : saveState === "saved" ? "✓ Saved" : saveState === "error" ? "Failed" : "↓ Save Report"}
+              </button>
+            )}
             <button
               onClick={start}
               disabled={busy || !hasHoldings || holdingCount === 0 || limitHit}
@@ -518,6 +552,63 @@ export default function AiPage() {
             Past performance is not a reliable indicator of future results. Consult a qualified financial
             adviser before making investment decisions.
           </p>
+        )}
+
+        {/* Saved Reports */}
+        {savedReports.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold tracking-[0.14em] uppercase" style={{ color: "#6b5e7e" }}>Saved Reports</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full" style={{ background: "#1a0030", color: "#6b5e7e", border: "1px solid #2a0050" }}>
+                {savedReports.length}/10
+              </span>
+            </div>
+            {savedReports.map(r => {
+              const date = new Date(r.created_at);
+              const label = date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " · " + date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+              const isOpen = expandedReport === r.id;
+              const reportSections = parseSections(r.text);
+              return (
+                <div key={r.id} className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid #2a0050" }}>
+                  {/* Row header */}
+                  <div className="flex items-center justify-between px-5 py-3 cursor-pointer" onClick={() => setExpandedReport(isOpen ? null : r.id)}>
+                    <div className="flex items-center gap-3">
+                      <span style={{ color: "#bf5af2", fontSize: 12 }}>◈</span>
+                      <span className="text-xs font-mono text-white/50">{label}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={async e => {
+                          e.stopPropagation();
+                          await deleteAiReport(r.id).catch(() => {});
+                          setSavedReports(prev => prev.filter(x => x.id !== r.id));
+                          if (expandedReport === r.id) setExpandedReport(null);
+                        }}
+                        className="text-[11px] font-mono transition-all"
+                        style={{ color: "#3a2a50" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#ff2d78"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#3a2a50"; }}
+                      >
+                        ✕
+                      </button>
+                      <span className="text-[10px] text-white/20">{isOpen ? "▲" : "▼"}</span>
+                    </div>
+                  </div>
+                  {/* Expanded content */}
+                  {isOpen && (
+                    <div className="border-t px-5 py-4 space-y-4" style={{ borderColor: "#2a0050" }}>
+                      {reportSections.length > 0
+                        ? reportSections.map((s, i) => (
+                            <SectionCard key={i} section={s} isLast={i === reportSections.length - 1} isStreaming={false} />
+                          ))
+                        : <p className="text-sm text-white/40 whitespace-pre-wrap">{r.text}</p>
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
 
         <div ref={bottomRef} />

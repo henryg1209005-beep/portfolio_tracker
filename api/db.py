@@ -90,6 +90,13 @@ def init_db():
                     token       TEXT,
                     created_at  TIMESTAMPTZ DEFAULT NOW()
                 );
+
+                CREATE TABLE IF NOT EXISTS ai_reports (
+                    id          SERIAL PRIMARY KEY,
+                    token       TEXT NOT NULL,
+                    report_text TEXT NOT NULL,
+                    created_at  TIMESTAMPTZ DEFAULT NOW()
+                );
             """)
             # Profile enums as DB-level guardrails (NOT VALID avoids legacy-row migration risk).
             cur.execute("""
@@ -331,6 +338,53 @@ def refund_usage_increment(token: str):
                    WHERE token = %s AND usage_date = %s""",
                 (token, today),
             )
+
+
+# ── AI Reports ────────────────────────────────────────────────────────────────
+
+def save_ai_report(token: str, text: str) -> int:
+    """Save an AI report and enforce a maximum of 10 per token (oldest pruned)."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO ai_reports (token, report_text) VALUES (%s, %s) RETURNING id",
+                (token, text),
+            )
+            new_id = cur.fetchone()[0]
+            # Prune any reports beyond the 10 most recent
+            cur.execute("""
+                DELETE FROM ai_reports
+                WHERE token = %s AND id NOT IN (
+                    SELECT id FROM ai_reports
+                    WHERE token = %s
+                    ORDER BY created_at DESC
+                    LIMIT 10
+                )
+            """, (token, token))
+    return new_id
+
+
+def list_ai_reports(token: str) -> list:
+    """Return all saved reports for a token, newest first."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, created_at, report_text FROM ai_reports WHERE token = %s ORDER BY created_at DESC LIMIT 10",
+                (token,),
+            )
+            rows = cur.fetchall()
+    return [{"id": r[0], "created_at": r[1].isoformat(), "text": r[2]} for r in rows]
+
+
+def delete_ai_report(token: str, report_id: int) -> bool:
+    """Delete a report by id, scoped to token. Returns True if deleted."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM ai_reports WHERE id = %s AND token = %s RETURNING id",
+                (report_id, token),
+            )
+            return cur.fetchone() is not None
 
 
 # ── Feedback ──────────────────────────────────────────────────────────────────
