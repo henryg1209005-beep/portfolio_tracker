@@ -30,10 +30,10 @@ function useTypewriter(target: string, active: boolean): string {
 
     // Natural pacing: pause longer at sentence ends, shorter between words
     const trailingChar = s.target.slice(0, s.pos).trimEnd().slice(-1);
-    s.nextDelay = /[.!?]/.test(trailingChar) ? 220 + Math.random() * 130   // sentence end
-                : trailingChar === "\n"       ? 150 + Math.random() * 100   // line break
-                : /[,;:]/.test(trailingChar)  ? 120 + Math.random() * 60    // clause break
-                :                               60 + Math.random() * 40;    // regular word
+    s.nextDelay = /[.!?]/.test(trailingChar) ? 550 + Math.random() * 200   // sentence end
+                : trailingChar === "\n"       ? 380 + Math.random() * 150   // line break
+                : /[,;:]/.test(trailingChar)  ? 260 + Math.random() * 100   // clause break
+                :                               130 + Math.random() * 70;   // regular word
 
     setDisplayed(s.target.slice(0, s.pos));
     if (s.pos < s.target.length) s.raf = requestAnimationFrame(tick);
