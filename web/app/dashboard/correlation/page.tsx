@@ -312,18 +312,18 @@ export default function CorrelationPage() {
   const load = useCallback(async (tf: Timeframe, m: CorrMethod) => {
     setLoading(true);
     setError("");
+    setSuggestions(null);
+    setRolling(null);
     try {
-      const [corrData, sugData, rollData] = await Promise.all([
-        fetchCorrelation(tf, m),
-        fetchCorrelationSuggestions(tf).catch(() => null),
-        fetchRollingCorrelation(tf).catch(() => null),
-      ]);
+      // Load heatmap first — it's cached and renders immediately
+      const corrData = await fetchCorrelation(tf, m);
       setData(corrData);
-      setSuggestions(sugData);
-      setRolling(rollData);
+      setLoading(false);
+      // Load secondary panels in the background — don't block the heatmap
+      fetchCorrelationSuggestions(tf).then(setSuggestions).catch(() => null);
+      fetchRollingCorrelation(tf).then(setRolling).catch(() => null);
     } catch {
       setError("Could not reach the API. Make sure the Python server is running on port 8000.");
-    } finally {
       setLoading(false);
     }
   }, []);

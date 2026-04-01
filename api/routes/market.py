@@ -14,7 +14,9 @@ from typing import Annotated
 from fastapi import Header
 from api.routes.cache import (get_cached_refresh, set_cached_refresh,
                               get_cached_performance, set_cached_performance,
-                              get_cached_correlation, set_cached_correlation)
+                              get_cached_correlation, set_cached_correlation,
+                              get_cached_suggestions, set_cached_suggestions,
+                              get_cached_rolling, set_cached_rolling)
 
 # ── Simple token-bucket rate limiter for market endpoints ─────────────────────
 # Max 20 requests per token per minute across all market endpoints
@@ -213,6 +215,10 @@ def correlation_suggestions(
     token = x_portfolio_token
     yf_period = _PERIOD_MAP.get(period.upper(), "1y")
 
+    cached = get_cached_suggestions(token, period.upper())
+    if cached is not None:
+        return cached
+
     data = _load(token)
     holdings_raw = data.get("holdings", [])
     stats_map = {h["ticker"]: _compute_stats(h) for h in holdings_raw}
@@ -285,10 +291,12 @@ def correlation_suggestions(
     # Sort by largest reduction (most diversifying first)
     suggestions.sort(key=lambda s: s["correlation_reduction"] or 0, reverse=True)
 
-    return {
+    result = {
         "current_avg_correlation": _safe_float(round(curr_avg, 4)),
         "suggestions": suggestions[:6],
     }
+    set_cached_suggestions(token, period.upper(), result)
+    return result
 
 
 @router.get("/correlation/rolling")
@@ -304,6 +312,11 @@ def correlation_rolling(
     _check_rate_limit(x_portfolio_token)
     token = x_portfolio_token
     yf_period = _PERIOD_MAP.get(period.upper(), "1y")
+    window = max(20, min(window, 120))
+
+    cached = get_cached_rolling(token, period.upper(), window)
+    if cached is not None:
+        return cached
 
     data = _load(token)
     holdings_raw = data.get("holdings", [])
@@ -325,6 +338,7 @@ def correlation_rolling(
 
     # Identify top 3 most-correlated pairs from static correlation
     static_corr = returns[valid].corr(min_periods=30)
+
     pairs_ranked = []
     for i in range(len(valid)):
         for j in range(i + 1, len(valid)):
@@ -337,8 +351,6 @@ def correlation_rolling(
     if not top_pairs:
         return {"pairs": [], "dates": []}
 
-    # Compute rolling correlation for each top pair
-    window = max(20, min(window, 120))
     result_pairs = []
     all_dates = None
 
@@ -369,7 +381,9 @@ def correlation_rolling(
             "dates": dates,
         })
 
-    return {"pairs": result_pairs, "window": window}
+    result = {"pairs": result_pairs, "window": window}
+    set_cached_rolling(token, period.upper(), window, result)
+    return result
 
 
 def _refresh_data(token: str, benchmark: str = "sp500") -> dict:

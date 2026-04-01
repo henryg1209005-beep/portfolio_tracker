@@ -9,6 +9,8 @@ _lock = threading.Lock()
 _refresh: dict = {}          # (token, benchmark) -> data
 _perf: dict    = {}          # (token, period) -> data
 _corr: dict    = {}          # (token, period, method) -> data
+_suggestions: dict = {}      # (token, period) -> data
+_rolling: dict = {}          # (token, period, window) -> data
 
 
 def get_cached_refresh(token: str, benchmark: str = "sp500"):
@@ -41,6 +43,26 @@ def set_cached_correlation(token: str, period: str, data: dict, method: str = "p
         _corr[(token, period, method)] = data
 
 
+def get_cached_suggestions(token: str, period: str):
+    with _lock:
+        return _suggestions.get((token, period))
+
+
+def set_cached_suggestions(token: str, period: str, data: dict):
+    with _lock:
+        _suggestions[(token, period)] = data
+
+
+def get_cached_rolling(token: str, period: str, window: int):
+    with _lock:
+        return _rolling.get((token, period, window))
+
+
+def set_cached_rolling(token: str, period: str, window: int, data: dict):
+    with _lock:
+        _rolling[(token, period, window)] = data
+
+
 def invalidate_refresh_cache(token: str):
     with _lock:
         for key in [k for k in _refresh if k[0] == token]:
@@ -49,3 +71,7 @@ def invalidate_refresh_cache(token: str):
             del _perf[key]
         for key in [k for k in _corr if k[0] == token]:
             del _corr[key]
+        for key in [k for k in _suggestions if k[0] == token]:
+            del _suggestions[key]
+        for key in [k for k in _rolling if k[0] == token]:
+            del _rolling[key]
