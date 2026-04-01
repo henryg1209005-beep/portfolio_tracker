@@ -5,38 +5,58 @@ import { streamAnalysis, fetchRefresh, fetchAIUsage } from "@/lib/api";
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 interface Section { title: string; body: string }
 
-// ─── Typewriter hook ─────────────────────────────────────────────────────────
+// ─── Word-level typewriter (rAF-based for smooth frame-aligned reveal) ───────
 function useTypewriter(target: string, active: boolean): string {
   const [displayed, setDisplayed] = useState("");
-  const r = useRef({ target, displayed: "", active, timer: null as ReturnType<typeof setTimeout> | null, running: false });
+  const ref = useRef({
+    target, pos: 0, active, running: false,
+    raf: 0, lastTick: 0, nextDelay: 0,
+  });
 
-  const scheduleNext = useCallback(() => {
-    const s = r.current;
-    if (s.displayed.length >= s.target.length) { s.running = false; return; }
-    const nextChar = s.target[s.displayed.length] ?? "";
-    const isPunct  = ".,:;!?".includes(nextChar);
-    const isNewline = nextChar === "\n";
-    const delay    = isNewline ? Math.random() * 120 + 80 : isPunct ? Math.random() * 90 + 60 : Math.random() * 35 + 20;
-    const chunk    = 1;
-    s.timer = setTimeout(() => {
-      s.displayed = s.target.slice(0, s.displayed.length + chunk);
-      setDisplayed(s.displayed);
-      scheduleNext();
-    }, delay);
+  const tick = useCallback((now: number) => {
+    const s = ref.current;
+    if (!s.active || s.pos >= s.target.length) { s.running = false; return; }
+
+    if (!s.lastTick) { s.lastTick = now; s.nextDelay = 0; }
+    if (now - s.lastTick < s.nextDelay) { s.raf = requestAnimationFrame(tick); return; }
+
+    // Advance to next word boundary (whole word at a time)
+    let end = s.pos + 1;
+    while (end < s.target.length && s.target[end] !== " " && s.target[end] !== "\n") end++;
+    if (end < s.target.length && s.target[end] === " ") end++; // include trailing space
+
+    s.pos = end;
+    s.lastTick = now;
+
+    // Natural pacing: pause longer at sentence ends, shorter between words
+    const trailingChar = s.target.slice(0, s.pos).trimEnd().slice(-1);
+    s.nextDelay = /[.!?]/.test(trailingChar) ? 220 + Math.random() * 130   // sentence end
+                : trailingChar === "\n"       ? 150 + Math.random() * 100   // line break
+                : /[,;:]/.test(trailingChar)  ? 120 + Math.random() * 60    // clause break
+                :                               60 + Math.random() * 40;    // regular word
+
+    setDisplayed(s.target.slice(0, s.pos));
+    if (s.pos < s.target.length) s.raf = requestAnimationFrame(tick);
+    else s.running = false;
   }, []);
 
   useEffect(() => {
-    r.current.target = target;
-    r.current.active = active;
+    const s = ref.current;
+    s.target = target;
+    s.active = active;
     if (!active) {
-      if (r.current.timer) clearTimeout(r.current.timer);
-      r.current.displayed = target; r.current.running = false;
-      setDisplayed(target); return;
+      cancelAnimationFrame(s.raf);
+      s.pos = target.length; s.running = false; s.lastTick = 0;
+      setDisplayed(target);
+      return;
     }
-    if (!r.current.running) { r.current.running = true; scheduleNext(); }
-  }, [target, active, scheduleNext]);
+    if (!s.running && s.pos < s.target.length) {
+      s.running = true;
+      s.raf = requestAnimationFrame(tick);
+    }
+  }, [target, active, tick]);
 
-  useEffect(() => () => { if (r.current.timer) clearTimeout(r.current.timer); }, []);
+  useEffect(() => () => { cancelAnimationFrame(ref.current.raf); }, []);
   return displayed;
 }
 
@@ -360,6 +380,7 @@ export default function AiPage() {
   const [usage, setUsage]       = useState<{ used: number; limit: number; remaining: number } | null>(null);
   const cleanupRef              = useRef<(() => void) | null>(null);
   const bottomRef               = useRef<HTMLDivElement>(null);
+  const lastScrollRef           = useRef(0);
 
   useEffect(() => {
     fetchRefresh()
@@ -376,7 +397,11 @@ export default function AiPage() {
       (chunk) => {
         setStatus("streaming");
         setText(t => t + chunk);
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        const now = Date.now();
+        if (now - lastScrollRef.current > 400) {
+          lastScrollRef.current = now;
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
       },
       () => {
         setStatus("done");
