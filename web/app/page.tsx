@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, UserButton } from "@clerk/nextjs";
-import { submitWaitlist } from "@/lib/api";
+
 
 // ── Feature data ──────────────────────────────────────────────────────────────
 
@@ -68,101 +68,9 @@ const STEPS = [
   {
     n: "03",
     title: "Get professional analysis",
-    body: "Risk metrics, AI report, and portfolio review — all on demand. Designed for UK retail investors who want more than a number.",
+    body: "Risk metrics, AI report, and portfolio review — all on demand. Designed for retail investors who want more than a number.",
   },
 ];
-
-// ── Waitlist form ─────────────────────────────────────────────────────────────
-
-function WaitlistForm() {
-  const [email, setEmail]   = useState("");
-  const [state, setState]   = useState<"idle" | "loading" | "done" | "duplicate" | "error">("idle");
-  const [position, setPosition] = useState<number | null>(null);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setState("loading");
-    try {
-      const res = await submitWaitlist(email.trim());
-      if (res.status === "already_registered") {
-        setState("duplicate");
-        setPosition(res.position ?? null);
-      } else {
-        setState("done");
-        setPosition(res.position ?? null);
-      }
-    } catch {
-      setState("error");
-    }
-  }
-
-  if (state === "done") {
-    return (
-      <div
-        className="flex items-center gap-3 px-5 py-3.5 rounded-xl"
-        style={{ background: "#00f5d411", border: "1px solid #00f5d433" }}
-      >
-        <span style={{ color: "#00f5d4" }}>✓</span>
-        <span className="text-sm" style={{ color: "#00f5d4" }}>
-          You&apos;re on the list{position ? ` — #${position}` : ""}. We&apos;ll be in touch.
-        </span>
-      </div>
-    );
-  }
-
-  if (state === "duplicate") {
-    return (
-      <div
-        className="flex items-center gap-3 px-5 py-3.5 rounded-xl"
-        style={{ background: "#bf5af211", border: "1px solid #bf5af233" }}
-      >
-        <span style={{ color: "#bf5af2" }}>◈</span>
-        <span className="text-sm" style={{ color: "#bf5af2" }}>
-          Already registered{position ? ` — you&apos;re #${position} on the list` : ""}.
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
-      <input
-        type="email"
-        required
-        placeholder="your@email.com"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        disabled={state === "loading"}
-        className="flex-1 px-4 py-3 rounded-xl text-sm font-mono focus:outline-none transition-colors disabled:opacity-50"
-        style={{
-          background: "#0d0020",
-          border: "1px solid #2a0050",
-          color: "#e2d9f3",
-        }}
-        onFocus={e => (e.currentTarget.style.borderColor = "#bf5af2")}
-        onBlur={e => (e.currentTarget.style.borderColor = "#2a0050")}
-      />
-      <button
-        type="submit"
-        disabled={state === "loading"}
-        className="px-6 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 shrink-0"
-        style={{
-          background: "linear-gradient(90deg, #bf5af2, #ff2d78)",
-          color: "#fff",
-          boxShadow: "0 0 20px #bf5af244",
-        }}
-      >
-        {state === "loading" ? "Joining…" : "Join Waitlist"}
-      </button>
-      {state === "error" && (
-        <p className="text-xs mt-1 w-full" style={{ color: "#ff2d78" }}>
-          Something went wrong — make sure the server is running.
-        </p>
-      )}
-    </form>
-  );
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -416,7 +324,7 @@ export default function LandingPage() {
           style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2", animationDelay: "0ms" }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-          Early Access · UK Retail Investors
+          Early Access · Retail Investors
         </div>
 
         {/* Headline */}
@@ -424,7 +332,7 @@ export default function LandingPage() {
           className="animate-fade-up text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight max-w-3xl mb-6"
           style={{ color: "#e2d9f3", animationDelay: "120ms" }}
         >
-          Your portfolio,{" "}
+          Stop guessing.{" "}
           <span
             style={{
               background: "linear-gradient(90deg, #bf5af2, #ff2d78)",
@@ -432,7 +340,7 @@ export default function LandingPage() {
               WebkitTextFillColor: "transparent",
             }}
           >
-            professionally analysed.
+            See exactly what your portfolio is really doing.
           </span>
         </h1>
 
@@ -442,7 +350,7 @@ export default function LandingPage() {
           style={{ color: "#6b5e7e", animationDelay: "240ms" }}
         >
           Institutional-grade risk metrics, AI-powered insights, and portfolio analysis —
-          built for UK investors who want more than a spreadsheet.
+          built for serious retail investors who want more than a spreadsheet.
         </p>
 
         {/* CTA */}
@@ -586,9 +494,9 @@ export default function LandingPage() {
             <div
               key={label}
               className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono"
-              style={{ background: "#0d0020", border: "1px solid #1a0030", color: "#4a3a5e" }}
+              style={{ background: "#0d0020", border: "1px solid #2a0050", color: "#8a7a9e" }}
             >
-              <span style={{ color: "#2a1a40" }}>{icon}</span>
+              <span style={{ color: "#6b5e7e" }}>{icon}</span>
               {label}
             </div>
           ))}
