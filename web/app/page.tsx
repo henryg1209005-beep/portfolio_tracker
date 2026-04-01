@@ -4,9 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser, UserButton } from "@clerk/nextjs";
 
-
-// ── Feature data ──────────────────────────────────────────────────────────────
-
 const FEATURES = [
   {
     icon: "◈",
@@ -15,8 +12,8 @@ const FEATURES = [
     title: "Risk Metrics",
     tag: "Institutional-grade",
     description:
-      "Sharpe ratio, annualised volatility, max drawdown, VaR, beta, and Jensen's alpha — all computed from your actual holdings with live market data. The numbers your broker never shows you.",
-    bullets: ["1-year rolling, S&P 500 benchmarked", "UK Gilt risk-free rate", "CAPM-adjusted alpha"],
+      "Sharpe ratio, annualised volatility, max drawdown, VaR, beta, and Jensen's alpha computed from your holdings with live market data, with confidence signals when sample quality is limited.",
+    bullets: ["1-year rolling with benchmark selection", "Confidence strip with sample quality", "Profile-aware risk status bands"],
     screen: "/screen-metrics2.png",
   },
   {
@@ -48,7 +45,7 @@ const FEATURES = [
     title: "Charts & Tracking",
     tag: "Visual analytics",
     description:
-      "Portfolio vs S&P 500 performance indexed to 100. Drawdown from peak. P&L by holding. Allocation breakdown. All charts update in real time when you add or remove positions.",
+      "Portfolio vs benchmark performance indexed to 100. Drawdown from peak. P&L by holding. Allocation breakdown. All charts update in real time when you add or remove positions.",
     bullets: ["1M · 3M · 6M · 1Y · 5Y timeframes", "Correlation heatmap", "Live P&L tracking"],
     screen: "/screen-charts.png",
   },
@@ -68,11 +65,9 @@ const STEPS = [
   {
     n: "03",
     title: "Get professional analysis",
-    body: "Risk metrics, AI report, and portfolio review — all on demand. Designed for retail investors who want more than a number.",
+    body: "Risk metrics, AI report, portfolio review, and exportable CSV/JSON reports all on demand. Built for investors who need numbers they can trust and share.",
   },
 ];
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 function Particles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -83,7 +78,10 @@ function Particles() {
     if (!ctx) return;
 
     let animId: number;
-    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    const resize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
     resize();
     window.addEventListener("resize", resize);
 
@@ -117,8 +115,13 @@ function Particles() {
       animId = requestAnimationFrame(draw);
     };
     draw();
-    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", resize); };
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
   }, []);
+
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
 }
 
@@ -131,7 +134,10 @@ function Meteors() {
     if (!ctx) return;
 
     let animId: number;
-    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    const resize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
     resize();
     window.addEventListener("resize", resize);
 
@@ -149,7 +155,6 @@ function Meteors() {
       m.active = true;
     };
 
-    // stagger initial spawns
     meteors.forEach((m, i) => setTimeout(() => spawn(m), i * 1800 + Math.random() * 3000));
 
     const draw = () => {
@@ -159,7 +164,11 @@ function Meteors() {
         m.x += m.speed;
         m.y += m.speed * 0.5;
         m.alpha -= 0.012;
-        if (m.alpha <= 0) { m.active = false; setTimeout(() => spawn(m), Math.random() * 4000 + 1500); continue; }
+        if (m.alpha <= 0) {
+          m.active = false;
+          setTimeout(() => spawn(m), Math.random() * 4000 + 1500);
+          continue;
+        }
         const grad = ctx.createLinearGradient(m.x, m.y, m.x - m.len, m.y - m.len * 0.5);
         grad.addColorStop(0, m.color);
         grad.addColorStop(1, "transparent");
@@ -175,8 +184,13 @@ function Meteors() {
       animId = requestAnimationFrame(draw);
     };
     draw();
-    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", resize); };
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
   }, []);
+
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
 }
 
@@ -185,7 +199,12 @@ function useInView(ref: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold: 0.12 });
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        setVisible(true);
+        obs.disconnect();
+      }
+    }, { threshold: 0.12 });
     obs.observe(el);
     return () => obs.disconnect();
   }, [ref]);
@@ -199,20 +218,10 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "#080012", color: "#e2d9f3" }}
-    >
-      {/* ── Nav ── */}
-      <nav
-        className="sticky top-0 z-50 flex flex-col"
-        style={{ background: "#08001299", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}
-      >
-        {/* Main row */}
+    <div className="min-h-screen flex flex-col" style={{ background: "#080012", color: "#e2d9f3" }}>
+      <nav className="sticky top-0 z-50 flex flex-col" style={{ background: "#08001299", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}>
         <div className="flex items-center justify-between px-6 py-4">
           <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />
-
-          {/* Desktop anchor links */}
           <div className="hidden md:flex items-center gap-7">
             {[
               { label: "Features", href: "#features" },
@@ -225,15 +234,14 @@ export default function LandingPage() {
                 {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 className="text-sm transition-colors"
                 style={{ color: "#6b5e7e" }}
-                onMouseEnter={e => (e.currentTarget.style.color = label === "Discord" ? "#bf5af2" : "#e2d9f3")}
-                onMouseLeave={e => (e.currentTarget.style.color = "#6b5e7e")}
+                onMouseEnter={(e) => (e.currentTarget.style.color = label === "Discord" ? "#bf5af2" : "#e2d9f3")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b5e7e")}
               >
                 {label}
               </a>
             ))}
           </div>
 
-          {/* Auth + mobile hamburger */}
           <div className="flex items-center gap-3">
             {isLoaded && isSignedIn ? (
               <>
@@ -253,7 +261,7 @@ export default function LandingPage() {
                 <button
                   className="md:hidden p-2 rounded-lg transition-colors text-base leading-none"
                   style={{ color: "#6b5e7e", border: "1px solid #1a0030" }}
-                  onClick={() => setMobileMenuOpen(m => !m)}
+                  onClick={() => setMobileMenuOpen((m) => !m)}
                   aria-label="Menu"
                 >
                   {mobileMenuOpen ? "✕" : "☰"}
@@ -263,53 +271,29 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile dropdown */}
         {mobileMenuOpen && (
-          <div
-            className="md:hidden flex flex-col px-6 pb-4 gap-1"
-            style={{ borderTop: "1px solid #1a0030" }}
-          >
+          <div className="md:hidden flex flex-col px-6 pb-4 gap-1" style={{ borderTop: "1px solid #1a0030" }}>
             {[
               { label: "Features", href: "#features" },
               { label: "How it works", href: "#how-it-works" },
             ].map(({ label, href }) => (
-              <a
-                key={label}
-                href={href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-3 text-sm border-b transition-colors"
-                style={{ color: "#6b5e7e", borderColor: "#1a0030" }}
-              >
+              <a key={label} href={href} onClick={() => setMobileMenuOpen(false)} className="py-3 text-sm border-b transition-colors" style={{ color: "#6b5e7e", borderColor: "#1a0030" }}>
                 {label}
               </a>
             ))}
-            <a
-              href="https://discord.gg/MabTm9Z4zR"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-3 text-sm border-b transition-colors"
-              style={{ color: "#bf5af2", borderColor: "#1a0030" }}
-            >
+            <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="py-3 text-sm border-b transition-colors" style={{ color: "#bf5af2", borderColor: "#1a0030" }}>
               Discord →
             </a>
-            <Link
-              href="/sign-in"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-3 text-sm transition-colors"
-              style={{ color: "#6b5e7e" }}
-            >
+            <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)} className="py-3 text-sm transition-colors" style={{ color: "#6b5e7e" }}>
               Sign in
             </Link>
           </div>
         )}
       </nav>
 
-      {/* ── Hero ── */}
       <section className="relative flex flex-col items-center justify-center text-center px-6 pt-28 pb-24 overflow-hidden">
         <Particles />
         <Meteors />
-        {/* Background glow */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -318,105 +302,55 @@ export default function LandingPage() {
           }}
         />
 
-        {/* Badge */}
-        <div
-          className="animate-fade-up inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-8"
-          style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2", animationDelay: "0ms" }}
-        >
+        <div className="animate-fade-up inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-8" style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2", animationDelay: "0ms" }}>
           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
           Early Access · Retail Investors
         </div>
 
-        {/* Headline */}
-        <h1
-          className="animate-fade-up text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight max-w-3xl mb-6"
-          style={{ color: "#e2d9f3", animationDelay: "120ms" }}
-        >
+        <h1 className="animate-fade-up text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight max-w-3xl mb-6" style={{ color: "#e2d9f3", animationDelay: "120ms" }}>
           Stop guessing.{" "}
-          <span
-            style={{
-              background: "linear-gradient(90deg, #bf5af2, #ff2d78)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
+          <span style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             See exactly what your portfolio is really doing.
           </span>
         </h1>
 
-        {/* Subheadline */}
-        <p
-          className="animate-fade-up text-base sm:text-lg leading-relaxed max-w-xl mb-10"
-          style={{ color: "#6b5e7e", animationDelay: "240ms" }}
-        >
-          Institutional-grade risk metrics, AI-powered insights, and portfolio analysis —
-          built for serious retail investors who want more than a spreadsheet.
+        <p className="animate-fade-up text-base sm:text-lg leading-relaxed max-w-xl mb-10" style={{ color: "#6b5e7e", animationDelay: "240ms" }}>
+          Institutional-grade risk metrics with confidence signals, AI-powered insights,
+          and exportable investor-ready reports.
         </p>
 
-        {/* CTA */}
         <div className="animate-fade-up flex flex-col items-center gap-4" style={{ animationDelay: "360ms" }}>
-          <Link
-            href="/sign-up"
-            className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all"
-            style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}
-          >
+          <Link href="/sign-up" className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}>
             Get started free →
           </Link>
           <div className="flex items-center gap-2">
-            <span
-              className="text-xs font-mono px-2.5 py-1 rounded-full"
-              style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}
-            >
+            <span className="text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
               Free during early access
             </span>
             <span className="text-xs" style={{ color: "#3a2a50" }}>· No card required</span>
           </div>
         </div>
 
-        {/* Hero screenshot */}
         <div className="animate-fade-up relative mt-16 w-full max-w-5xl mx-auto" style={{ animationDelay: "480ms" }}>
-          {/* Glow underneath */}
-          <div
-            className="absolute -inset-px rounded-2xl pointer-events-none"
-            style={{ boxShadow: "0 0 80px 10px #bf5af222, 0 0 140px 30px #ff2d7808" }}
-          />
-          {/* Frame */}
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ border: "1px solid #bf5af233" }}
-          >
-            {/* Fake browser bar */}
-            <div
-              className="flex items-center gap-2 px-4 py-2.5"
-              style={{ background: "#0d0020", borderBottom: "1px solid #1a0030" }}
-            >
+          <div className="absolute -inset-px rounded-2xl pointer-events-none" style={{ boxShadow: "0 0 80px 10px #bf5af222, 0 0 140px 30px #ff2d7808" }} />
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #bf5af233" }}>
+            <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#0d0020", borderBottom: "1px solid #1a0030" }}>
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ff2d7866" }} />
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#f5a62366" }} />
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#00f5d466" }} />
-              <span
-                className="ml-3 text-[11px] font-mono px-3 py-0.5 rounded"
-                style={{ background: "#1a0030", color: "#3a2a50" }}
-              >
+              <span className="ml-3 text-[11px] font-mono px-3 py-0.5 rounded" style={{ background: "#1a0030", color: "#3a2a50" }}>
                 portivex.com/dashboard
               </span>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/screen-metrics.png"
-              alt="Portivex Risk Metrics dashboard"
-              className="w-full object-cover object-top"
-            />
+            <img src="/screen-metrics.png" alt="Portivex Risk Metrics dashboard" className="w-full object-cover object-top" />
           </div>
         </div>
       </section>
 
-      {/* ── Features ── */}
       <section id="features" className="px-6 py-20 max-w-6xl mx-auto w-full">
         <div className="text-center mb-14">
-          <div
-            className="text-[11px] font-mono uppercase tracking-widest mb-3"
-            style={{ color: "#4a3a5e" }}
-          >
+          <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>
             What&apos;s inside
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: "#e2d9f3" }}>
@@ -435,19 +369,12 @@ export default function LandingPage() {
                 transitionDelay: featuresVisible ? `${i * 120}ms` : "0ms",
               }}
             >
-              {/* Text section */}
               <div className="p-6 flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                    style={{ background: f.glow, border: `1px solid ${f.accent}33` }}
-                  >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ background: f.glow, border: `1px solid ${f.accent}33` }}>
                     <span style={{ color: f.accent }}>{f.icon}</span>
                   </div>
-                  <span
-                    className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-full mt-1"
-                    style={{ background: `${f.accent}11`, color: f.accent, border: `1px solid ${f.accent}22` }}
-                  >
+                  <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-full mt-1" style={{ background: `${f.accent}11`, color: f.accent, border: `1px solid ${f.accent}22` }}>
                     {f.tag}
                   </span>
                 </div>
@@ -465,24 +392,14 @@ export default function LandingPage() {
                 </ul>
               </div>
 
-              {/* Screenshot */}
-              <div
-                className="mx-4 mb-4 rounded-xl overflow-hidden"
-                style={{ border: `1px solid ${f.accent}18` }}
-              >
+              <div className="mx-4 mb-4 rounded-xl overflow-hidden" style={{ border: `1px solid ${f.accent}18` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={f.screen}
-                  alt={`${f.title} screenshot`}
-                  className="w-full object-cover object-top"
-                  style={{ maxHeight: "220px" }}
-                />
+                <img src={f.screen} alt={`${f.title} screenshot`} className="w-full object-cover object-top" style={{ maxHeight: "220px" }} />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Also includes strip */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           {[
             { icon: "⬡", label: "Correlation Matrix" },
@@ -490,12 +407,10 @@ export default function LandingPage() {
             { icon: "◉", label: "Multi-currency (GBP / USD / EUR)" },
             { icon: "▦", label: "Live P&L per holding" },
             { icon: "◈", label: "CSV broker import" },
+            { icon: "✦", label: "Exportable CSV/JSON reports" },
+            { icon: "◎", label: "Confidence-scored metrics" },
           ].map(({ icon, label }) => (
-            <div
-              key={label}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono"
-              style={{ background: "#0d0020", border: "1px solid #2a0050", color: "#8a7a9e" }}
-            >
+            <div key={label} className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "#0d0020", border: "1px solid #2a0050", color: "#8a7a9e" }}>
               <span style={{ color: "#6b5e7e" }}>{icon}</span>
               {label}
             </div>
@@ -503,18 +418,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── How it works ── */}
-      <section
-        id="how-it-works"
-        className="px-6 py-20"
-        style={{ background: "linear-gradient(180deg, transparent, #0d001888, transparent)" }}
-      >
+      <section id="how-it-works" className="px-6 py-20" style={{ background: "linear-gradient(180deg, transparent, #0d001888, transparent)" }}>
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
-            <div
-              className="text-[11px] font-mono uppercase tracking-widest mb-3"
-              style={{ color: "#4a3a5e" }}
-            >
+            <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>
               How it works
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: "#e2d9f3" }}>
@@ -525,37 +432,22 @@ export default function LandingPage() {
           <div className="flex flex-col gap-6">
             {STEPS.map((s, i) => (
               <div key={s.n} className="flex gap-5 items-start">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold font-mono shrink-0 mt-0.5"
-                  style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2" }}
-                >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold font-mono shrink-0 mt-0.5" style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2" }}>
                   {s.n}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold mb-1.5" style={{ color: "#e2d9f3" }}>{s.title}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: "#6b5e7e" }}>{s.body}</p>
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div
-                    className="absolute ml-5 mt-12 w-px h-6"
-                    style={{ background: "#1a0030" }}
-                  />
-                )}
+                {i < STEPS.length - 1 && <div className="absolute ml-5 mt-12 w-px h-6" style={{ background: "#1a0030" }} />}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Bottom CTA ── */}
       <section className="px-6 py-24 flex flex-col items-center text-center">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-8"
-          style={{
-            background: "linear-gradient(135deg, #bf5af222, #ff2d7811)",
-            border: "1px solid #bf5af233",
-          }}
-        >
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-8" style={{ background: "linear-gradient(135deg, #bf5af222, #ff2d7811)", border: "1px solid #bf5af233" }}>
           ✦
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: "#e2d9f3" }}>
@@ -564,20 +456,12 @@ export default function LandingPage() {
         <p className="text-sm mb-8 max-w-sm" style={{ color: "#6b5e7e" }}>
           Free during early access. No card required.
         </p>
-        <Link
-          href="/sign-up"
-          className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all"
-          style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}
-        >
+        <Link href="/sign-up" className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}>
           Get started free →
         </Link>
       </section>
 
-      {/* ── Footer ── */}
-      <footer
-        className="px-6 py-8 flex flex-col items-center gap-4"
-        style={{ borderTop: "1px solid #1a0030" }}
-      >
+      <footer className="px-6 py-8 flex flex-col items-center gap-4" style={{ borderTop: "1px solid #1a0030" }}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full max-w-5xl">
           <div className="text-sm font-bold">
             <span style={{ color: "#ff2d78" }}>Porti</span>
@@ -586,13 +470,7 @@ export default function LandingPage() {
           <p className="text-xs text-center" style={{ color: "#3a2a50" }}>
             Built by a UK investor who got frustrated with spreadsheets.
           </p>
-          <Link
-            href="/dashboard"
-            className="text-xs transition-colors"
-            style={{ color: "#3a2a50" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#bf5af2")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#3a2a50")}
-          >
+          <Link href="/dashboard" className="text-xs transition-colors" style={{ color: "#3a2a50" }} onMouseEnter={(e) => (e.currentTarget.style.color = "#bf5af2")} onMouseLeave={(e) => (e.currentTarget.style.color = "#3a2a50")}>
             Launch App →
           </Link>
         </div>
