@@ -79,20 +79,49 @@ export default function MetricsPage() {
   function exportJson() {
     if (!data || !data.metrics) return;
     const now = new Date();
+    const m = data.metrics as Record<string, unknown>;
+    const s = data.summary;
+    // Convert fractional metrics to percentage for readability
+    const pct = (v: unknown) => typeof v === "number" ? +(v * 100).toFixed(4) : null;
+
     const report = {
-      exported_at: now.toISOString(),
+      exported_at:    now.toISOString(),
       benchmark,
       benchmark_label: benchLabel,
-      risk_profile: riskProfile,
+      risk_profile:   riskProfile,
       currency,
-      refreshed_at: data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : null,
-      summary: data.summary,
-      metrics: data.metrics,
+      data_as_of:     data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : null,
+      summary: {
+        portfolio_value:  s.total_value,
+        total_invested:   s.total_cost,
+        unrealised_pnl:   s.total_pnl,
+        pnl_return_pct:   s.total_pnl_pct,
+        holding_count:    s.holding_count,
+        fx_gbpusd:        s.gbpusd,
+        fx_gbpeur:        s.gbpeur,
+      },
+      risk_metrics: {
+        sharpe_ratio:               m.sharpe_ratio,
+        sortino_ratio:              m.sortino_ratio,
+        annualised_return_pct:      pct(m.actual_return),
+        volatility_pct:             pct(m.volatility),
+        beta:                       m.beta,
+        capm_expected_return_pct:   pct(m.capm_expected_return),
+        alpha_pct:                  pct(m.alpha),
+        var_95_pct:                 pct(m.var_95),
+        var_95_cornish_fisher_pct:  pct(m.var_95_cf),
+        max_drawdown_pct:           pct(m.max_drawdown),
+        drawdown_recovery_days:     m.drawdown_recovery_days,
+        risk_free_rate_pct:         pct(m.rf_annual),
+      },
+      confidence: {
+        sample_days:            m.sample_days,
+        benchmark_overlap_days: m.benchmark_overlap_days,
+        window_years:           m.window_years_equivalent,
+      },
     };
 
-    const blob = new Blob([JSON.stringify(report, null, 2)], {
-      type: "application/json;charset=utf-8",
-    });
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -104,30 +133,50 @@ export default function MetricsPage() {
   function exportCsv() {
     if (!data || !data.metrics) return;
     const now = new Date();
+    const m = data.metrics as Record<string, unknown>;
+    const s = data.summary;
+    // Convert decimal fractions to human-readable percentages
+    const pct  = (v: unknown) => typeof v === "number" ? +(v * 100).toFixed(4) : "";
+    const num  = (v: unknown) => v != null ? v : "";
+    const cap  = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
-    const rows: Array<[string, string, unknown]> = [
-      ["meta", "exported_at", now.toISOString()],
-      ["meta", "benchmark", benchmark],
-      ["meta", "benchmark_label", benchLabel],
-      ["meta", "risk_profile", riskProfile],
-      ["meta", "currency", currency],
-      ["meta", "refreshed_at", data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : ""],
-      ["summary", "total_value", data.summary.total_value],
-      ["summary", "total_cost", data.summary.total_cost],
-      ["summary", "total_pnl", data.summary.total_pnl],
-      ["summary", "total_pnl_pct", data.summary.total_pnl_pct],
-      ["summary", "holding_count", data.summary.holding_count],
-      ["summary", "gbpusd", data.summary.gbpusd],
-      ["summary", "gbpeur", data.summary.gbpeur],
+    const rows: Array<[string, string, unknown, string]> = [
+      // ── Meta ────────────────────────────────────────────────────────────────
+      ["Meta", "Exported At",    now.toISOString(),                                                          ""],
+      ["Meta", "Benchmark",      benchLabel,                                                                  ""],
+      ["Meta", "Risk Profile",   cap(riskProfile),                                                           ""],
+      ["Meta", "Currency",       currency,                                                                    ""],
+      ["Meta", "Data As Of",     data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : "", ""],
+      // ── Summary ─────────────────────────────────────────────────────────────
+      ["Summary", "Portfolio Value", num(s.total_value),   currency],
+      ["Summary", "Total Invested",  num(s.total_cost),    currency],
+      ["Summary", "Unrealised P&L",  num(s.total_pnl),     currency],
+      ["Summary", "P&L Return",      num(s.total_pnl_pct), "%"],
+      ["Summary", "Holdings",        num(s.holding_count), ""],
+      ["Summary", "GBP/USD Rate",    num(s.gbpusd),        ""],
+      ["Summary", "GBP/EUR Rate",    num(s.gbpeur),        ""],
+      // ── Risk Metrics ─────────────────────────────────────────────────────────
+      ["Risk Metrics", "Sharpe Ratio",                      num(m.sharpe_ratio),         ""],
+      ["Risk Metrics", "Sortino Ratio",                     num(m.sortino_ratio),         ""],
+      ["Risk Metrics", "Annualised Return",                 pct(m.actual_return),         "%"],
+      ["Risk Metrics", "Volatility",                        pct(m.volatility),            "%"],
+      ["Risk Metrics", "Beta",                              num(m.beta),                  ""],
+      ["Risk Metrics", "CAPM Expected Return",              pct(m.capm_expected_return),  "%"],
+      ["Risk Metrics", "Alpha",                             pct(m.alpha),                 "%"],
+      ["Risk Metrics", "Value at Risk (95%, Historical)",   pct(m.var_95),                "%"],
+      ["Risk Metrics", "Value at Risk (95%, Cornish-Fisher)", pct(m.var_95_cf),           "%"],
+      ["Risk Metrics", "Max Drawdown",                      pct(m.max_drawdown),          "%"],
+      ["Risk Metrics", "Drawdown Recovery",                 num(m.drawdown_recovery_days), "trading days"],
+      ["Risk Metrics", "Risk-Free Rate",                    pct(m.rf_annual),             "%"],
+      // ── Confidence ───────────────────────────────────────────────────────────
+      ["Confidence", "Sample Days",            num(m.sample_days),             "trading days"],
+      ["Confidence", "Benchmark Overlap Days", num(m.benchmark_overlap_days),  "trading days"],
+      ["Confidence", "Data Window",            num(m.window_years_equivalent),  "years"],
     ];
 
-    Object.entries(data.metrics).forEach(([key, value]) => {
-      rows.push(["metrics", key, value]);
-    });
-
-    const header = "section,key,value\n";
+    const header = "section,metric,value,unit\n";
     const body = rows
-      .map(([section, key, value]) => [section, key, value].map(escapeCsvValue).join(","))
+      .map(([section, metric, value, unit]) => [section, metric, value, unit].map(escapeCsvValue).join(","))
       .join("\n");
 
     const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
