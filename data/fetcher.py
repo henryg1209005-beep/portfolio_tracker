@@ -278,6 +278,16 @@ def fetch_current_prices(tickers, gbpusd=None, gbpeur=None):
                     print(f"PRICE WARNING [{sym}]: unexpected currency '{currency}', assuming USD")
                     price = price / gbpusd
 
+            # Sanity check: if price deviates >30% from cached, suspect bad data
+            # and serve the stale price instead — prevents yfinance glitches
+            # from propagating directly to the user.
+            if cached is not None:
+                cached_price = cached[0]
+                if cached_price > 0 and abs(price - cached_price) / cached_price > 0.30:
+                    print(f"PRICE SANITY [{sym}]: new={price:.4f} vs cached={cached_price:.4f} (>30% deviation) — keeping cached")
+                    prices[ticker] = cached_price
+                    continue
+
             _price_cache[sym] = (price, now)
             prices[ticker] = price
         except Exception:
