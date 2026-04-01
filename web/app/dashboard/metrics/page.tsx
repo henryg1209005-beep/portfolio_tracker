@@ -35,6 +35,37 @@ function escapeCsvValue(v: unknown): string {
   return `"${raw.replace(/"/g, "\"\"")}"`;
 }
 
+function isValidValue(v: unknown): boolean {
+  if (v == null) return false;
+  if (typeof v === "number") return Number.isFinite(v);
+  if (typeof v === "string") return v.trim().length > 0;
+  return true;
+}
+
+function cleanObject<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Partial<T> = {};
+  Object.entries(obj).forEach(([k, v]) => {
+    if (!isValidValue(v)) return;
+    out[k as keyof T] = v as T[keyof T];
+  });
+  return out;
+}
+
+function fmtNumber(v: unknown, digits = 4): string {
+  if (!isValidValue(v) || typeof v !== "number") return "";
+  return v.toFixed(digits);
+}
+
+function fmtPercent(v: unknown, digits = 2): string {
+  if (!isValidValue(v) || typeof v !== "number") return "";
+  return `${(v * 100).toFixed(digits)}%`;
+}
+
+function fmtCurrency(v: unknown): string {
+  if (!isValidValue(v) || typeof v !== "number") return "";
+  return v.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export default function MetricsPage() {
   const { currency } = useCurrency();
   const [data, setData] = useState<RefreshData | null>(null);
@@ -81,45 +112,65 @@ export default function MetricsPage() {
     const now = new Date();
     const m = data.metrics as Record<string, unknown>;
     const s = data.summary;
-    // Convert fractional metrics to percentage for readability
-    const pct = (v: unknown) => typeof v === "number" ? +(v * 100).toFixed(4) : null;
 
-    const report = {
-      exported_at:    now.toISOString(),
+    const summary = cleanObject({
+      portfolio_value: s.total_value,
+      total_invested: s.total_cost,
+      unrealised_pnl: s.total_pnl,
+      pnl_return_pct: s.total_pnl_pct,
+      holding_count: s.holding_count,
+      fx_gbpusd: s.gbpusd,
+      fx_gbpeur: s.gbpeur,
+    });
+
+    const riskMetricsRaw = cleanObject({
+      sharpe_ratio: m.sharpe_ratio,
+      sortino_ratio: m.sortino_ratio,
+      annualised_return: m.actual_return,
+      volatility: m.volatility,
+      beta: m.beta,
+      capm_expected_return: m.capm_expected_return,
+      alpha: m.alpha,
+      var_95: m.var_95,
+      var_95_cornish_fisher: m.var_95_cf,
+      max_drawdown: m.max_drawdown,
+      drawdown_recovery_days: m.drawdown_recovery_days,
+      risk_free_rate: m.rf_annual,
+    });
+
+    const riskMetricsDisplay = cleanObject({
+      sharpe_ratio: fmtNumber(m.sharpe_ratio, 3),
+      sortino_ratio: fmtNumber(m.sortino_ratio, 3),
+      annualised_return: fmtPercent(m.actual_return, 2),
+      volatility: fmtPercent(m.volatility, 2),
+      beta: fmtNumber(m.beta, 3),
+      capm_expected_return: fmtPercent(m.capm_expected_return, 2),
+      alpha: fmtPercent(m.alpha, 2),
+      var_95: fmtPercent(m.var_95, 2),
+      var_95_cornish_fisher: fmtPercent(m.var_95_cf, 2),
+      max_drawdown: fmtPercent(m.max_drawdown, 2),
+      drawdown_recovery_days: isValidValue(m.drawdown_recovery_days) ? String(m.drawdown_recovery_days) : "",
+      risk_free_rate: fmtPercent(m.rf_annual, 2),
+    });
+
+    const confidence = cleanObject({
+      sample_days: m.sample_days,
+      benchmark_overlap_days: m.benchmark_overlap_days,
+      window_years: m.window_years_equivalent,
+    });
+
+    const report = cleanObject({
+      exported_at: now.toISOString(),
       benchmark,
       benchmark_label: benchLabel,
-      risk_profile:   riskProfile,
+      risk_profile: riskProfile,
       currency,
-      data_as_of:     data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : null,
-      summary: {
-        portfolio_value:  s.total_value,
-        total_invested:   s.total_cost,
-        unrealised_pnl:   s.total_pnl,
-        pnl_return_pct:   s.total_pnl_pct,
-        holding_count:    s.holding_count,
-        fx_gbpusd:        s.gbpusd,
-        fx_gbpeur:        s.gbpeur,
-      },
-      risk_metrics: {
-        sharpe_ratio:               m.sharpe_ratio,
-        sortino_ratio:              m.sortino_ratio,
-        annualised_return_pct:      pct(m.actual_return),
-        volatility_pct:             pct(m.volatility),
-        beta:                       m.beta,
-        capm_expected_return_pct:   pct(m.capm_expected_return),
-        alpha_pct:                  pct(m.alpha),
-        var_95_pct:                 pct(m.var_95),
-        var_95_cornish_fisher_pct:  pct(m.var_95_cf),
-        max_drawdown_pct:           pct(m.max_drawdown),
-        drawdown_recovery_days:     m.drawdown_recovery_days,
-        risk_free_rate_pct:         pct(m.rf_annual),
-      },
-      confidence: {
-        sample_days:            m.sample_days,
-        benchmark_overlap_days: m.benchmark_overlap_days,
-        window_years:           m.window_years_equivalent,
-      },
-    };
+      data_as_of: data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : null,
+      summary,
+      risk_metrics_raw: riskMetricsRaw,
+      risk_metrics_display: riskMetricsDisplay,
+      confidence,
+    });
 
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -135,44 +186,44 @@ export default function MetricsPage() {
     const now = new Date();
     const m = data.metrics as Record<string, unknown>;
     const s = data.summary;
-    // Convert decimal fractions to human-readable percentages
-    const pct  = (v: unknown) => typeof v === "number" ? +(v * 100).toFixed(4) : "";
-    const num  = (v: unknown) => v != null ? v : "";
-    const cap  = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+    const rows: Array<[string, string, string, string]> = [];
+    const cap = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
-    const rows: Array<[string, string, unknown, string]> = [
-      // ── Meta ────────────────────────────────────────────────────────────────
-      ["Meta", "Exported At",    now.toISOString(),                                                          ""],
-      ["Meta", "Benchmark",      benchLabel,                                                                  ""],
-      ["Meta", "Risk Profile",   cap(riskProfile),                                                           ""],
-      ["Meta", "Currency",       currency,                                                                    ""],
-      ["Meta", "Data As Of",     data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : "", ""],
-      // ── Summary ─────────────────────────────────────────────────────────────
-      ["Summary", "Portfolio Value", num(s.total_value),   currency],
-      ["Summary", "Total Invested",  num(s.total_cost),    currency],
-      ["Summary", "Unrealised P&L",  num(s.total_pnl),     currency],
-      ["Summary", "P&L Return",      num(s.total_pnl_pct), "%"],
-      ["Summary", "Holdings",        num(s.holding_count), ""],
-      ["Summary", "GBP/USD Rate",    num(s.gbpusd),        ""],
-      ["Summary", "GBP/EUR Rate",    num(s.gbpeur),        ""],
-      // ── Risk Metrics ─────────────────────────────────────────────────────────
-      ["Risk Metrics", "Sharpe Ratio",                      num(m.sharpe_ratio),         ""],
-      ["Risk Metrics", "Sortino Ratio",                     num(m.sortino_ratio),         ""],
-      ["Risk Metrics", "Annualised Return",                 pct(m.actual_return),         "%"],
-      ["Risk Metrics", "Volatility",                        pct(m.volatility),            "%"],
-      ["Risk Metrics", "Beta",                              num(m.beta),                  ""],
-      ["Risk Metrics", "CAPM Expected Return",              pct(m.capm_expected_return),  "%"],
-      ["Risk Metrics", "Alpha",                             pct(m.alpha),                 "%"],
-      ["Risk Metrics", "Value at Risk (95%, Historical)",   pct(m.var_95),                "%"],
-      ["Risk Metrics", "Value at Risk (95%, Cornish-Fisher)", pct(m.var_95_cf),           "%"],
-      ["Risk Metrics", "Max Drawdown",                      pct(m.max_drawdown),          "%"],
-      ["Risk Metrics", "Drawdown Recovery",                 num(m.drawdown_recovery_days), "trading days"],
-      ["Risk Metrics", "Risk-Free Rate",                    pct(m.rf_annual),             "%"],
-      // ── Confidence ───────────────────────────────────────────────────────────
-      ["Confidence", "Sample Days",            num(m.sample_days),             "trading days"],
-      ["Confidence", "Benchmark Overlap Days", num(m.benchmark_overlap_days),  "trading days"],
-      ["Confidence", "Data Window",            num(m.window_years_equivalent),  "years"],
-    ];
+    const addRow = (section: string, metric: string, value: string, unit = "") => {
+      if (!value) return;
+      rows.push([section, metric, value, unit]);
+    };
+
+    addRow("Meta", "Exported At", now.toISOString());
+    addRow("Meta", "Benchmark", benchLabel);
+    addRow("Meta", "Risk Profile", cap(riskProfile));
+    addRow("Meta", "Currency", currency);
+    addRow("Meta", "Data As Of", data.refreshed_at ? new Date(data.refreshed_at * 1000).toISOString() : "");
+
+    addRow("Summary", "Portfolio Value", fmtCurrency(s.total_value), currency);
+    addRow("Summary", "Total Invested", fmtCurrency(s.total_cost), currency);
+    addRow("Summary", "Unrealised P&L", fmtCurrency(s.total_pnl), currency);
+    addRow("Summary", "P&L Return", fmtNumber(s.total_pnl_pct, 2), "%");
+    addRow("Summary", "Holdings", isValidValue(s.holding_count) ? String(s.holding_count) : "");
+    addRow("Summary", "GBP/USD Rate", fmtNumber(s.gbpusd, 4));
+    addRow("Summary", "GBP/EUR Rate", fmtNumber(s.gbpeur, 4));
+
+    addRow("Risk Metrics", "Sharpe Ratio", fmtNumber(m.sharpe_ratio, 3));
+    addRow("Risk Metrics", "Sortino Ratio", fmtNumber(m.sortino_ratio, 3));
+    addRow("Risk Metrics", "Annualised Return", fmtPercent(m.actual_return, 2));
+    addRow("Risk Metrics", "Volatility", fmtPercent(m.volatility, 2));
+    addRow("Risk Metrics", "Beta", fmtNumber(m.beta, 3));
+    addRow("Risk Metrics", "CAPM Expected Return", fmtPercent(m.capm_expected_return, 2));
+    addRow("Risk Metrics", "Alpha", fmtPercent(m.alpha, 2));
+    addRow("Risk Metrics", "Value at Risk (95%, Historical)", fmtPercent(m.var_95, 2));
+    addRow("Risk Metrics", "Value at Risk (95%, Cornish-Fisher)", fmtPercent(m.var_95_cf, 2));
+    addRow("Risk Metrics", "Max Drawdown", fmtPercent(m.max_drawdown, 2));
+    addRow("Risk Metrics", "Drawdown Recovery", isValidValue(m.drawdown_recovery_days) ? String(m.drawdown_recovery_days) : "", "trading days");
+    addRow("Risk Metrics", "Risk-Free Rate", fmtPercent(m.rf_annual, 2));
+
+    addRow("Confidence", "Sample Days", isValidValue(m.sample_days) ? String(m.sample_days) : "", "trading days");
+    addRow("Confidence", "Benchmark Overlap Days", isValidValue(m.benchmark_overlap_days) ? String(m.benchmark_overlap_days) : "", "trading days");
+    addRow("Confidence", "Data Window", fmtNumber(m.window_years_equivalent, 2), "years");
 
     const header = "section,metric,value,unit\n";
     const body = rows
