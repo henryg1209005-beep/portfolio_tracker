@@ -144,7 +144,7 @@ const STATUS_LABELS: Record<string, Record<Status, string>> = {
 // ── MetricCard ────────────────────────────────────────────────────────────────
 
 function MetricCard({
-  metricKey, name, period, question, value, status, explain, detail, tip, sparkData, trend,
+  metricKey, name, period, question, value, status, explain, detail, tip, sparkData, trend, statusContext,
 }: {
   metricKey: string;
   name: string;
@@ -157,6 +157,7 @@ function MetricCard({
   tip?: string;
   sparkData?: number[];
   trend?: TrendInfo;
+  statusContext?: string;
 }) {
   const color      = STATUS_COLORS[status];
   const statusText = STATUS_LABELS[metricKey]?.[status] ?? (status === "neutral" ? "No data" : status);
@@ -224,6 +225,9 @@ function MetricCard({
       {/* Explanation */}
       <div style={{ borderTop: "1px solid #2a0050" }} className="pt-3 flex flex-col gap-1.5">
         <p className="text-xs text-text leading-relaxed">{explain}</p>
+        {statusContext && (
+          <p className="text-[10px] leading-relaxed" style={{ color: "#9b8ab0" }}>{statusContext}</p>
+        )}
         <p className="text-xs leading-relaxed" style={{ color: "#6b5e7e" }}>{detail}</p>
       </div>
 
@@ -245,8 +249,8 @@ function MetricCard({
 
 const PROFILE_BANDS = {
   conservative: { sharpeGood: 1.2, sharpeOk: 0.6, sortinoGood: 1.8, sortinoOk: 0.8, volGood: 0.12, volOk: 0.20, betaGood: 0.7, betaOk: 1.0, varGoodPct: 0.02, varOkPct: 0.04, mddGoodAbs: 0.10, mddOkAbs: 0.20 },
-  balanced:     { sharpeGood: 1.0, sharpeOk: 0.3, sortinoGood: 1.5, sortinoOk: 0.5, volGood: 0.15, volOk: 0.30, betaGood: 0.8, betaOk: 1.3, varGoodPct: 0.03, varOkPct: 0.06, mddGoodAbs: 0.15, mddOkAbs: 0.30 },
-  growth:       { sharpeGood: 0.8, sharpeOk: 0.2, sortinoGood: 1.2, sortinoOk: 0.4, volGood: 0.20, volOk: 0.40, betaGood: 1.0, betaOk: 1.6, varGoodPct: 0.04, varOkPct: 0.08, mddGoodAbs: 0.20, mddOkAbs: 0.40 },
+  balanced:     { sharpeGood: 1.0, sharpeOk: 0.5, sortinoGood: 1.5, sortinoOk: 0.7, volGood: 0.15, volOk: 0.30, betaGood: 0.8, betaOk: 1.3, varGoodPct: 0.03, varOkPct: 0.06, mddGoodAbs: 0.15, mddOkAbs: 0.30 },
+  growth:       { sharpeGood: 0.8, sharpeOk: 0.4, sortinoGood: 1.2, sortinoOk: 0.6, volGood: 0.20, volOk: 0.40, betaGood: 1.0, betaOk: 1.6, varGoodPct: 0.04, varOkPct: 0.08, mddGoodAbs: 0.20, mddOkAbs: 0.40 },
 } as const;
 
 function sharpeStatus(s: number | null, profile: RiskProfile): Status {
@@ -409,6 +413,9 @@ export default function MetricsGrid({
     : `The largest peak-to-trough decline over the measurement period was ${gbp(mddGbp)}.${ddRecoveryText}`;
 
   const bands = PROFILE_BANDS[riskProfile];
+  const profileLabel =
+    riskProfile === "conservative" ? "Conservative" :
+    riskProfile === "growth" ? "Growth" : "Balanced";
   const mddAbs = Math.abs(metrics.max_drawdown ?? 0);
   const mddStatus: Status =
     metrics.max_drawdown == null ? "neutral" : mddAbs <= bands.mddGoodAbs ? "good" : mddAbs <= bands.mddOkAbs ? "ok" : "bad";
@@ -479,6 +486,14 @@ export default function MetricsGrid({
     : vol > 0.30 ? { arrow: "↑", color: "#ff2d78", label: "elevated" }
     : { arrow: "→", color: "#6b5e7e", label: "stable" };
 
+  const confidence = metrics.sample_days == null
+    ? "Unknown"
+    : metrics.sample_days < 60 ? "Low"
+    : metrics.sample_days < 120 ? "Low"
+    : metrics.sample_days < 180 ? "Medium"
+    : "High";
+  const limitedData = (metrics.sample_days ?? 0) > 0 && (metrics.sample_days ?? 0) < 60;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="rounded-xl px-4 py-3 flex flex-wrap items-center gap-3" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
@@ -489,11 +504,11 @@ export default function MetricsGrid({
         <span
           className="text-[10px] font-mono px-2 py-0.5 rounded-full"
           style={{
-            color: metrics.sample_days == null ? "#ff2d78" : metrics.sample_days >= 180 ? "#00f5d4" : metrics.sample_days >= 90 ? "#bf5af2" : "#ff2d78",
+            color: confidence === "High" ? "#00f5d4" : confidence === "Medium" ? "#bf5af2" : "#ff2d78",
             border: "1px solid #2a0050",
           }}
         >
-          Confidence: {metrics.sample_days == null ? "Unknown" : metrics.sample_days >= 180 ? "High" : metrics.sample_days >= 90 ? "Medium" : "Low"}
+          Confidence: {confidence}
         </span>
         {metrics.sample_days != null && (
           <span className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>Sample: {metrics.sample_days} trading days</span>
@@ -507,6 +522,15 @@ export default function MetricsGrid({
           </span>
         )}
       </div>
+      {limitedData && (
+        <div className="rounded-xl px-4 py-3 text-[11px] leading-relaxed flex items-start gap-2"
+          style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
+          <span className="shrink-0 mt-0.5">⚠</span>
+          <span>
+            Limited data quality: fewer than 60 trading days. Treat this as directional only until more observations accumulate.
+          </span>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
         {/* Sharpe Ratio */}
@@ -518,6 +542,7 @@ export default function MetricsGrid({
           value={sharpe != null ? sharpe.toFixed(2) : "—"}
           status={sharpeStatus(sharpe, riskProfile)}
           explain={sharpeExplain}
+          statusContext={`${profileLabel} threshold: Good ≥ ${bands.sharpeGood.toFixed(1)}, OK ≥ ${bands.sharpeOk.toFixed(1)}.`}
           detail="Calculated as excess return over the short-term risk-free rate, divided by portfolio volatility. Status thresholds are adjusted by your selected risk profile."
           tip={sharpeTip}
           sparkData={sharpeSpark}
@@ -533,6 +558,7 @@ export default function MetricsGrid({
           value={sortino != null ? (sortino > 99 ? "99+" : sortino.toFixed(2)) : "—"}
           status={sortinoStatus(sortino, riskProfile)}
           explain={sortinoExplain}
+          statusContext={`${profileLabel} threshold: Good ≥ ${bands.sortinoGood.toFixed(1)}, OK ≥ ${bands.sortinoOk.toFixed(1)}.`}
           detail="Like Sharpe, but only penalises downside volatility. Upside swings don't count against you. Status thresholds are adjusted by your selected risk profile."
           tip={sortinoTip}
         />
@@ -559,6 +585,7 @@ export default function MetricsGrid({
           value={volPct}
           status={volStatus(vol, riskProfile)}
           explain={riskExplain}
+          statusContext={`${profileLabel} threshold: Good < ${(bands.volGood * 100).toFixed(0)}%, OK < ${(bands.volOk * 100).toFixed(0)}%.`}
           detail="Annualised standard deviation of daily returns. The S&P 500 runs at roughly 15–18% in normal markets; individual stock-heavy portfolios often exceed 30%."
           tip={volTip}
           sparkData={volSpark}
@@ -574,6 +601,7 @@ export default function MetricsGrid({
           value={beta != null ? beta.toFixed(2) : "—"}
           status={betaStatus(beta, riskProfile)}
           explain={betaExplain}
+          statusContext={`${profileLabel} threshold: Good < ${bands.betaGood.toFixed(1)}, OK < ${bands.betaOk.toFixed(1)}.`}
           detail={`Beta of 1.0 = moves exactly with ${benchmarkLabel}. Below 1.0 = more defensive. Above 1.3 = amplified market swings. Concentration in high-beta stocks raises this significantly.`}
           tip={betaTip}
           sparkData={betaSpark}
@@ -589,6 +617,7 @@ export default function MetricsGrid({
           value={varGbp != null ? gbp(varGbp) : "—"}
           status={varStatus}
           explain={varExplain}
+          statusContext={`${profileLabel} threshold: Good < ${(bands.varGoodPct * 100).toFixed(0)}% of portfolio, OK < ${(bands.varOkPct * 100).toFixed(0)}%.`}
           detail={cfVarGbp != null
             ? `Historical: ${gbp(varGbp ?? 0)} (raw 5th percentile). Cornish-Fisher: ${gbp(cfVarGbp)} (adjusted for skew & kurtosis). The gap between them indicates how fat-tailed your returns are.`
             : "On a typical bad day — the kind that happens roughly once a month — losses are expected to stay below this figure. 5% of days historically exceed it."}
@@ -604,6 +633,7 @@ export default function MetricsGrid({
           value={mddGbp != null ? gbp(mddGbp) : "—"}
           status={mddStatus}
           explain={mddExplain}
+          statusContext={`${profileLabel} threshold: Good drawdown ≤ ${(bands.mddGoodAbs * 100).toFixed(0)}%, OK ≤ ${(bands.mddOkAbs * 100).toFixed(0)}%.`}
           detail={ddRecovery != null
             ? ddRecovery < 0
               ? `Still in drawdown — ${Math.abs(ddRecovery)} trading days since the trough. No full recovery yet. This is the figure that tests emotional discipline.`
