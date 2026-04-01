@@ -200,16 +200,19 @@ def validate_ticker(ticker):
         return False
 
 
-def fetch_current_prices(tickers, gbpusd=None):
+def fetch_current_prices(tickers, gbpusd=None, gbpeur=None):
     """
     Fetch current prices in GBP.
     - LSE (.L) tickers: use fast_info for BOTH price and currency so they are
       always internally consistent — eliminates the mismatch between yf.download()
       and a separate fast_info currency call that caused intermittent 100x overstatement.
     - USD-denominated prices are converted using the live GBP/USD rate.
+    - EUR-denominated prices are converted using the live GBP/EUR rate.
     """
     if gbpusd is None:
         gbpusd = fetch_gbp_usd_rate()
+    if gbpeur is None:
+        gbpeur = fetch_gbp_eur_rate()
 
     now = time.time()
     prices = {}
