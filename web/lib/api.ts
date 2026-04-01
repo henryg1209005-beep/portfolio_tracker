@@ -67,6 +67,10 @@ export type Metrics = {
   drawdown_recovery_days: number | null;
   rf_annual: number | null;
   benchmark_used: string | null;
+  risk_model?: "current_holdings_cost_weighted" | string | null;
+  sample_days?: number | null;
+  benchmark_overlap_days?: number | null;
+  window_years_equivalent?: number | null;
   error?: string;
 };
 

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { fetchRefresh, fetchPerformance, type RefreshData, type PerformanceData } from "@/lib/api";
+import { fetchRefresh, fetchPerformance, getProfile, type RefreshData, type PerformanceData, type InvestorProfile } from "@/lib/api";
 import SummaryCards from "@/components/SummaryCards";
 import MetricsGrid from "@/components/MetricsGrid";
 import { useCurrency } from "@/lib/currencyContext";
@@ -19,6 +19,7 @@ export default function MetricsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [benchmark, setBenchmark] = useState<Benchmark>("sp500");
+  const [riskProfile, setRiskProfile] = useState<InvestorProfile["risk_appetite"]>("balanced");
 
   const load = useCallback(async (bench: Benchmark) => {
     setLoading(true);
@@ -26,7 +27,7 @@ export default function MetricsPage() {
     try {
       const [refresh, perf] = await Promise.all([
         fetchRefresh(bench),
-        fetchPerformance("1Y").catch(() => null),
+        fetchPerformance("1Y", bench).catch(() => null),
       ]);
       setData(refresh);
       setPerfData(perf);
@@ -38,6 +39,14 @@ export default function MetricsPage() {
   }, []);
 
   useEffect(() => { load(benchmark); }, [load, benchmark]);
+
+  useEffect(() => {
+    getProfile()
+      .then((p) => {
+        if (p.exists && p.risk_appetite) setRiskProfile(p.risk_appetite);
+      })
+      .catch(() => {});
+  }, []);
 
   function handleBenchmark(b: Benchmark) {
     setBenchmark(b);
@@ -100,7 +109,13 @@ export default function MetricsPage() {
         <>
           <SummaryCards summary={data.summary} currency={currency} />
           {data.metrics ? (
-            <MetricsGrid metrics={data.metrics} summary={data.summary} perfData={perfData} benchmarkLabel={benchLabel} />
+            <MetricsGrid
+              metrics={data.metrics}
+              summary={data.summary}
+              perfData={perfData}
+              benchmarkLabel={benchLabel}
+              riskProfile={riskProfile}
+            />
           ) : (
             <div className="text-muted text-sm synth-card rounded-xl p-6" style={{ borderColor: "#2a0050" }}>
               Not enough historical data to compute metrics yet. Add more holdings or wait for 30+ trading days.

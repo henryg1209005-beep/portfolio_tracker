@@ -1,5 +1,6 @@
 "use client";
 import type { Metrics, Summary, PerformanceData } from "@/lib/api";
+type RiskProfile = "conservative" | "balanced" | "growth";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -242,16 +243,24 @@ function MetricCard({
 
 // ── Status functions ──────────────────────────────────────────────────────────
 
-function sharpeStatus(s: number | null): Status {
+const PROFILE_BANDS = {
+  conservative: { sharpeGood: 1.2, sharpeOk: 0.6, sortinoGood: 1.8, sortinoOk: 0.8, volGood: 0.12, volOk: 0.20, betaGood: 0.7, betaOk: 1.0, varGoodPct: 0.02, varOkPct: 0.04, mddGoodAbs: 0.10, mddOkAbs: 0.20 },
+  balanced:     { sharpeGood: 1.0, sharpeOk: 0.3, sortinoGood: 1.5, sortinoOk: 0.5, volGood: 0.15, volOk: 0.30, betaGood: 0.8, betaOk: 1.3, varGoodPct: 0.03, varOkPct: 0.06, mddGoodAbs: 0.15, mddOkAbs: 0.30 },
+  growth:       { sharpeGood: 0.8, sharpeOk: 0.2, sortinoGood: 1.2, sortinoOk: 0.4, volGood: 0.20, volOk: 0.40, betaGood: 1.0, betaOk: 1.6, varGoodPct: 0.04, varOkPct: 0.08, mddGoodAbs: 0.20, mddOkAbs: 0.40 },
+} as const;
+
+function sharpeStatus(s: number | null, profile: RiskProfile): Status {
   if (s == null) return "neutral";
-  if (s >= 1)    return "good";
-  if (s >= 0.3)  return "ok";
+  const b = PROFILE_BANDS[profile];
+  if (s >= b.sharpeGood) return "good";
+  if (s >= b.sharpeOk)   return "ok";
   return "bad";
 }
-function sortinoStatus(s: number | null): Status {
+function sortinoStatus(s: number | null, profile: RiskProfile): Status {
   if (s == null) return "neutral";
-  if (s >= 1.5)  return "good";
-  if (s >= 0.5)  return "ok";
+  const b = PROFILE_BANDS[profile];
+  if (s >= b.sortinoGood) return "good";
+  if (s >= b.sortinoOk)   return "ok";
   return "bad";
 }
 function alphaStatus(a: number | null): Status {
@@ -260,16 +269,18 @@ function alphaStatus(a: number | null): Status {
   if (a > -0.02) return "ok";
   return "bad";
 }
-function volStatus(v: number | null): Status {
+function volStatus(v: number | null, profile: RiskProfile): Status {
   if (v == null) return "neutral";
-  if (v < 0.15)  return "good";
-  if (v < 0.30)  return "ok";
+  const b = PROFILE_BANDS[profile];
+  if (v < b.volGood) return "good";
+  if (v < b.volOk)   return "ok";
   return "bad";
 }
-function betaStatus(b: number | null): Status {
-  if (b == null) return "neutral";
-  if (b < 0.8)   return "good";
-  if (b < 1.3)   return "ok";
+function betaStatus(betaValue: number | null, profile: RiskProfile): Status {
+  if (betaValue == null) return "neutral";
+  const b = PROFILE_BANDS[profile];
+  if (betaValue < b.betaGood) return "good";
+  if (betaValue < b.betaOk)   return "ok";
   return "bad";
 }
 
@@ -280,11 +291,13 @@ export default function MetricsGrid({
   summary,
   perfData,
   benchmarkLabel = "S&P 500",
+  riskProfile = "balanced",
 }: {
   metrics: Metrics;
   summary: Summary;
   perfData?: PerformanceData | null;
   benchmarkLabel?: string;
+  riskProfile?: RiskProfile;
 }) {
   if (metrics.error) {
     return (
@@ -395,8 +408,12 @@ export default function MetricsGrid({
     ? "Not enough data to calculate the maximum drawdown."
     : `The largest peak-to-trough decline over the measurement period was ${gbp(mddGbp)}.${ddRecoveryText}`;
 
-  const mddStatus: Status = (metrics.max_drawdown ?? 0) > -0.15 ? "good" : (metrics.max_drawdown ?? 0) > -0.30 ? "ok" : "bad";
-  const varStatus: Status = varGbp != null && varGbp < totalValue * 0.03 ? "good" : varGbp != null && varGbp < totalValue * 0.06 ? "ok" : "bad";
+  const bands = PROFILE_BANDS[riskProfile];
+  const mddAbs = Math.abs(metrics.max_drawdown ?? 0);
+  const mddStatus: Status =
+    metrics.max_drawdown == null ? "neutral" : mddAbs <= bands.mddGoodAbs ? "good" : mddAbs <= bands.mddOkAbs ? "ok" : "bad";
+  const varStatus: Status =
+    varGbp == null ? "neutral" : varGbp < totalValue * bands.varGoodPct ? "good" : varGbp < totalValue * bands.varOkPct ? "ok" : "bad";
 
   // ── Actionable tips ────────────────────────────────────────────────────────
 
@@ -464,6 +481,32 @@ export default function MetricsGrid({
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="rounded-xl px-4 py-3 flex flex-wrap items-center gap-3" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
+        <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#6b5e7e" }}>Methodology</span>
+        <span className="text-xs font-semibold" style={{ color: "#e2d9f3" }}>
+          {metrics.risk_model === "current_holdings_cost_weighted" ? "Current Holdings Risk Model" : "Portfolio Risk Model"}
+        </span>
+        <span
+          className="text-[10px] font-mono px-2 py-0.5 rounded-full"
+          style={{
+            color: metrics.sample_days == null ? "#ff2d78" : metrics.sample_days >= 180 ? "#00f5d4" : metrics.sample_days >= 90 ? "#bf5af2" : "#ff2d78",
+            border: "1px solid #2a0050",
+          }}
+        >
+          Confidence: {metrics.sample_days == null ? "Unknown" : metrics.sample_days >= 180 ? "High" : metrics.sample_days >= 90 ? "Medium" : "Low"}
+        </span>
+        {metrics.sample_days != null && (
+          <span className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>Sample: {metrics.sample_days} trading days</span>
+        )}
+        {metrics.benchmark_overlap_days != null && (
+          <span className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>Benchmark overlap: {metrics.benchmark_overlap_days} days</span>
+        )}
+        {(metrics.window_years_equivalent != null || metrics.sample_days != null) && (
+          <span className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>
+            Window: ~{(metrics.window_years_equivalent ?? ((metrics.sample_days ?? 0) / 252)).toFixed(2)} years
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
         {/* Sharpe Ratio */}
@@ -473,9 +516,9 @@ export default function MetricsGrid({
           period="1Y rolling"
           question="Is the risk worth the reward?"
           value={sharpe != null ? sharpe.toFixed(2) : "—"}
-          status={sharpeStatus(sharpe)}
+          status={sharpeStatus(sharpe, riskProfile)}
           explain={sharpeExplain}
-          detail="Above 1.0 is considered strong. Most diversified funds sit between 0.5 and 1.0. Calculated as excess return over the short-term risk-free rate, divided by portfolio volatility."
+          detail="Calculated as excess return over the short-term risk-free rate, divided by portfolio volatility. Status thresholds are adjusted by your selected risk profile."
           tip={sharpeTip}
           sparkData={sharpeSpark}
           trend={sharpeTrend ?? sharpeTrendFallback}
@@ -488,9 +531,9 @@ export default function MetricsGrid({
           period="1Y rolling"
           question="Is the downside risk worth it?"
           value={sortino != null ? (sortino > 99 ? "99+" : sortino.toFixed(2)) : "—"}
-          status={sortinoStatus(sortino)}
+          status={sortinoStatus(sortino, riskProfile)}
           explain={sortinoExplain}
-          detail="Like Sharpe, but only penalises downside volatility. Upside swings don't count against you. Above 1.5 is strong. More relevant for retail investors who care about losses, not gains."
+          detail="Like Sharpe, but only penalises downside volatility. Upside swings don't count against you. Status thresholds are adjusted by your selected risk profile."
           tip={sortinoTip}
         />
 
@@ -514,7 +557,7 @@ export default function MetricsGrid({
           period="annualised"
           question="How large are the swings?"
           value={volPct}
-          status={volStatus(vol)}
+          status={volStatus(vol, riskProfile)}
           explain={riskExplain}
           detail="Annualised standard deviation of daily returns. The S&P 500 runs at roughly 15–18% in normal markets; individual stock-heavy portfolios often exceed 30%."
           tip={volTip}
@@ -529,7 +572,7 @@ export default function MetricsGrid({
           period={`vs ${benchmarkLabel}`}
           question="How much does the market move you?"
           value={beta != null ? beta.toFixed(2) : "—"}
-          status={betaStatus(beta)}
+          status={betaStatus(beta, riskProfile)}
           explain={betaExplain}
           detail={`Beta of 1.0 = moves exactly with ${benchmarkLabel}. Below 1.0 = more defensive. Above 1.3 = amplified market swings. Concentration in high-beta stocks raises this significantly.`}
           tip={betaTip}

@@ -504,6 +504,7 @@ def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
                 }
                 metrics["rf_annual"] = _safe_float(rf)
                 metrics["benchmark_used"] = benchmark
+                metrics["risk_model"] = "current_holdings_cost_weighted"
     except Exception as exc:
         metrics = {"error": str(exc)}
 

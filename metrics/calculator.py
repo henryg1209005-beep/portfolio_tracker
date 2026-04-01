@@ -180,9 +180,11 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
 
     bench_ret = benchmark_series.pct_change().dropna()
 
-    # Align on common dates
-    bench_ret = bench_ret.reindex(port_ret.index).fillna(0)
-    port_ret  = port_ret.reindex(bench_ret.index)
+    # Align strictly on common observed dates (no synthetic zero-return fill).
+    aligned = pd.concat([port_ret, bench_ret], axis=1, join="inner").dropna()
+    aligned.columns = ["p", "b"]
+    port_ret = aligned["p"]
+    bench_ret = aligned["b"]
 
     if len(port_ret) < 30:
         return None
@@ -215,6 +217,9 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
         "var_95_cf":              cf_var,
         "max_drawdown":           mdd,
         "drawdown_recovery_days": dd_recovery,
+        "sample_days":            int(len(port_ret)),
+        "benchmark_overlap_days": int(len(aligned)),
+        "window_years_equivalent": float(len(port_ret) / TRADING_DAYS),
         "portfolio_cumulative":   port_cum,
         "benchmark_cumulative":   bench_cum,
     }
