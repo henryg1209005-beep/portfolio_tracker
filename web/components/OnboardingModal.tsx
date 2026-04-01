@@ -1,8 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { saveProfile, InvestorProfile } from "@/lib/api";
 
-type Props = { onDone: () => void };
+type Props = {
+  onDone: () => void;
+  initialProfile?: Partial<InvestorProfile> | null;
+  onSaved?: (profile: InvestorProfile) => void;
+};
 
 const STEPS = [
   {
@@ -38,24 +42,47 @@ const STEPS = [
   },
 ];
 
-export default function OnboardingModal({ onDone }: Props) {
+function toCompleteProfile(p?: Partial<InvestorProfile> | null): InvestorProfile | null {
+  if (!p) return null;
+  if (!p.risk_appetite || !p.goal || !p.time_horizon) return null;
+  return {
+    risk_appetite: p.risk_appetite,
+    goal: p.goal,
+    time_horizon: p.time_horizon,
+  };
+}
+
+export default function OnboardingModal({ onDone, initialProfile, onSaved }: Props) {
   // -1 = welcome, 0-2 = profile questions, 3 = done
   const [step, setStep] = useState(-1);
   const [answers, setAnswers] = useState<Partial<InvestorProfile>>({});
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    const complete = toCompleteProfile(initialProfile);
+    if (!complete) return;
+    setAnswers(complete);
+    setStep(0);
+  }, [initialProfile]);
 
   async function handleNext() {
     if (step === -1) { setStep(0); return; }
     const current = STEPS[step];
     if (!answers[current.key]) return;
     if (step < STEPS.length - 1) { setStep(s => s + 1); return; }
+    const payload = toCompleteProfile(answers);
+    if (!payload) return;
+    setSaveError("");
     setSaving(true);
     try {
-      await saveProfile(answers as InvestorProfile);
+      await saveProfile(payload);
+      onSaved?.(payload);
       setDone(true);
     } catch {
       setSaving(false);
+      setSaveError("Could not save profile. Please retry.");
     }
   }
 
@@ -197,14 +224,19 @@ export default function OnboardingModal({ onDone }: Props) {
               >
                 Skip
               </button>
-              <button
-                onClick={handleNext}
-                disabled={!selected || saving}
-                className="flex-1 px-6 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-30"
-                style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
-              >
-                {saving ? "Saving…" : step < STEPS.length - 1 ? "Next →" : "Finish →"}
-              </button>
+              <div className="flex-1 flex flex-col gap-2">
+                {saveError && (
+                  <p className="text-xs" style={{ color: "#ff2d78" }}>{saveError}</p>
+                )}
+                <button
+                  onClick={handleNext}
+                  disabled={!selected || saving}
+                  className="px-6 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-30"
+                  style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
+                >
+                  {saving ? "Saving…" : step < STEPS.length - 1 ? "Next →" : (saveError ? "Retry Save →" : "Finish →")}
+                </button>
+              </div>
             </div>
           </>
         )}

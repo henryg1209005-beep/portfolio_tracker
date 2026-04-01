@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import FeedbackModal from "@/components/FeedbackModal";
 import OnboardingModal from "@/components/OnboardingModal";
+import { getProfile, type InvestorProfile } from "@/lib/api";
 
 const links = [
   { href: "/dashboard",             label: "Overview",     icon: "▦" },
@@ -27,6 +28,14 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [profile, setProfile] = useState<Partial<InvestorProfile> | null>(null);
+
+  useEffect(() => {
+    if (!showProfile) return;
+    getProfile().then((p) => {
+      if (p.exists) setProfile(p);
+    }).catch(() => {});
+  }, [showProfile]);
 
   return (
     <>
@@ -209,7 +218,13 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
       )}
 
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
-      {showProfile && <OnboardingModal onDone={() => setShowProfile(false)} />}
+      {showProfile && (
+        <OnboardingModal
+          onDone={() => setShowProfile(false)}
+          initialProfile={profile}
+          onSaved={(saved) => setProfile(saved)}
+        />
+      )}
     </>
   );
 }

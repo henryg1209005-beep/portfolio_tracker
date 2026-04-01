@@ -569,12 +569,17 @@ type Props = {
   holdings: HoldingInput[];
   metrics: MetricsInput;
   totalPortfolioValue: number;
+  initialProfile?: RiskProfile;
   onClose: () => void;
 };
 
-export default function FixMyPortfolioPanel({ holdings, metrics, totalPortfolioValue, onClose }: Props) {
-  const [profile, setProfile] = useState<RiskProfile>("balanced");
+export default function FixMyPortfolioPanel({ holdings, metrics, totalPortfolioValue, initialProfile = "balanced", onClose }: Props) {
+  const [profile, setProfile] = useState<RiskProfile>(initialProfile);
   const [plan, setPlan]       = useState<PortfolioFixPlan | null>(null);
+
+  useEffect(() => {
+    setProfile(initialProfile);
+  }, [initialProfile]);
 
   useEffect(() => {
     setPlan(generatePortfolioFixPlan(holdings, metrics, profile, totalPortfolioValue));
@@ -626,7 +631,12 @@ export default function FixMyPortfolioPanel({ holdings, metrics, totalPortfolioV
 
           {/* Profile toggle */}
           <div className="flex flex-col gap-2.5">
-            <div className="text-[11px] text-muted uppercase tracking-widest font-mono">Risk Profile</div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[11px] text-muted uppercase tracking-widest font-mono">Risk Profile</div>
+              <div className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>
+                {profile === initialProfile ? "Using saved profile" : "What-if override active"}
+              </div>
+            </div>
             <ProfileToggle value={profile} onChange={setProfile} />
             <ProfileBanner profile={profile} />
           </div>

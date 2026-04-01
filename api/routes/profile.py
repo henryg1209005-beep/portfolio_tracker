@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from fastapi import APIRouter, Header
 from pydantic import BaseModel
 
@@ -13,9 +13,9 @@ def _load_profile(token: str) -> dict | None:
 
 
 class Profile(BaseModel):
-    risk_appetite: str   # conservative | balanced | growth
-    goal: str            # long_term_growth | income | preservation
-    time_horizon: str    # <2 | 2-5 | 5-10 | 10+
+    risk_appetite: Literal["conservative", "balanced", "growth"]
+    goal: Literal["long_term_growth", "income", "preservation"]
+    time_horizon: Literal["<2", "2-5", "5-10", "10+"]
 
 
 @router.get("")

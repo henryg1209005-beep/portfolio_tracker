@@ -91,6 +91,46 @@ def init_db():
                     created_at  TIMESTAMPTZ DEFAULT NOW()
                 );
             """)
+            # Profile enums as DB-level guardrails (NOT VALID avoids legacy-row migration risk).
+            cur.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conname = 'profiles_risk_appetite_check'
+                    ) THEN
+                        ALTER TABLE profiles
+                        ADD CONSTRAINT profiles_risk_appetite_check
+                        CHECK (risk_appetite IN ('conservative', 'balanced', 'growth')) NOT VALID;
+                    END IF;
+                END $$;
+            """)
+            cur.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conname = 'profiles_goal_check'
+                    ) THEN
+                        ALTER TABLE profiles
+                        ADD CONSTRAINT profiles_goal_check
+                        CHECK (goal IN ('long_term_growth', 'income', 'preservation')) NOT VALID;
+                    END IF;
+                END $$;
+            """)
+            cur.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conname = 'profiles_time_horizon_check'
+                    ) THEN
+                        ALTER TABLE profiles
+                        ADD CONSTRAINT profiles_time_horizon_check
+                        CHECK (time_horizon IN ('<2', '2-5', '5-10', '10+')) NOT VALID;
+                    END IF;
+                END $$;
+            """)
 
 
 # ── Portfolio ─────────────────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { fetchRefresh, removeHolding, clearAllHoldings, type RefreshData } from "@/lib/api";
+import { fetchRefresh, removeHolding, clearAllHoldings, getProfile, type RefreshData } from "@/lib/api";
 import { useCurrency, CURRENCIES, type Currency } from "@/lib/currencyContext";
+import type { RiskProfile } from "@/lib/fixMyPortfolio";
 import SummaryCards from "@/components/SummaryCards";
 import HoldingsTable from "@/components/HoldingsTable";
 import AddHoldingModal from "@/components/AddHoldingModal";
@@ -16,6 +17,7 @@ export default function OverviewPage() {
   const [showImport, setShowImport] = useState(false);
   const [showFix, setShowFix]     = useState(false);
   const [fixLoading, setFixLoading] = useState(false);
+  const [riskProfile, setRiskProfile] = useState<RiskProfile>("balanced");
   const { currency, setCurrency } = useCurrency();
 
   const load = useCallback(async (force = false) => {
@@ -31,6 +33,16 @@ export default function OverviewPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    getProfile()
+      .then((p) => {
+        if (p.exists && p.risk_appetite) {
+          setRiskProfile(p.risk_appetite);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleRemove(ticker: string) {
     if (!confirm(`Remove ${ticker}?`)) return;
@@ -183,6 +195,7 @@ export default function OverviewPage() {
             max_drawdown: null, var_95: null, alpha: null, actual_return: null,
           }}
           totalPortfolioValue={data.summary.total_value ?? 0}
+          initialProfile={riskProfile}
           onClose={() => setShowFix(false)}
         />
       )}
