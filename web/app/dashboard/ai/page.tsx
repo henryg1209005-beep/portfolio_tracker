@@ -419,8 +419,10 @@ export default function AiPage() {
   const hasHoldings = holdingCount === null || holdingCount > 0;
   const limitHit    = usage !== null && usage.remaining === 0;
   const sections    = parseSections(text);
-  // Keep partial alive on "done" so the typewriter can finish the last section
-  const partial     = (busy || status === "done") ? parsePartial(text) : null;
+  // Keep partial alive on "done" so the typewriter can finish the last section,
+  // but suppress it if parseSections already includes that section (avoids duplicate)
+  const _partial    = (busy || status === "done") ? parsePartial(text) : null;
+  const partial     = _partial && !sections.some(s => s.title === _partial.title) ? _partial : null;
 
   return (
     <>
