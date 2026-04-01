@@ -3,24 +3,40 @@ In-memory cache for market refresh and performance data.
 Keyed by token; invalidated on any portfolio write.
 Single-instance Railway deployment means in-memory is sufficient.
 """
+import time
 import threading
 
 _lock = threading.Lock()
-_refresh: dict = {}          # (token, benchmark) -> data
+_refresh: dict = {}          # (token, benchmark) -> (data, timestamp)
 _perf: dict    = {}          # (token, period) -> data
 _corr: dict    = {}          # (token, period, method) -> data
 _suggestions: dict = {}      # (token, period) -> data
 _rolling: dict = {}          # (token, period, window) -> data
 
+_REFRESH_TTL = 300           # 5 minutes — prices auto-expire
+
 
 def get_cached_refresh(token: str, benchmark: str = "sp500"):
     with _lock:
-        return _refresh.get((token, benchmark))
+        entry = _refresh.get((token, benchmark))
+        if entry is None:
+            return None
+        data, ts = entry
+        if time.time() - ts > _REFRESH_TTL:
+            del _refresh[(token, benchmark)]
+            return None
+        return data
 
 
 def set_cached_refresh(token: str, data: dict, benchmark: str = "sp500"):
     with _lock:
-        _refresh[(token, benchmark)] = data
+        _refresh[(token, benchmark)] = (data, time.time())
+
+
+def invalidate_refresh_only(token: str, benchmark: str = "sp500"):
+    """Invalidate just the refresh cache for a token — used by force-refresh."""
+    with _lock:
+        _refresh.pop((token, benchmark), None)
 
 
 def get_cached_performance(token: str, period: str):

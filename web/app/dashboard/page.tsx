@@ -18,11 +18,11 @@ export default function OverviewPage() {
   const [fixLoading, setFixLoading] = useState(false);
   const { currency, setCurrency } = useCurrency();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
-      setData(await fetchRefresh());
+      setData(await fetchRefresh("sp500", force));
     } catch {
       setError("Could not reach the API. Make sure the Python server is running on port 8000.");
     } finally {
@@ -49,7 +49,9 @@ export default function OverviewPage() {
               <span className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full animate-fade-up"
                 style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4", animationDelay: "400ms" }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse" />
-                LIVE
+                {data.refreshed_at
+                  ? `Updated ${Math.round((Date.now() / 1000 - data.refreshed_at) / 60)}m ago`
+                  : "LIVE"}
               </span>
             )}
           </div>
@@ -77,7 +79,7 @@ export default function OverviewPage() {
           )}
 
           <button
-            onClick={load}
+            onClick={() => load(true)}
             disabled={loading}
             className="px-3 py-2 text-sm rounded-lg font-mono transition-all disabled:opacity-40"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}

@@ -74,12 +74,15 @@ export type RefreshData = {
   holdings: Holding[];
   summary: Summary;
   metrics: Metrics | null;
+  refreshed_at?: number;
 };
 
 // ── API calls ─────────────────────────────────────────────────────────────────
 
-export async function fetchRefresh(benchmark = "sp500"): Promise<RefreshData> {
-  const res = await fetch(`${BASE}/market/refresh?benchmark=${benchmark}`, { headers: authHeader() });
+export async function fetchRefresh(benchmark = "sp500", force = false): Promise<RefreshData> {
+  const params = new URLSearchParams({ benchmark });
+  if (force) params.set("force", "true");
+  const res = await fetch(`${BASE}/market/refresh?${params}`, { headers: authHeader() });
   if (!res.ok) throw new Error("Failed to fetch market data");
   return res.json();
 }

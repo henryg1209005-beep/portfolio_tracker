@@ -16,7 +16,8 @@ from api.routes.cache import (get_cached_refresh, set_cached_refresh,
                               get_cached_performance, set_cached_performance,
                               get_cached_correlation, set_cached_correlation,
                               get_cached_suggestions, set_cached_suggestions,
-                              get_cached_rolling, set_cached_rolling)
+                              get_cached_rolling, set_cached_rolling,
+                              invalidate_refresh_only)
 
 # ── Simple token-bucket rate limiter for market endpoints ─────────────────────
 # Max 20 requests per token per minute across all market endpoints
@@ -510,14 +511,17 @@ def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
         "holdings": enriched,
         "summary": summary,
         "metrics": metrics,
+        "refreshed_at": int(time.time()),
     }
     set_cached_refresh(token, result, benchmark)
     return result
 
 
 @router.get("/refresh")
-def refresh(x_portfolio_token: Annotated[str, Header()], benchmark: str = "sp500"):
+def refresh(x_portfolio_token: Annotated[str, Header()], benchmark: str = "sp500", force: bool = False):
     _check_rate_limit(x_portfolio_token)
+    if force:
+        invalidate_refresh_only(x_portfolio_token, benchmark)
     return _refresh_data(x_portfolio_token, benchmark=benchmark)
 
 
