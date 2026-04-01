@@ -13,10 +13,9 @@ export default function OverviewPage() {
   const [data, setData]       = useState<RefreshData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
-  const [showAdd, setShowAdd]     = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [showFix, setShowFix]     = useState(false);
-  const [fixLoading, setFixLoading] = useState(false);
+  const [showFix, setShowFix] = useState(false);
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("balanced");
   const { currency, setCurrency } = useCurrency();
 
@@ -50,16 +49,19 @@ export default function OverviewPage() {
     load();
   }
 
+  const canReview = !!data && !loading && data.holdings.length > 0;
+
   return (
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-4 md:space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-3 animate-fade-up sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Overview</h1>
             {!loading && data && (
-              <span className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full animate-fade-up"
-                style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4", animationDelay: "400ms" }}>
+              <span
+                className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full animate-fade-up"
+                style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4", animationDelay: "400ms" }}
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse" />
                 {data.refreshed_at
                   ? `Updated ${Math.round((Date.now() / 1000 - data.refreshed_at) / 60)}m ago`
@@ -70,10 +72,8 @@ export default function OverviewPage() {
           <p className="text-muted text-sm mt-0.5">Your portfolio at a glance</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {/* Currency toggle */}
           {data && (
-            <div className="flex items-center rounded-lg overflow-hidden font-mono text-xs"
-              style={{ border: "1px solid #2a0050" }}>
+            <div className="flex items-center rounded-lg overflow-hidden font-mono text-xs" style={{ border: "1px solid #2a0050" }}>
               {CURRENCIES.map(c => (
                 <button
                   key={c}
@@ -117,23 +117,23 @@ export default function OverviewPage() {
             </button>
           )}
 
-          {/* Portfolio Review */}
-          <button
-            onClick={() => {
-              setFixLoading(true);
-              setTimeout(() => { setFixLoading(false); setShowFix(true); }, 120);
-            }}
-            disabled={!data || loading || fixLoading}
-            className="px-3 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
-            style={{ background: "linear-gradient(90deg, #3d005e, #1a0030)", border: "1px solid #bf5af266", color: "#bf5af2" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 16px #bf5af244"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#bf5af266"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-          >
-            {fixLoading
-              ? <><span className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#bf5af266", borderTopColor: "transparent" }} />Analysing…</>
-              : <>✦ Review</>
-            }
-          </button>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => setShowFix(true)}
+              disabled={!canReview}
+              className="px-3 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
+              style={{ background: "linear-gradient(90deg, #3d005e, #1a0030)", border: "1px solid #bf5af266", color: "#bf5af2" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 16px #bf5af244"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#bf5af266"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              ✦ Review
+            </button>
+            {!canReview && (
+              <span className="text-[10px] font-mono" style={{ color: "#4a3a5e" }}>
+                Add at least one holding to run review.
+              </span>
+            )}
+          </div>
 
           <button
             onClick={() => setShowImport(true)}
@@ -155,14 +155,12 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="rounded-xl p-4 text-sm" style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
           {error}
         </div>
       )}
 
-      {/* Skeleton / Content */}
       {loading && !data ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -175,7 +173,12 @@ export default function OverviewPage() {
       ) : data ? (
         <>
           <SummaryCards summary={data.summary} currency={currency} />
-          <HoldingsTable holdings={data.holdings} onRemove={handleRemove} currency={currency} fxRate={currency === "EUR" ? (data.summary.gbpeur ?? 1) : currency === "USD" ? (data.summary.gbpusd ?? 1) : 1} />
+          <HoldingsTable
+            holdings={data.holdings}
+            onRemove={handleRemove}
+            currency={currency}
+            fxRate={currency === "EUR" ? (data.summary.gbpeur ?? 1) : currency === "USD" ? (data.summary.gbpusd ?? 1) : 1}
+          />
         </>
       ) : null}
 

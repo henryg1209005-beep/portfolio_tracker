@@ -573,9 +573,17 @@ type Props = {
   onClose: () => void;
 };
 
+type RecommendationFilter = "all" | Priority;
+
+function formatGBP(amount: number): string {
+  return `£${Math.abs(amount).toLocaleString("en-GB")}`;
+}
+
 export default function FixMyPortfolioPanel({ holdings, metrics, totalPortfolioValue, initialProfile = "balanced", onClose }: Props) {
   const [profile, setProfile] = useState<RiskProfile>(initialProfile);
   const [plan, setPlan]       = useState<PortfolioFixPlan | null>(null);
+  const [filter, setFilter] = useState<RecommendationFilter>("all");
+  const [copiedPlan, setCopiedPlan] = useState(false);
 
   useEffect(() => {
     setProfile(initialProfile);
@@ -593,6 +601,48 @@ export default function FixMyPortfolioPanel({ holdings, metrics, totalPortfolioV
   const currentMaxWeight = Math.round(Math.max(...holdings.map(h => (h.weight ?? 0) * 100), 0));
   const currentConcentration = concentrationLabel(currentMaxWeight);
   const unclassified     = getUnclassifiedTickers(holdings);
+  const filteredRecommendations = filter === "all"
+    ? plan.recommendations
+    : plan.recommendations.filter(r => r.priority === filter);
+
+  const totalBuyGBP = plan.recommendations
+    .filter(r => r.action === "add" || r.action === "increase")
+    .reduce((sum, r) => sum + r.amountGBP, 0);
+  const totalSellGBP = plan.recommendations
+    .filter(r => r.action === "reduce" || r.action === "trim")
+    .reduce((sum, r) => sum + r.amountGBP, 0);
+  const netDeployGBP = totalBuyGBP - totalSellGBP;
+
+  function recommendationLabel(r: Recommendation): string {
+    const target = r.ticker ?? r.assetClass ?? "asset";
+    if (r.action === "add") return `Add ${target} (${r.targetWeight}%)`;
+    if (r.action === "increase") return `Increase ${target} to ${r.targetWeight}%`;
+    if (r.action === "reduce") return `Reduce ${target} to ${r.targetWeight}%`;
+    return `Trim ${target} to ${r.targetWeight}%`;
+  }
+
+  async function copyActionPlan() {
+    const sourcePlan = plan;
+    if (!sourcePlan) return;
+
+    const lines = sourcePlan.recommendations.map((r, i) => {
+      const side = r.action === "add" || r.action === "increase" ? "Buy" : "Sell";
+      return `${i + 1}. ${recommendationLabel(r)} — ${side} ${formatGBP(r.amountGBP)} (${r.priority})`;
+    });
+    const text = [
+      "Portivex Review Action Plan",
+      `Risk profile: ${profile}`,
+      `Top priority: ${sourcePlan.topPriorityAction}`,
+      "",
+      ...lines,
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedPlan(true);
+      setTimeout(() => setCopiedPlan(false), 1800);
+    } catch {}
+  }
 
   return (
     <div
@@ -689,6 +739,29 @@ export default function FixMyPortfolioPanel({ holdings, metrics, totalPortfolioV
             </div>
           )}
 
+          {/* Capital movement summary */}
+          {plan.recommendations.length > 0 && (
+            <div
+              className="rounded-xl px-5 py-4 grid grid-cols-3 gap-3"
+              style={{ background: "#0d0020", border: "1px solid #2a0050" }}
+            >
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#6b5e7e" }}>Total Buys</div>
+                <div className="text-sm font-bold mt-1" style={{ color: "#00f5d4" }}>{formatGBP(totalBuyGBP)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#6b5e7e" }}>Total Sells</div>
+                <div className="text-sm font-bold mt-1" style={{ color: "#ff2d78" }}>{formatGBP(totalSellGBP)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#6b5e7e" }}>Net Cash</div>
+                <div className="text-sm font-bold mt-1" style={{ color: netDeployGBP >= 0 ? "#00f5d4" : "#ff2d78" }}>
+                  {netDeployGBP >= 0 ? `${formatGBP(netDeployGBP)} to deploy` : `${formatGBP(netDeployGBP)} to free up`}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Primary issues */}
           <div className="flex flex-col gap-3">
             <div className="text-[11px] text-muted uppercase tracking-widest font-mono">Issues Detected</div>
@@ -705,10 +778,45 @@ export default function FixMyPortfolioPanel({ holdings, metrics, totalPortfolioV
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div className="text-[11px] text-muted uppercase tracking-widest font-mono">Recommended Changes</div>
-                <span className="text-[10px] text-muted/50 font-mono">Sorted by impact</span>
+                <button
+                  onClick={copyActionPlan}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono transition-all"
+                  style={{ background: "#0d0020", border: "1px solid #2a0050", color: copiedPlan ? "#00f5d4" : "#6b5e7e" }}
+                >
+                  {copiedPlan ? "Copied" : "Copy Plan"}
+                </button>
               </div>
-              {plan.recommendations.map((r, i) => (
-                <RecoCard key={i} r={r} index={i} />
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: "all" as RecommendationFilter, label: `All (${plan.recommendations.length})` },
+                  { key: "high" as RecommendationFilter, label: `High (${highCount})` },
+                  { key: "medium" as RecommendationFilter, label: `Medium (${medCount})` },
+                  { key: "low" as RecommendationFilter, label: `Low (${lowCount})` },
+                ].map((opt) => {
+                  const active = filter === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => setFilter(opt.key)}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono transition-all"
+                      style={{
+                        background: active ? "linear-gradient(90deg,#bf5af211,#ff2d7811)" : "#0d0020",
+                        border: `1px solid ${active ? "#bf5af255" : "#2a0050"}`,
+                        color: active ? "#e2d9f3" : "#6b5e7e",
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {filteredRecommendations.length === 0 && (
+                <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#0d0020", border: "1px solid #2a0050", color: "#6b5e7e" }}>
+                  No recommendations in this filter.
+                </div>
+              )}
+              {filteredRecommendations.map((r, i) => (
+                <RecoCard key={`${r.action}-${r.ticker ?? r.assetClass ?? i}-${i}`} r={r} index={i} />
               ))}
             </div>
           )}
