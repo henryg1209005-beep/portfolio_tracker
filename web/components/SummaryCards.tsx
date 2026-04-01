@@ -75,7 +75,7 @@ function Card({
         boxShadow: a.glow,
       }}
     >
-      <span className="text-[11px] text-muted uppercase tracking-widest font-mono">{label}</span>
+      <span className="text-xs text-muted uppercase tracking-widest font-mono">{label}</span>
       <span
         className="text-2xl font-bold font-mono mt-1 tabular-nums"
         style={{ color: a.color }}

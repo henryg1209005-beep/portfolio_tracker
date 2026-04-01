@@ -92,14 +92,17 @@ export default function HoldingsTable({ holdings, onRemove, currency = "GBP", fx
                 <div className="flex items-center gap-2">
                   <span className="font-bold font-mono" style={{ color: "#e2d9f3" }}>{h.ticker.replace(".L", "")}</span>
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium shrink-0"
+                    className="text-xs px-1.5 py-0.5 rounded font-mono font-medium shrink-0"
                     style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
                   >
                     {h.type}
                   </span>
                 </div>
-                <span className="text-xs font-mono" style={{ color: "#4a3a5e" }}>
-                  {h.net_shares?.toFixed(4)} shares · avg {typeof fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) === "string" ? fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) : "—"}
+                <span className="text-xs font-mono" style={{ color: "#6b5e7e" }}>
+                  {h.net_shares?.toFixed(4)} shares
+                </span>
+                <span className="text-xs font-mono" style={{ color: "#6b5e7e" }}>
+                  avg {typeof fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) === "string" ? fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) : "—"}
                 </span>
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
@@ -108,10 +111,10 @@ export default function HoldingsTable({ holdings, onRemove, currency = "GBP", fx
               </div>
               <button
                 onClick={() => onRemove(h.ticker)}
-                className="text-xs shrink-0 px-2 py-1.5 rounded transition-all"
-                style={{ color: "#2a1a40" }}
+                className="text-xs shrink-0 px-2 py-2 rounded transition-all"
+                style={{ color: "#4a3a5e" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#ff2d78"; (e.currentTarget as HTMLElement).style.background = "#ff2d7811"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#2a1a40"; (e.currentTarget as HTMLElement).style.background = ""; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#4a3a5e"; (e.currentTarget as HTMLElement).style.background = ""; }}
               >
                 ✕
               </button>

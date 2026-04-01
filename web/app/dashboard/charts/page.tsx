@@ -286,20 +286,23 @@ export default function ChartsPage() {
 
       {/* ── Summary stat cards ── */}
       {hasPerf && (
-        <div className="flex gap-3 flex-wrap">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Portfolio Return", value: `${sign(portReturn)}${portReturn.toFixed(2)}%`,  accent: portReturn  >= 0 ? "#00f5d4" : "#ff2d78" },
-            { label: "S&P 500 Return",   value: `${sign(benchReturn)}${benchReturn.toFixed(2)}%`, accent: benchReturn >= 0 ? "#00f5d4" : "#ff2d78" },
-            { label: "Alpha vs Market",  value: `${sign(alpha)}${alpha.toFixed(2)}%`,             accent: alpha >= 0 ? "#00f5d4" : "#ff2d78" },
-            { label: "Max Drawdown",     value: `${maxDD.toFixed(2)}%`,                           accent: maxDD > -10 ? "#00f5d4" : maxDD > -25 ? "#bf5af2" : "#ff2d78" },
-          ].map(({ label, value, accent }) => (
+            { label: "Portfolio Return", short: "Return",  value: `${sign(portReturn)}${portReturn.toFixed(2)}%`,   accent: portReturn  >= 0 ? "#00f5d4" : "#ff2d78" },
+            { label: "S&P 500 Return",   short: "S&P 500", value: `${sign(benchReturn)}${benchReturn.toFixed(2)}%`, accent: benchReturn >= 0 ? "#00f5d4" : "#ff2d78" },
+            { label: "Alpha vs Market",  short: "Alpha",   value: `${sign(alpha)}${alpha.toFixed(2)}%`,             accent: alpha >= 0 ? "#00f5d4" : "#ff2d78" },
+            { label: "Max Drawdown",     short: "Max DD",  value: `${maxDD.toFixed(2)}%`,                           accent: maxDD > -10 ? "#00f5d4" : maxDD > -25 ? "#bf5af2" : "#ff2d78" },
+          ].map(({ label, short, value, accent }) => (
             <div
               key={label}
-              className="synth-card rounded-xl px-4 py-3.5 flex flex-col gap-1 flex-1 min-w-0"
+              className="synth-card rounded-xl px-3 py-3 flex flex-col gap-1 overflow-hidden"
               style={{ borderColor: `${accent}33` }}
             >
-              <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: accent }}>{label}</span>
-              <span className="text-xl font-bold font-mono" style={{ color: accent }}>{value}</span>
+              <span className="text-xs font-mono uppercase tracking-wide leading-tight" style={{ color: accent }}>
+                <span className="sm:hidden">{short}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </span>
+              <span className="text-base sm:text-xl font-bold font-mono truncate" style={{ color: accent }}>{value}</span>
             </div>
           ))}
         </div>

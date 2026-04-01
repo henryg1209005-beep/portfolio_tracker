@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CorrelationData } from "@/lib/api";
 
 // Synthwave palette: pink (−1) → dark purple (0) → cyan (+1)
@@ -38,8 +38,21 @@ type Tooltip = { row: string; col: string; value: number; overlap?: number; x: n
 
 export default function CorrelationHeatmap({ data }: { data: CorrelationData }) {
   const [tooltip, setTooltip] = useState<Tooltip>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerW, setContainerW] = useState(520);
   const { tickers, matrix } = data;
   const n = tickers.length;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setContainerW(w);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   if (n < 2) {
     return (
@@ -56,14 +69,15 @@ export default function CorrelationHeatmap({ data }: { data: CorrelationData }) 
     if (c.overlap !== undefined) overlapLookup.set(`${c.row}|${c.col}`, c.overlap);
   });
 
-  const CELL    = Math.min(76, Math.max(48, Math.floor(520 / n)));
   const LABEL_W = 70;
   const PAD     = 4;
+  const CELL    = Math.min(76, Math.max(32, Math.floor((containerW - LABEL_W - PAD) / n)));
   const totalW  = LABEL_W + n * CELL + PAD;
   const totalH  = LABEL_W + n * CELL + PAD;
 
   return (
     <div
+      ref={containerRef}
       className="synth-card rounded-xl p-5 relative overflow-x-auto"
       style={{ borderColor: "#2a0050" }}
     >
@@ -86,8 +100,9 @@ export default function CorrelationHeatmap({ data }: { data: CorrelationData }) 
       </div>
 
       <svg
-        width={totalW}
+        width="100%"
         height={totalH}
+        viewBox={`0 0 ${totalW} ${totalH}`}
         onMouseLeave={() => setTooltip(null)}
         style={{ display: "block" }}
       >
@@ -171,11 +186,6 @@ export default function CorrelationHeatmap({ data }: { data: CorrelationData }) 
           })
         )}
       </svg>
-
-      {/* Mobile scroll hint */}
-      <p className="xl:hidden text-[10px] text-center font-mono mt-3" style={{ color: "#4a3a5e" }}>
-        ← scroll to see full matrix →
-      </p>
 
       {/* Tooltip */}
       {tooltip && (

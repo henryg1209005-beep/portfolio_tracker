@@ -181,9 +181,9 @@ function MetricCard({
       {/* Name + period */}
       <div>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-mono uppercase tracking-widest" style={{ color }}>{name}</span>
+          <span className="text-xs font-mono uppercase tracking-widest" style={{ color }}>{name}</span>
           {period && (
-            <span className="text-[9px] font-mono text-muted/60">{period}</span>
+            <span className="text-xs font-mono text-muted/60">{period}</span>
           )}
         </div>
         <div className="text-xs font-medium text-text/70 mt-0.5">{question}</div>
@@ -196,7 +196,7 @@ function MetricCard({
           {trend && trend.arrow !== "→" && (
             <div className="flex flex-col pb-0.5">
               <span className="text-sm font-bold leading-none" style={{ color: trend.color }}>{trend.arrow}</span>
-              <span className="text-[9px] font-mono leading-none mt-0.5" style={{ color: trend.color + "99" }}>{trend.label}</span>
+              <span className="text-xs font-mono leading-none mt-0.5" style={{ color: trend.color + "99" }}>{trend.label}</span>
             </div>
           )}
           {trend && trend.arrow === "→" && (
@@ -204,7 +204,7 @@ function MetricCard({
           )}
         </div>
         <div
-          className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0 mb-1"
+          className="flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 rounded-full shrink-0 mb-1"
           style={{ background: `${color}15`, color, border: `1px solid ${color}33` }}
         >
           <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ background: color }} />
@@ -216,14 +216,14 @@ function MetricCard({
       {sparkData && sparkData.length >= 3 && (
         <div className="flex items-center gap-2 -mt-1">
           <Sparkline data={sparkData} color={color} />
-          <span className="text-[9px] text-muted/50 font-mono">90d trend</span>
+          <span className="text-xs text-muted/50 font-mono">90d trend</span>
         </div>
       )}
 
       {/* Explanation */}
       <div style={{ borderTop: "1px solid #2a0050" }} className="pt-3 flex flex-col gap-1.5">
         <p className="text-xs text-text leading-relaxed">{explain}</p>
-        <p className="text-[10px] leading-relaxed" style={{ color: "#6b5e7e" }}>{detail}</p>
+        <p className="text-xs leading-relaxed" style={{ color: "#6b5e7e" }}>{detail}</p>
       </div>
 
       {/* Actionable tip */}
@@ -232,8 +232,8 @@ function MetricCard({
           className="rounded-lg px-3 py-2.5 flex gap-2 items-start"
           style={{ background: tipBg[status], borderLeft: `2px solid ${tipBorder[status]}` }}
         >
-          <span className="text-[10px] font-bold shrink-0 mt-px" style={{ color }}>→</span>
-          <p className="text-[11px] leading-relaxed" style={{ color: `${color}cc` }}>{tip}</p>
+          <span className="text-xs font-bold shrink-0 mt-px" style={{ color }}>→</span>
+          <p className="text-xs leading-relaxed" style={{ color: `${color}cc` }}>{tip}</p>
         </div>
       )}
     </div>
