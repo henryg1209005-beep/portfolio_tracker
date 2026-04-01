@@ -1,6 +1,8 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { streamAnalysis, fetchRefresh, fetchAIUsage, saveAiReport, listAiReports, deleteAiReport, type AiReport } from "@/lib/api";
+import { DEMO_AI_REPORT, DEMO_REFRESH_DATA } from "@/lib/demoPortfolio";
+import { useDemoMode } from "@/lib/demoModeContext";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 interface Section { title: string; body: string }
@@ -372,6 +374,7 @@ function NoHoldingsState() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AiPage() {
+  const { isDemoMode } = useDemoMode();
   const [text, setText]         = useState("");
   const [status, setStatus]     = useState<Status>("idle");
   const [error, setError]       = useState("");
@@ -385,6 +388,12 @@ export default function AiPage() {
   const [expandedReport, setExpandedReport] = useState<number | null>(null);
 
   useEffect(() => {
+    if (isDemoMode) {
+      setHoldingCount(DEMO_REFRESH_DATA.holdings.length);
+      setUsage({ used: 0, limit: 999, remaining: 999 });
+      setSavedReports([]);
+      return;
+    }
     fetchRefresh()
       .then(d => setHoldingCount(d.holdings.length))
       .catch(() => setHoldingCount(0));
@@ -394,7 +403,7 @@ export default function AiPage() {
     listAiReports()
       .then(setSavedReports)
       .catch(() => {});
-  }, []);
+  }, [isDemoMode]);
 
   async function handleSave() {
     if (!text || saveState === "saving" || saveState === "saved") return;
@@ -411,6 +420,14 @@ export default function AiPage() {
 
   function start() {
     setText(""); setError(""); setStatus("loading"); setSaveState("idle");
+    if (isDemoMode) {
+      setStatus("streaming");
+      window.setTimeout(() => {
+        setText(DEMO_AI_REPORT);
+        setStatus("done");
+      }, 500);
+      return;
+    }
     const cleanup = streamAnalysis(
       (chunk) => {
         setStatus("streaming");

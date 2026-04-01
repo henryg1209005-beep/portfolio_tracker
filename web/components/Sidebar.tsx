@@ -20,9 +20,11 @@ type Props = {
   token: string;
   copied: boolean;
   onCopyToken: () => void;
+  isDemoMode: boolean;
+  onToggleDemoMode: () => void;
 };
 
-export default function Sidebar({ token, copied, onCopyToken }: Props) {
+export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onToggleDemoMode }: Props) {
   const path = usePathname();
   const { signOut } = useClerk();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -104,6 +106,19 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
         >
           <span className="text-base">→</span>
           Sign out
+        </button>
+
+        <button
+          onClick={onToggleDemoMode}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left"
+          style={{
+            color: isDemoMode ? "#bf5af2" : "#6b5e7e",
+            background: isDemoMode ? "#bf5af211" : "transparent",
+            border: isDemoMode ? "1px solid #bf5af244" : "1px solid transparent",
+          }}
+        >
+          <span className="text-base">{isDemoMode ? "●" : "○"}</span>
+          {isDemoMode ? "Demo on" : "Demo off"}
         </button>
 
         {/* Access token */}
@@ -204,6 +219,19 @@ export default function Sidebar({ token, copied, onCopyToken }: Props) {
               <span className="text-base">◈</span>
               Discord Community
             </a>
+
+            <button
+              onClick={() => { onToggleDemoMode(); setShowMore(false); }}
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all w-full text-left"
+              style={{
+                background: isDemoMode ? "#bf5af211" : "#0d0020",
+                color: isDemoMode ? "#bf5af2" : "#6b5e7e",
+                border: isDemoMode ? "1px solid #bf5af244" : "1px solid #1a0030",
+              }}
+            >
+              <span className="text-base">{isDemoMode ? "●" : "○"}</span>
+              {isDemoMode ? "Disable Demo Mode" : "Enable Demo Mode"}
+            </button>
 
             <button
               onClick={() => signOut({ redirectUrl: "/" })}

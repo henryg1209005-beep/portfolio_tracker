@@ -2,6 +2,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { fetchPerformance, fetchRefresh, type PerformanceData, type RefreshData } from "@/lib/api";
 import { useCurrency, CURRENCY_SYMBOL } from "@/lib/currencyContext";
+import { DEMO_REFRESH_DATA, getDemoPerformance } from "@/lib/demoPortfolio";
+import { useDemoMode } from "@/lib/demoModeContext";
 import {
   LineChart, Line, AreaChart, Area,
   BarChart, Bar, Cell, ReferenceLine,
@@ -130,6 +132,7 @@ function ActiveShape(props: {
 
 export default function ChartsPage() {
   const { currency } = useCurrency();
+  const { isDemoMode } = useDemoMode();
   const symbol = CURRENCY_SYMBOL[currency] ?? "£";
   const [perfData,    setPerfData]    = useState<PerformanceData | null>(null);
   const [portData,    setPortData]    = useState<RefreshData | null>(null);
@@ -152,6 +155,11 @@ export default function ChartsPage() {
   const loadPerf = useCallback(async (tf: Timeframe, bm: Benchmark) => {
     setPerfLoading(true);
     setPerfError(false);
+    if (isDemoMode) {
+      setPerfData(getDemoPerformance(tf, bm));
+      setPerfLoading(false);
+      return;
+    }
     try {
       const perf = await fetchPerformance(tf, bm);
       setPerfData(perf);
@@ -160,10 +168,15 @@ export default function ChartsPage() {
     } finally {
       setPerfLoading(false);
     }
-  }, []);
+  }, [isDemoMode]);
 
   const loadPort = useCallback(async () => {
     setPortLoading(true);
+    if (isDemoMode) {
+      setPortData(DEMO_REFRESH_DATA);
+      setPortLoading(false);
+      return;
+    }
     try {
       setPortData(await fetchRefresh());
     } catch {
@@ -171,10 +184,10 @@ export default function ChartsPage() {
     } finally {
       setPortLoading(false);
     }
-  }, []);
+  }, [isDemoMode]);
 
   useEffect(() => { loadPerf(timeframe, benchmark); }, [timeframe, benchmark, loadPerf]);
-  useEffect(() => { loadPort(); }, [loadPort]);
+  useEffect(() => { loadPort(); }, [loadPort, isDemoMode]);
 
   // ── Derived data ────────────────────────────────────────────────────────────
 

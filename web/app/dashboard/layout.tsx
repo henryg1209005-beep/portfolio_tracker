@@ -6,10 +6,22 @@ import Sidebar from "@/components/Sidebar";
 import OnboardingModal from "@/components/OnboardingModal";
 import { setToken, getToken, getProfile, type InvestorProfile } from "@/lib/api";
 import { CurrencyProvider } from "@/lib/currencyContext";
+import { DemoModeProvider, useDemoMode } from "@/lib/demoModeContext";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <CurrencyProvider>
+      <DemoModeProvider>
+        <DashboardShell>{children}</DashboardShell>
+      </DemoModeProvider>
+    </CurrencyProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const { userId, isLoaded } = useAuth();
   const router = useRouter();
+  const { isDemoMode, setDemoMode } = useDemoMode();
   const [copied, setCopied] = useState(false);
   const [ready, setReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -49,10 +61,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <CurrencyProvider>
-      <div className="flex h-screen overflow-hidden font-sans">
-        <Sidebar token={getToken()} copied={copied} onCopyToken={copyToken} />
+    <div className="flex h-screen overflow-hidden font-sans">
+      <Sidebar
+        token={getToken()}
+        copied={copied}
+        onCopyToken={copyToken}
+        isDemoMode={isDemoMode}
+        onToggleDemoMode={() => setDemoMode(!isDemoMode)}
+      />
         <main className="flex-1 overflow-y-auto bg-bg pb-16 md:pb-0">
+          {isDemoMode && (
+            <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-4">
+              <div
+                className="rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3"
+                style={{ background: "#bf5af211", border: "1px solid #bf5af244", color: "#bf5af2" }}
+              >
+                <span>Demo mode enabled. Dashboard is showing sample data.</span>
+                <button
+                  onClick={() => setDemoMode(false)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-mono"
+                  style={{ border: "1px solid #bf5af244", color: "#bf5af2" }}
+                >
+                  Exit Demo
+                </button>
+              </div>
+            </div>
+          )}
           {profileError && (
             <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-4">
               <div
@@ -79,7 +113,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onSaved={(saved) => setProfile(saved)}
           />
         )}
-      </div>
-    </CurrencyProvider>
+    </div>
   );
 }

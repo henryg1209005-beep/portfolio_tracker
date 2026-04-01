@@ -11,6 +11,8 @@ import {
 import SummaryCards from "@/components/SummaryCards";
 import MetricsGrid from "@/components/MetricsGrid";
 import { useCurrency } from "@/lib/currencyContext";
+import { DEMO_REFRESH_DATA, getDemoPerformance } from "@/lib/demoPortfolio";
+import { useDemoMode } from "@/lib/demoModeContext";
 
 type Benchmark = "sp500" | "ftse100" | "msci_world";
 const BENCHMARKS: { key: Benchmark; label: string }[] = [
@@ -68,6 +70,7 @@ function fmtCurrency(v: unknown): string {
 
 export default function MetricsPage() {
   const { currency } = useCurrency();
+  const { isDemoMode } = useDemoMode();
   const [data, setData] = useState<RefreshData | null>(null);
   const [perfData, setPerfData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +81,16 @@ export default function MetricsPage() {
   const load = useCallback(async (bench: Benchmark) => {
     setLoading(true);
     setError("");
+    if (isDemoMode) {
+      const demoRefresh = {
+        ...DEMO_REFRESH_DATA,
+        metrics: DEMO_REFRESH_DATA.metrics ? { ...DEMO_REFRESH_DATA.metrics, benchmark_used: bench } : null,
+      };
+      setData(demoRefresh);
+      setPerfData(getDemoPerformance("1Y", bench));
+      setLoading(false);
+      return;
+    }
     try {
       const [refresh, perf] = await Promise.all([
         fetchRefresh(bench),
@@ -90,11 +103,11 @@ export default function MetricsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isDemoMode]);
 
   useEffect(() => {
     load(benchmark);
-  }, [load, benchmark]);
+  }, [load, benchmark, isDemoMode]);
 
   useEffect(() => {
     getProfile()
@@ -245,6 +258,11 @@ export default function MetricsPage() {
         <div>
           <h1 className="text-2xl font-bold">Risk Metrics</h1>
           <p className="text-muted text-sm mt-0.5">1-year rolling, {benchLabel} benchmark</p>
+          {isDemoMode && (
+            <p className="text-[11px] font-mono mt-1" style={{ color: "#bf5af2" }}>
+              Demo mode data
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center rounded-lg overflow-hidden font-mono text-xs" style={{ border: "1px solid #2a0050" }}>

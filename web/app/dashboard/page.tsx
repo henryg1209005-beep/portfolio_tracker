@@ -4,6 +4,7 @@ import { fetchRefresh, removeHolding, clearAllHoldings, getProfile, type Refresh
 import { useCurrency, CURRENCIES } from "@/lib/currencyContext";
 import type { RiskProfile } from "@/lib/fixMyPortfolio";
 import { DEMO_REFRESH_DATA } from "@/lib/demoPortfolio";
+import { useDemoMode } from "@/lib/demoModeContext";
 import SummaryCards from "@/components/SummaryCards";
 import HoldingsTable from "@/components/HoldingsTable";
 import AddHoldingModal from "@/components/AddHoldingModal";
@@ -18,15 +19,14 @@ export default function OverviewPage() {
   const [showImport, setShowImport] = useState(false);
   const [showFix, setShowFix] = useState(false);
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("balanced");
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const { currency, setCurrency } = useCurrency();
+  const { isDemoMode, setDemoMode } = useDemoMode();
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
       setData(await fetchRefresh("sp500", force));
-      setIsDemoMode(false);
     } catch {
       setError("Could not reach the API right now. Please try again in a moment.");
     } finally {
@@ -34,16 +34,23 @@ export default function OverviewPage() {
     }
   }, []);
 
-  function loadDemoPortfolio() {
+  function enableDemoPortfolio() {
+    setDemoMode(true);
+  }
+
+  function applyDemoPortfolio() {
     setData(DEMO_REFRESH_DATA);
     setError("");
     setLoading(false);
-    setIsDemoMode(true);
   }
 
   useEffect(() => {
+    if (isDemoMode) {
+      applyDemoPortfolio();
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, isDemoMode]);
 
   useEffect(() => {
     getProfile()
@@ -130,7 +137,7 @@ export default function OverviewPage() {
 
           {!isDemoMode && (
             <button
-              onClick={loadDemoPortfolio}
+              onClick={enableDemoPortfolio}
               className="px-3 py-2 text-sm rounded-lg font-mono transition-all"
               style={{ border: "1px solid #bf5af244", color: "#bf5af2", background: "#bf5af211" }}
             >
@@ -140,7 +147,7 @@ export default function OverviewPage() {
 
           {isDemoMode && (
             <button
-              onClick={() => load(true)}
+              onClick={() => setDemoMode(false)}
               className="px-3 py-2 text-sm rounded-lg font-mono transition-all"
               style={{ border: "1px solid #00f5d444", color: "#00f5d4", background: "#00f5d411" }}
             >
@@ -196,6 +203,7 @@ export default function OverviewPage() {
 
           <button
             onClick={() => setShowImport(true)}
+            disabled={isDemoMode}
             className="px-3 py-2 text-sm font-mono rounded-lg transition-all"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
             onMouseEnter={(e) => {
@@ -212,6 +220,7 @@ export default function OverviewPage() {
 
           <button
             onClick={() => setShowAdd(true)}
+            disabled={isDemoMode}
             className="px-3 py-2 text-sm font-semibold rounded-lg transition-all"
             style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff" }}
           >
@@ -226,7 +235,7 @@ export default function OverviewPage() {
             <span>{error}</span>
             {!isDemoMode && (
               <button
-                onClick={loadDemoPortfolio}
+                onClick={enableDemoPortfolio}
                 className="px-3 py-2 text-xs rounded-lg font-mono transition-all"
                 style={{ border: "1px solid #bf5af244", color: "#bf5af2", background: "#bf5af211" }}
               >

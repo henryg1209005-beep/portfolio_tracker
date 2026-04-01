@@ -5,6 +5,8 @@ import {
   type CorrelationData, type SuggestionsData, type RollingCorrelationData,
 } from "@/lib/api";
 import { computeCorrelationAnalytics, type CorrelationAnalytics, type PairResult } from "@/lib/correlationAnalytics";
+import { DEMO_CORRELATION_DATA, DEMO_ROLLING_CORRELATION_DATA, DEMO_SUGGESTIONS_DATA } from "@/lib/demoPortfolio";
+import { useDemoMode } from "@/lib/demoModeContext";
 import CorrelationHeatmap from "@/components/CorrelationHeatmap";
 import RollingCorrelationChart from "@/components/RollingCorrelationChart";
 
@@ -301,6 +303,7 @@ function InsightsPanel({ analytics }: { analytics: CorrelationAnalytics }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CorrelationPage() {
+  const { isDemoMode } = useDemoMode();
   const [data,        setData]        = useState<CorrelationData | null>(null);
   const [suggestions, setSuggestions]  = useState<SuggestionsData | null>(null);
   const [rolling,     setRolling]     = useState<RollingCorrelationData | null>(null);
@@ -314,6 +317,13 @@ export default function CorrelationPage() {
     setError("");
     setSuggestions(null);
     setRolling(null);
+    if (isDemoMode) {
+      setData({ ...DEMO_CORRELATION_DATA, method: m });
+      setSuggestions(DEMO_SUGGESTIONS_DATA);
+      setRolling(DEMO_ROLLING_CORRELATION_DATA);
+      setLoading(false);
+      return;
+    }
     try {
       // Load heatmap first — it's cached and renders immediately
       const corrData = await fetchCorrelation(tf, m);
@@ -326,9 +336,9 @@ export default function CorrelationPage() {
       setError("Could not reach the API right now. Please try again in a moment.");
       setLoading(false);
     }
-  }, []);
+  }, [isDemoMode]);
 
-  useEffect(() => { load(timeframe, method); }, [timeframe, method, load]);
+  useEffect(() => { load(timeframe, method); }, [timeframe, method, load, isDemoMode]);
 
   const analytics = useMemo<CorrelationAnalytics | null>(() => {
     if (!data || data.tickers.length < 2) return null;
