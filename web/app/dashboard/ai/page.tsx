@@ -258,11 +258,11 @@ function SectionCard({ section, isLast, isStreaming }: {
 }
 
 // ─── Streaming section card (typewriter body) ─────────────────────────────────
-function StreamingSectionCard({ section }: { section: Section }) {
+function StreamingSectionCard({ section, active }: { section: Section; active: boolean }) {
   const meta   = SECTION_META[section.title.toUpperCase()] ?? { icon: "◈" };
   const accent = meta.accent ?? "#bf5af2";
   const isTldr = section.title.toUpperCase() === "TL;DR";
-  const typed  = useTypewriter(section.body, true);
+  const typed  = useTypewriter(section.body, active);
 
   return (
     <div className="rounded-2xl overflow-hidden border border-border"
@@ -420,7 +420,8 @@ export default function AiPage() {
   const hasHoldings = holdingCount === null || holdingCount > 0;
   const limitHit    = usage !== null && usage.remaining === 0;
   const sections    = parseSections(text);
-  const partial     = busy ? parsePartial(text) : null;
+  // Keep partial alive on "done" so the typewriter can finish the last section
+  const partial     = (busy || status === "done") ? parsePartial(text) : null;
 
   return (
     <>
@@ -503,7 +504,7 @@ export default function AiPage() {
               />
             ))}
             {partial && (
-              <StreamingSectionCard key={partial.title} section={partial} />
+              <StreamingSectionCard key={partial.title} section={partial} active={busy} />
             )}
           </div>
         ) : null}
