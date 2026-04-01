@@ -95,7 +95,7 @@ export default function SummaryCards({ summary, currency = "GBP" }: { summary: S
 
   const value     = summary.total_value * fxRate;
   const pnl       = summary.total_pnl * fxRate;
-  const dividends = summary.total_dividends * fxRate;
+  const cost      = summary.total_cost * fxRate;
   const pos       = pnl >= 0;
   const pnlPct    = summary.total_pnl_pct?.toFixed(2) ?? "0.00";
 
@@ -124,8 +124,8 @@ export default function SummaryCards({ summary, currency = "GBP" }: { summary: S
       />
       <Card
         index={2}
-        label="Dividends Received"
-        rawValue={dividends}
+        label="Total Invested"
+        rawValue={cost}
         accent="purple"
         symbol={symbol}
       />

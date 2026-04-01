@@ -135,7 +135,6 @@ export default function HoldingsTable({ holdings, onRemove, currency = "GBP", fx
               <Th label="Value" k="market_value" />
               <Th label="P&L" k="pnl" />
               <Th label="Weight" k="weight" />
-              <th className="px-4 py-3 text-left text-[11px] text-muted uppercase tracking-wider font-mono">Divs</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -172,7 +171,6 @@ export default function HoldingsTable({ holdings, onRemove, currency = "GBP", fx
                   <td className="px-4 py-3 font-mono text-muted">
                     {h.weight != null ? `${(h.weight * 100).toFixed(1)}%` : "—"}
                   </td>
-                  <td className="px-4 py-3 font-mono text-muted">{fmt(h.total_dividends != null ? h.total_dividends * fxRate : null, symbol)}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => onRemove(h.ticker)}

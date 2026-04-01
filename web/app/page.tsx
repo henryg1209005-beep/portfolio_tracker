@@ -26,7 +26,7 @@ const FEATURES = [
     title: "AI Overview",
     tag: "Powered by AI",
     description:
-      "A private-wealth-grade portfolio report generated in seconds. Plain-English explanations of every metric, hidden exposures, dividend income, and an honest assessment of your portfolio construction.",
+      "A private-wealth-grade portfolio report generated in seconds. Plain-English explanations of every metric, hidden exposures, and an honest assessment of your portfolio construction.",
     bullets: ["Live data, not generic advice", "Streams in real time", "8-section structured report"],
     screen: "/screen-ai.png",
   },
@@ -489,7 +489,7 @@ export default function LandingPage() {
             { icon: "↑", label: "CSV Import" },
             { icon: "◉", label: "Multi-currency (GBP / USD / EUR)" },
             { icon: "▦", label: "Live P&L per holding" },
-            { icon: "◈", label: "Dividend tracking" },
+            { icon: "◈", label: "CSV broker import" },
           ].map(({ icon, label }) => (
             <div
               key={label}

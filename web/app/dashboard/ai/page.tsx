@@ -221,9 +221,8 @@ const SECTION_META: Record<string, { icon: string; accent?: string }> = {
   "3. RISK METRICS":                   { icon: "⚡" },
   "4. PERFORMANCE VS BENCHMARK":       { icon: "↗", accent: "#00e6b4" },
   "5. HIDDEN EXPOSURES":               { icon: "⚠", accent: "#ffbe00" },
-  "6. DIVIDEND INCOME":                { icon: "◉" },
-  "7. OBSERVATIONS WORTH CONSIDERING": { icon: "✦" },
-  "8. OVERALL ASSESSMENT":             { icon: "▣" },
+  "6. OBSERVATIONS WORTH CONSIDERING": { icon: "✦" },
+  "7. OVERALL ASSESSMENT":             { icon: "▣" },
 };
 
 function SectionCard({ section, isLast, isStreaming }: {

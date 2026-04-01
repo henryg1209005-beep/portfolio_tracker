@@ -6,13 +6,24 @@ import threading
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import numpy as np
+import pandas as pd
+import yfinance as yf
 import anthropic
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from api import db
-from .market import _refresh_data
+from .market import _refresh_data, _safe_float
 from .profile import _load_profile
+from data.fetcher import (
+    fetch_historical_data, fetch_gbpusd_history, fetch_benchmark_data,
+    fetch_risk_free_rate, resolve_ticker,
+)
+from metrics.calculator import (
+    _portfolio_returns, sharpe_ratio, volatility, max_drawdown,
+    value_at_risk, cornish_fisher_var, TRADING_DAYS,
+)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -55,7 +66,7 @@ State the value, then immediately explain it in plain terms.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 3. RISK METRICS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Volatility, Max Drawdown, VaR 95%, Beta — each with plain-English translation.
+Volatility, Max Drawdown, VaR 95% (both historical and Cornish-Fisher), Sortino Ratio, Beta — each with plain-English translation. If rolling trends are provided, comment on whether risk is rising, stable, or falling.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 4. PERFORMANCE vs BENCHMARK
@@ -63,22 +74,17 @@ Volatility, Max Drawdown, VaR 95%, Beta — each with plain-English translation.
 Actual return vs CAPM expected. Jensen's Alpha in plain terms.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-5. HIDDEN EXPOSURES
+5. SECTOR & CORRELATION ANALYSIS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ETF overlap, geographic/sector concentration, currency risk.
+Use the sector data and correlation matrix provided. Flag any sector over-concentration, highly correlated pairs (>0.8), and geographic/currency risk.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6. DIVIDEND INCOME
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total received. If none, note the growth-only nature.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7. OBSERVATIONS WORTH CONSIDERING
+6. OBSERVATIONS WORTH CONSIDERING
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 3-4 numbered observations. Each: data point → why it matters → what it could imply.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-8. OVERALL ASSESSMENT
+7. OVERALL ASSESSMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Two paragraphs. Honest assessment of construction strengths and areas worth attention.
 
@@ -100,22 +106,38 @@ _UK_ETFS    = {"HUKX","ISF"}
 _BOND_ETFS  = {"IGLT","VGOV","IGLS","SLXX","CORP","AGG","BND","TLT","IEF","LQD","VGSH"}
 _CRYPTO     = {"BTC-USD","ETH-USD","BNB-USD","SOL-USD","ADA-USD","XRP-USD","DOGE-USD"}
 
-# Balanced profile thresholds (mirrors THRESHOLDS.balanced in fixMyPortfolio.ts)
-_US_MAX      = 0.70
-_CRYPTO_MAX  = 0.08
-_VOL_HIGH    = 0.28
-_MAX_HHI     = 0.28
+# Profile-aware thresholds for scoring
+_PROFILE_THRESHOLDS = {
+    "conservative": {
+        "us_max": 0.55, "crypto_max": 0.03, "vol_high": 0.15, "max_hhi": 0.22,
+        "sharpe_tiers":   [1.2, 0.8, 0.5, 0.2],   # thresholds for 25/20/14/8/3
+        "drawdown_tiers": [0.07, 0.12, 0.18, 0.25],  # thresholds for 20/15/9/4
+    },
+    "balanced": {
+        "us_max": 0.70, "crypto_max": 0.08, "vol_high": 0.28, "max_hhi": 0.28,
+        "sharpe_tiers":   [1.5, 1.0, 0.6, 0.3],
+        "drawdown_tiers": [0.10, 0.20, 0.30, 0.40],
+    },
+    "growth": {
+        "us_max": 0.85, "crypto_max": 0.15, "vol_high": 0.40, "max_hhi": 0.35,
+        "sharpe_tiers":   [1.8, 1.2, 0.7, 0.3],
+        "drawdown_tiers": [0.15, 0.30, 0.40, 0.50],
+    },
+}
 
 
-def _compute_scores(holdings: list, metrics: dict | None) -> dict:
+def _compute_scores(holdings: list, metrics: dict | None, profile: dict | None = None) -> dict:
     """
     5-factor portfolio score (0–100).
-    Methodology mirrors fixMyPortfolio.ts so both features show the same number.
-    Profile assumed: balanced.
+    Thresholds adapt to the user's risk profile (conservative/balanced/growth).
     """
     if not holdings:
         return {"concentration": 0, "risk_adjusted": 0, "drawdown": 0,
-                "diversification": 0, "alignment": 0, "overall": 0}
+                "diversification": 0, "alignment": 0, "overall": 0,
+                "profile_used": "balanced"}
+
+    risk_appetite = (profile or {}).get("risk_appetite", "balanced")
+    thresholds = _PROFILE_THRESHOLDS.get(risk_appetite, _PROFILE_THRESHOLDS["balanced"])
 
     metrics = metrics or {}
     weights = [h.get("weight") or 0 for h in holdings]
@@ -155,6 +177,8 @@ def _compute_scores(holdings: list, metrics: dict | None) -> dict:
             has_bonds = True
         # UK stocks / ETFs: not US, not intl for our purposes
 
+    max_hhi = thresholds["max_hhi"]
+
     # ── Factor 1: Concentration efficiency (0–30) ────────────────────────────
     concentration = (
         30 if efficiency_ratio >= 0.80 else
@@ -163,51 +187,56 @@ def _compute_scores(holdings: list, metrics: dict | None) -> dict:
         10 if efficiency_ratio >= 0.35 else
         4  if efficiency_ratio >= 0.20 else 0
     )
-    if hhi > _MAX_HHI * 1.5:
+    if hhi > max_hhi * 1.5:
         concentration = max(0, concentration - 12)
-    elif hhi > _MAX_HHI:
+    elif hhi > max_hhi:
         concentration = max(0, concentration - 6)
 
     # ── Factor 2: Risk-adjusted return (0–25) ────────────────────────────────
     sharpe = metrics.get("sharpe_ratio") or 0
+    st = thresholds["sharpe_tiers"]
     risk_adjusted = (
-        25 if sharpe >= 1.5 else
-        20 if sharpe >= 1.0 else
-        14 if sharpe >= 0.6 else
-        8  if sharpe >= 0.3 else
+        25 if sharpe >= st[0] else
+        20 if sharpe >= st[1] else
+        14 if sharpe >= st[2] else
+        8  if sharpe >= st[3] else
         3  if sharpe >= 0.0 else 0
     )
 
     # ── Factor 3: Drawdown control (0–20) ────────────────────────────────────
     mdd = abs(metrics.get("max_drawdown") or 0)
+    dt = thresholds["drawdown_tiers"]
     drawdown = (
-        20 if mdd <= 0.10 else
-        15 if mdd <= 0.20 else
-        9  if mdd <= 0.30 else
-        4  if mdd <= 0.40 else 0
+        20 if mdd <= dt[0] else
+        15 if mdd <= dt[1] else
+        9  if mdd <= dt[2] else
+        4  if mdd <= dt[3] else 0
     )
 
     # ── Factor 4: Diversification (0–15) ─────────────────────────────────────
+    us_max = thresholds["us_max"]
     div = 0
     if has_intl and has_em: div += 8
     elif has_intl:          div += 4
-    if us_exposure <= _US_MAX:
-        div += round((1 - us_exposure / (_US_MAX + 0.001)) * 3)
+    if us_exposure <= us_max:
+        div += round((1 - us_exposure / (us_max + 0.001)) * 3)
     if has_bonds:           div += 4
     if len(asset_types) >= 3: div += 3
     elif len(asset_types) == 2: div += 1
     diversification = min(15, div)
 
     # ── Factor 5: Profile alignment (0–10) ───────────────────────────────────
+    vol_high = thresholds["vol_high"]
+    crypto_max = thresholds["crypto_max"]
     vol = metrics.get("volatility") or 0
     alignment = 10
-    if   vol > _VOL_HIGH * 1.5:      alignment -= 10
-    elif vol > _VOL_HIGH * 1.2:      alignment -= 7
-    elif vol > _VOL_HIGH:            alignment -= 4
-    if   us_exposure > _US_MAX + 0.10: alignment -= 3
-    elif us_exposure > _US_MAX:        alignment -= 1
-    if   crypto_exp > _CRYPTO_MAX * 1.5: alignment -= 3
-    elif crypto_exp > _CRYPTO_MAX:       alignment -= 1
+    if   vol > vol_high * 1.5:      alignment -= 10
+    elif vol > vol_high * 1.2:      alignment -= 7
+    elif vol > vol_high:            alignment -= 4
+    if   us_exposure > us_max + 0.10: alignment -= 3
+    elif us_exposure > us_max:        alignment -= 1
+    if   crypto_exp > crypto_max * 1.5: alignment -= 3
+    elif crypto_exp > crypto_max:       alignment -= 1
     alignment = max(0, alignment)
 
     overall = concentration + risk_adjusted + drawdown + diversification + alignment
@@ -219,6 +248,7 @@ def _compute_scores(holdings: list, metrics: dict | None) -> dict:
         "diversification": diversification,
         "alignment":      alignment,
         "overall":        min(100, max(0, overall)),
+        "profile_used":   risk_appetite,
     }
 
 
@@ -227,11 +257,92 @@ _GOAL_LABELS  = {"long_term_growth": "Long-term capital growth", "income": "Inco
 _HORIZON_LABELS = {"<2": "Less than 2 years", "2-5": "2–5 years", "5-10": "5–10 years", "10+": "10+ years"}
 
 
+def _fetch_sector_data(tickers: list[str]) -> dict[str, dict]:
+    """Fetch sector and industry for each ticker via yfinance. Returns {ticker: {sector, industry}}."""
+    result = {}
+    for ticker in tickers:
+        sym = resolve_ticker(ticker)
+        try:
+            info = yf.Ticker(sym).info
+            sector = info.get("sector", "Unknown")
+            industry = info.get("industry", "Unknown")
+            result[ticker] = {"sector": sector, "industry": industry}
+        except Exception:
+            result[ticker] = {"sector": "Unknown", "industry": "Unknown"}
+    return result
+
+
+def _compute_correlation(tickers: list[str]) -> tuple[list[str], dict]:
+    """Compute pairwise correlation for tickers. Returns (valid_tickers, {(t1,t2): corr_value})."""
+    if len(tickers) < 2:
+        return tickers, {}
+    try:
+        gbpusd_hist = fetch_gbpusd_history(period="1y")
+        hist = fetch_historical_data(tickers, period="1y", gbpusd_series=gbpusd_hist)
+        if hist.empty or hist.shape[1] < 2:
+            return tickers, {}
+        corr = hist.pct_change().dropna().corr()
+        valid = [t for t in tickers if t in corr.columns]
+        pairs = {}
+        for i, t1 in enumerate(valid):
+            for t2 in valid[i+1:]:
+                val = _safe_float(corr.loc[t1, t2])
+                if val is not None:
+                    pairs[(t1, t2)] = val
+        return valid, pairs
+    except Exception:
+        return tickers, {}
+
+
+def _compute_rolling_trends(tickers: list[str], weights: dict, first_buy_dates: dict) -> dict | None:
+    """
+    Compute key metrics at two windows (full 1Y and trailing 3M) to show trends.
+    Returns {"now": {...}, "3m_ago": {...}} or None on failure.
+    """
+    try:
+        rf = fetch_risk_free_rate()
+        gbpusd_hist = fetch_gbpusd_history(period="1y")
+
+        # Full 1Y window (current metrics)
+        hist_1y = fetch_historical_data(tickers, period="1y", gbpusd_series=gbpusd_hist)
+        if hist_1y.empty or len(hist_1y) < 60:
+            return None
+
+        port_ret_1y = _portfolio_returns(hist_1y, weights, first_buy_dates)
+        if port_ret_1y.empty or len(port_ret_1y) < 60:
+            return None
+
+        # Trailing 3M window — last ~63 trading days of the 1Y series
+        port_ret_3m = port_ret_1y.iloc[-63:]
+
+        # Also compute metrics for the FIRST half (3M ending ~63 days ago) for comparison
+        if len(port_ret_1y) >= 126:
+            port_ret_old = port_ret_1y.iloc[-126:-63]
+        else:
+            return None
+
+        def _metrics_for(ret):
+            return {
+                "sharpe": _safe_float(sharpe_ratio(ret, rf)),
+                "volatility": _safe_float(volatility(ret)),
+                "var_95": _safe_float(value_at_risk(ret)),
+                "var_95_cf": _safe_float(cornish_fisher_var(ret)),
+                "max_drawdown": _safe_float(max_drawdown(ret)),
+            }
+
+        return {
+            "recent_3m": _metrics_for(port_ret_3m),
+            "prior_3m": _metrics_for(port_ret_old),
+        }
+    except Exception:
+        return None
+
+
 def _build_context(market_data: dict, profile: dict | None = None) -> str:
     holdings = market_data.get("holdings", [])
     summary = market_data.get("summary", {})
     metrics = market_data.get("metrics") or {}
-    scores = _compute_scores(holdings, metrics)
+    scores = _compute_scores(holdings, metrics, profile)
 
     lines = ["=== PORTFOLIO DATA FOR ANALYSIS ===\n"]
 
@@ -245,12 +356,13 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
     lines.append(f"Total Value: £{summary.get('total_value', 0):,.2f}")
     lines.append(f"Total Cost:  £{summary.get('total_cost', 0):,.2f}")
     lines.append(f"Unrealised P&L: £{summary.get('total_pnl', 0):,.2f} ({summary.get('total_pnl_pct', 0):.1f}%)")
-    lines.append(f"Total Dividends: £{summary.get('total_dividends', 0):,.2f}")
     lines.append(f"Holdings: {summary.get('holding_count', 0)}")
     lines.append(f"GBP/USD: {summary.get('gbpusd', 1.34):.4f}\n")
 
     lines.append("--- HOLDINGS ---")
+    tickers = []
     for h in sorted(holdings, key=lambda x: -(x.get("weight") or 0)):
+        tickers.append(h["ticker"])
         lines.append(
             f"{h['ticker']} ({h['type']}) | "
             f"{h['net_shares']:.4f} shares | "
@@ -258,10 +370,36 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
             f"Price: £{h['current_price']:.2f} | "
             f"Value: £{h['market_value']:.2f} | "
             f"P&L: £{h['pnl']:.2f} ({h['pnl_pct']:.1f}%) | "
-            f"Weight: {(h['weight'] or 0)*100:.1f}% | "
-            f"Dividends: £{h['total_dividends']:.2f}"
+            f"Weight: {(h['weight'] or 0)*100:.1f}%"
         )
 
+    # ── Sector data ──────────────────────────────────────────────────────────
+    if tickers:
+        sector_data = _fetch_sector_data(tickers)
+        lines.append("\n--- SECTOR & INDUSTRY ---")
+        sector_weights: dict[str, float] = {}
+        for h in holdings:
+            t = h["ticker"]
+            sec = sector_data.get(t, {}).get("sector", "Unknown")
+            ind = sector_data.get(t, {}).get("industry", "Unknown")
+            w = (h.get("weight") or 0)
+            lines.append(f"{t}: {sec} / {ind}")
+            sector_weights[sec] = sector_weights.get(sec, 0) + w
+        lines.append("\nSector weights:")
+        for sec, sw in sorted(sector_weights.items(), key=lambda x: -x[1]):
+            lines.append(f"  {sec}: {sw*100:.1f}%")
+
+    # ── Correlation matrix ───────────────────────────────────────────────────
+    if len(tickers) >= 2:
+        valid_corr, pairs = _compute_correlation(tickers)
+        if pairs:
+            lines.append("\n--- CORRELATION MATRIX (1Y, notable pairs) ---")
+            # Show all pairs, highlight high correlations
+            for (t1, t2), val in sorted(pairs.items(), key=lambda x: -abs(x[1])):
+                flag = " *** HIGH" if abs(val) > 0.8 else ""
+                lines.append(f"  {t1} / {t2}: {val:.3f}{flag}")
+
+    # ── Risk metrics ─────────────────────────────────────────────────────────
     if metrics and "error" not in metrics:
         lines.append("\n--- RISK METRICS ---")
         def fmt(v, pct=False):
@@ -269,24 +407,72 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
             return f"{v*100:.2f}%" if pct else f"{v:.4f}"
 
         lines.append(f"Sharpe Ratio:          {fmt(metrics.get('sharpe_ratio'))}")
+        lines.append(f"Sortino Ratio:         {fmt(metrics.get('sortino_ratio'))}")
         lines.append(f"Annualised Return:     {fmt(metrics.get('actual_return'), pct=True)}")
         lines.append(f"Volatility:            {fmt(metrics.get('volatility'), pct=True)}")
         lines.append(f"Beta:                  {fmt(metrics.get('beta'))}")
         lines.append(f"CAPM Expected Return:  {fmt(metrics.get('capm_expected_return'), pct=True)}")
         lines.append(f"Jensen's Alpha:        {fmt(metrics.get('alpha'), pct=True)}")
-        lines.append(f"VaR 95% (daily):       {fmt(metrics.get('var_95'), pct=True)}")
+        lines.append(f"VaR 95% Historical:    {fmt(metrics.get('var_95'), pct=True)}")
+        lines.append(f"VaR 95% Cornish-Fisher:{fmt(metrics.get('var_95_cf'), pct=True)}")
         lines.append(f"Max Drawdown:          {fmt(metrics.get('max_drawdown'), pct=True)}")
-        lines.append(f"VaR in £:              £{abs((metrics.get('var_95') or 0) * (summary.get('total_value') or 0)):,.2f}")
-        lines.append(f"Max Drawdown in £:     £{abs((metrics.get('max_drawdown') or 0) * (summary.get('total_value') or 0)):,.2f}")
+        lines.append(f"Risk-Free Rate:        {fmt(metrics.get('rf_annual'), pct=True)}")
+        lines.append(f"Benchmark:             {metrics.get('benchmark_used', 'sp500')}")
 
+        dd_recovery = metrics.get("drawdown_recovery_days")
+        if dd_recovery is not None:
+            if dd_recovery >= 0:
+                lines.append(f"Drawdown Recovery:     {dd_recovery} trading days")
+            else:
+                lines.append(f"Drawdown Recovery:     Still in drawdown ({abs(dd_recovery)} days since trough)")
+
+        total_val = summary.get("total_value") or 0
+        lines.append(f"VaR in £ (historical): £{abs((metrics.get('var_95') or 0) * total_val):,.2f}")
+        lines.append(f"VaR in £ (CF):         £{abs((metrics.get('var_95_cf') or 0) * total_val):,.2f}")
+        lines.append(f"Max Drawdown in £:     £{abs((metrics.get('max_drawdown') or 0) * total_val):,.2f}")
+
+    # ── Rolling trends ───────────────────────────────────────────────────────
+    if tickers and metrics and "error" not in metrics:
+        # Build cost weights for rolling calc
+        cost_weights = {
+            h["ticker"]: (h.get("cost_basis") or 0)
+            for h in holdings if (h.get("cost_basis") or 0) > 0
+        }
+        first_buy_dates = {}
+        # We don't have raw transaction data here, so use empty dict (trends still work)
+        trends = _compute_rolling_trends(tickers, cost_weights, first_buy_dates)
+        if trends:
+            lines.append("\n--- ROLLING METRIC TRENDS (recent 3M vs prior 3M) ---")
+            recent = trends["recent_3m"]
+            prior = trends["prior_3m"]
+            for key, label in [("sharpe", "Sharpe"), ("volatility", "Volatility"),
+                               ("var_95", "VaR 95%"), ("max_drawdown", "Max Drawdown")]:
+                r = recent.get(key)
+                p = prior.get(key)
+                if r is not None and p is not None:
+                    if key == "volatility":
+                        # Higher volatility = worse
+                        trend_note = "worsening" if r > p else "improving" if r < p else "stable"
+                    elif key in ("var_95", "max_drawdown"):
+                        # These are negative; more negative = worse
+                        trend_note = "worsening" if r < p else "improving" if r > p else "stable"
+                    else:
+                        trend_note = "improving" if r > p else "declining" if r < p else "stable"
+                    if key in ("volatility", "var_95", "max_drawdown"):
+                        lines.append(f"  {label}: {r*100:.2f}% (was {p*100:.2f}%) — {trend_note}")
+                    else:
+                        lines.append(f"  {label}: {r:.4f} (was {p:.4f}) — {trend_note}")
+
+    # ── Portfolio scores ─────────────────────────────────────────────────────
     overall = scores["overall"]
+    profile_used = scores.get("profile_used", "balanced")
     score_label = (
         "Strong"         if overall >= 75 else
         "Moderate"       if overall >= 55 else
         "Needs Attention" if overall >= 35 else
         "At Risk"
     )
-    lines.append("\n--- PRE-COMPUTED PORTFOLIO SCORES (copy exactly, assumed balanced profile) ---")
+    lines.append(f"\n--- PRE-COMPUTED PORTFOLIO SCORES (copy exactly, {profile_used} profile thresholds) ---")
     lines.append(f"Overall Score:              {overall} / 100  ({score_label})")
     lines.append(f"Concentration Efficiency:   {scores['concentration']} / 30")
     lines.append(f"Risk-Adjusted Return:       {scores['risk_adjusted']} / 25")
@@ -352,7 +538,7 @@ def analysis(token: str):
                 client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
                 with client.messages.stream(
                     model="claude-haiku-4-5",
-                    max_tokens=2500,
+                    max_tokens=3500,
                     system=[{
                         "type": "text",
                         "text": SYSTEM_PROMPT,
