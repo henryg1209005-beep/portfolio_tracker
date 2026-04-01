@@ -25,7 +25,7 @@ export default function OverviewPage() {
     try {
       setData(await fetchRefresh("sp500", force));
     } catch {
-      setError("Could not reach the API. Make sure the Python server is running on port 8000.");
+      setError("Could not reach the API right now. Please try again in a moment.");
     } finally {
       setLoading(false);
     }

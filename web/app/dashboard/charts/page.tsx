@@ -293,7 +293,7 @@ export default function ChartsPage() {
 
       {perfNetworkError && (
         <div className="rounded-xl p-4 text-sm" style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
-          Could not reach the API. Make sure the Python server is running on port 8000.
+          Could not reach the API right now. Please try again in a moment.
         </div>
       )}
 
@@ -365,7 +365,7 @@ export default function ChartsPage() {
             </ResponsiveContainer>
           </div>
         ) : perfNetworkError ? (
-          <EmptyState icon="↗" message="Could not reach API" sub="Make sure the Python server is running on port 8000." />
+          <EmptyState icon="↗" message="Could not reach API" sub="Please try again in a moment." />
         ) : perfFailed ? (
           <EmptyState icon="↗" message="Could not compute performance" sub="Historical price data unavailable for this period. Try a different timeframe." />
         ) : (
@@ -401,7 +401,7 @@ export default function ChartsPage() {
             </ResponsiveContainer>
           </div>
         ) : perfNetworkError ? (
-          <EmptyState icon="↘" message="Could not reach API" sub="Make sure the Python server is running on port 8000." />
+          <EmptyState icon="↘" message="Could not reach API" sub="Please try again in a moment." />
         ) : perfFailed ? (
           <EmptyState icon="↘" message="Could not compute drawdown" sub="Same data source as performance — try a different timeframe." />
         ) : (

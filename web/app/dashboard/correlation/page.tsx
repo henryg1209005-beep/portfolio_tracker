@@ -323,7 +323,7 @@ export default function CorrelationPage() {
       fetchCorrelationSuggestions(tf).then(setSuggestions).catch(() => null);
       fetchRollingCorrelation(tf).then(setRolling).catch(() => null);
     } catch {
-      setError("Could not reach the API. Make sure the Python server is running on port 8000.");
+      setError("Could not reach the API right now. Please try again in a moment.");
       setLoading(false);
     }
   }, []);
