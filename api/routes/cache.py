@@ -8,7 +8,7 @@ import threading
 
 _lock = threading.Lock()
 _refresh: dict = {}          # (token, benchmark) -> (data, timestamp)
-_perf: dict    = {}          # (token, period) -> data
+_perf: dict    = {}          # (token, period, benchmark) -> data
 _corr: dict    = {}          # (token, period, method) -> data
 _suggestions: dict = {}      # (token, period) -> data
 _rolling: dict = {}          # (token, period, window) -> data
@@ -39,14 +39,14 @@ def invalidate_refresh_only(token: str, benchmark: str = "sp500"):
         _refresh.pop((token, benchmark), None)
 
 
-def get_cached_performance(token: str, period: str):
+def get_cached_performance(token: str, period: str, benchmark: str = "sp500"):
     with _lock:
-        return _perf.get((token, period))
+        return _perf.get((token, period, benchmark))
 
 
-def set_cached_performance(token: str, period: str, data: dict):
+def set_cached_performance(token: str, period: str, data: dict, benchmark: str = "sp500"):
     with _lock:
-        _perf[(token, period)] = data
+        _perf[(token, period, benchmark)] = data
 
 
 def get_cached_correlation(token: str, period: str, method: str = "pearson"):

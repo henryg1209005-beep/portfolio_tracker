@@ -197,10 +197,20 @@ export async function fetchRollingCorrelation(period = "1Y", window = 60): Promi
   return res.json();
 }
 
-export type PerformanceData = { dates: string[]; portfolio: number[]; benchmark: number[] };
+export type PerformanceData = {
+  dates: string[];
+  portfolio: number[];
+  benchmark: number[];
+  benchmark_used?: "sp500" | "ftse100" | "msci_world";
+  benchmark_name?: string;
+};
 
-export async function fetchPerformance(period = "1Y"): Promise<PerformanceData> {
-  const res = await fetch(`${BASE}/market/performance?period=${period}`, {
+export async function fetchPerformance(
+  period = "1Y",
+  benchmark: "sp500" | "ftse100" | "msci_world" = "sp500"
+): Promise<PerformanceData> {
+  const params = new URLSearchParams({ period, benchmark });
+  const res = await fetch(`${BASE}/market/performance?${params}`, {
     headers: authHeader(),
     cache: "no-store",
   });

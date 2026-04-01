@@ -526,14 +526,28 @@ def refresh(x_portfolio_token: Annotated[str, Header()], benchmark: str = "sp500
 
 
 @router.get("/performance")
-def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y"):
+def performance(
+    x_portfolio_token: Annotated[str, Header()],
+    period: str = "1Y",
+    benchmark: str = "sp500",
+):
     _check_rate_limit(x_portfolio_token)
     """
-    Return portfolio vs S&P 500 cumulative performance (indexed to 100).
+    Return portfolio vs benchmark cumulative performance (indexed to 100).
     period: 1M | 3M | 6M | 1Y | 5Y  (default 1Y)
     """
     token = x_portfolio_token
-    cached = get_cached_performance(token, period)
+    benchmark = benchmark.lower()
+    if benchmark not in ("sp500", "ftse100", "msci_world"):
+        benchmark = "sp500"
+
+    benchmark_name = {
+        "sp500": "S&P 500",
+        "ftse100": "FTSE 100",
+        "msci_world": "MSCI World",
+    }[benchmark]
+
+    cached = get_cached_performance(token, period, benchmark)
     if cached is not None:
         return cached
 
@@ -545,14 +559,26 @@ def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
     tickers = [h["ticker"] for h in holdings_raw if stats_map[h["ticker"]]["net_shares"] > 0]
 
     if not tickers:
-        return {"dates": [], "portfolio": [], "benchmark": []}
+        return {
+            "dates": [],
+            "portfolio": [],
+            "benchmark": [],
+            "benchmark_used": benchmark,
+            "benchmark_name": benchmark_name,
+        }
 
     gbpusd_hist = fetch_gbpusd_history(period=yf_period)
     hist  = fetch_historical_data(tickers, period=yf_period, gbpusd_series=gbpusd_hist)
-    bench = fetch_benchmark_data(period=yf_period, benchmark="sp500")
+    bench = fetch_benchmark_data(period=yf_period, benchmark=benchmark)
 
     if hist.empty or bench.empty:
-        return {"dates": [], "portfolio": [], "benchmark": []}
+        return {
+            "dates": [],
+            "portfolio": [],
+            "benchmark": [],
+            "benchmark_used": benchmark,
+            "benchmark_name": benchmark_name,
+        }
 
     # GBP-normalised cost-basis weights
     gbpusd = fetch_gbp_usd_rate()
@@ -567,7 +593,13 @@ def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
 
     valid_tickers = [t for t in tickers if t in hist.columns]
     if not valid_tickers:
-        return {"dates": [], "portfolio": [], "benchmark": []}
+        return {
+            "dates": [],
+            "portfolio": [],
+            "benchmark": [],
+            "benchmark_used": benchmark,
+            "benchmark_name": benchmark_name,
+        }
 
     # Normalise weights so they sum to 1 for the valid subset
     w = np.array([weights.get(t, 0.0) for t in valid_tickers], dtype=float)
@@ -595,7 +627,13 @@ def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
     port_returns  = port_returns.reindex(bench_returns.index).dropna()
 
     if len(port_returns) < 2:
-        return {"dates": [], "portfolio": [], "benchmark": []}
+        return {
+            "dates": [],
+            "portfolio": [],
+            "benchmark": [],
+            "benchmark_used": benchmark,
+            "benchmark_name": benchmark_name,
+        }
 
     port_cum  = (1 + port_returns).cumprod() * 100
     bench_cum = (1 + bench_returns).cumprod() * 100
@@ -612,8 +650,10 @@ def performance(x_portfolio_token: Annotated[str, Header()], period: str = "1Y")
         "dates":     dates,
         "portfolio": [_safe_float(v) for v in port_cum.values],
         "benchmark": [_safe_float(v) for v in bench_cum.values],
+        "benchmark_used": benchmark,
+        "benchmark_name": benchmark_name,
     }
-    set_cached_performance(token, period, result)
+    set_cached_performance(token, period, result, benchmark)
     return result
 
 

@@ -14,6 +14,12 @@ import {
 
 type Timeframe = "1M" | "3M" | "6M" | "1Y" | "5Y";
 const TIMEFRAMES: Timeframe[] = ["1M", "3M", "6M", "1Y", "5Y"];
+type Benchmark = "sp500" | "ftse100" | "msci_world";
+const BENCHMARKS: { key: Benchmark; label: string; short: string }[] = [
+  { key: "sp500", label: "S&P 500", short: "S&P 500" },
+  { key: "ftse100", label: "FTSE 100", short: "FTSE 100" },
+  { key: "msci_world", label: "MSCI World", short: "MSCI World" },
+];
 
 const PIE_COLORS = [
   "#bf5af2", "#00f5d4", "#ff2d78", "#f5a623",
@@ -23,12 +29,17 @@ const PIE_COLORS = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string, tf: Timeframe) {
-  const d = new Date(dateStr);
+  // Parse YYYY-MM-DD to local date parts to avoid timezone day-shift.
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const parsed = Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)
+    ? new Date(y, m - 1, d)
+    : new Date(dateStr);
+  const date = Number.isNaN(parsed.getTime()) ? new Date(dateStr) : parsed;
   if (tf === "1M" || tf === "3M")
-    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   if (tf === "5Y")
-    return d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+    return date.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+  return date.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
 
 function sign(n: number) { return n >= 0 ? "+" : ""; }
@@ -131,21 +142,20 @@ export default function ChartsPage() {
   const [portLoading, setPortLoading] = useState(true);
   const [perfError,   setPerfError]   = useState(false);
   const [timeframe,   setTimeframe]   = useState<Timeframe>("1Y");
+  const [benchmark,   setBenchmark]   = useState<Benchmark>("sp500");
   const [activeSlice, setActiveSlice] = useState(0);
 
   const loading = perfLoading || portLoading;
 
   // Fetch performance and portfolio data independently so one failure
   // doesn't wipe out the other.
-  const loadPerf = useCallback(async (tf: Timeframe) => {
+  const loadPerf = useCallback(async (tf: Timeframe, bm: Benchmark) => {
     setPerfLoading(true);
     setPerfError(false);
     try {
-      const perf = await fetchPerformance(tf);
-      console.log("[Charts] perf response:", perf.dates.length, "dates, first:", perf.dates[0], "last:", perf.dates.at(-1));
+      const perf = await fetchPerformance(tf, bm);
       setPerfData(perf);
-    } catch (e) {
-      console.error("[Charts] fetchPerformance threw:", e);
+    } catch {
       setPerfError(true);
     } finally {
       setPerfLoading(false);
@@ -163,15 +173,20 @@ export default function ChartsPage() {
     }
   }, []);
 
-  useEffect(() => { loadPerf(timeframe); }, [timeframe, loadPerf]);
+  useEffect(() => { loadPerf(timeframe, benchmark); }, [timeframe, benchmark, loadPerf]);
   useEffect(() => { loadPort(); }, [loadPort]);
 
   // ── Derived data ────────────────────────────────────────────────────────────
 
+  const benchmarkLabel =
+    perfData?.benchmark_name ??
+    BENCHMARKS.find(b => b.key === benchmark)?.label ??
+    "Benchmark";
+
   const perfChartData = perfData?.dates.map((d, i) => ({
     date: formatDate(d, timeframe),
     Portfolio: perfData.portfolio[i],
-    "S&P 500": perfData.benchmark[i],
+    Benchmark: perfData.benchmark[i],
   })) ?? [];
 
   const drawdownData = perfData && perfData.dates.length > 0
@@ -180,7 +195,7 @@ export default function ChartsPage() {
 
   const pnlData = (portData?.holdings ?? [])
     .filter(h => h.pnl != null)
-    .map(h => ({ ticker: h.ticker.replace(".L", ""), pnl: h.pnl as number }))
+    .map(h => ({ ticker: h.ticker.replace(".L", ""), pnl: (h.pnl as number) * fxRate }))
     .sort((a, b) => b.pnl - a.pnl);
 
   const allocationData = (portData?.holdings ?? [])
@@ -220,11 +235,30 @@ export default function ChartsPage() {
         <div>
           <h1 className="text-2xl font-bold text-text">Charts</h1>
           <p className="text-muted text-sm mt-0.5 font-mono">
-            Portfolio analytics · {timeframe}
+            Portfolio analytics · {timeframe} · {benchmarkLabel}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex overflow-x-auto" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
+            {BENCHMARKS.map(b => (
+              <button
+                key={b.key}
+                onClick={() => setBenchmark(b.key)}
+                disabled={perfLoading}
+                className="px-3 py-1.5 text-xs font-mono font-semibold transition-all disabled:opacity-40 shrink-0"
+                style={{
+                  borderRadius: "0.45rem",
+                  color:      b.key === benchmark ? "#080012" : "#6b5e7e",
+                  background: b.key === benchmark ? "linear-gradient(90deg,#00f5d4,#5ac8fa)" : "transparent",
+                  boxShadow:  b.key === benchmark ? "0 0 10px #00f5d444" : undefined,
+                }}
+              >
+                {b.short}
+              </button>
+            ))}
+          </div>
+
           <div className="flex overflow-x-auto" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
             {TIMEFRAMES.map(tf => (
               <button
@@ -245,7 +279,7 @@ export default function ChartsPage() {
           </div>
 
           <button
-            onClick={() => { loadPerf(timeframe); loadPort(); }}
+            onClick={() => { loadPerf(timeframe, benchmark); loadPort(); }}
             disabled={loading}
             className="px-3 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
@@ -289,7 +323,7 @@ export default function ChartsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Portfolio Return", short: "Return",  value: `${sign(portReturn)}${portReturn.toFixed(2)}%`,   accent: portReturn  >= 0 ? "#00f5d4" : "#ff2d78" },
-            { label: "S&P 500 Return",   short: "S&P 500", value: `${sign(benchReturn)}${benchReturn.toFixed(2)}%`, accent: benchReturn >= 0 ? "#00f5d4" : "#ff2d78" },
+            { label: `${benchmarkLabel} Return`, short: benchmarkLabel, value: `${sign(benchReturn)}${benchReturn.toFixed(2)}%`, accent: benchReturn >= 0 ? "#00f5d4" : "#ff2d78" },
             { label: "Alpha vs Market",  short: "Alpha",   value: `${sign(alpha)}${alpha.toFixed(2)}%`,             accent: alpha >= 0 ? "#00f5d4" : "#ff2d78" },
             { label: "Max Drawdown",     short: "Max DD",  value: `${maxDD.toFixed(2)}%`,                           accent: maxDD > -10 ? "#00f5d4" : maxDD > -25 ? "#bf5af2" : "#ff2d78" },
           ].map(({ label, short, value, accent }) => (
@@ -310,7 +344,7 @@ export default function ChartsPage() {
 
       {/* ── 1. Performance vs Benchmark ── */}
       <div>
-        <SectionHeader title="Performance vs S&P 500" sub="Indexed to 100 — shows relative growth over the period" />
+        <SectionHeader title={`Performance vs ${benchmarkLabel}`} sub="Indexed to 100 — shows relative growth over the period" />
         {loading ? (
           <div className="synth-card rounded-xl h-72 animate-pulse" style={{ borderColor: "#2a0050" }} />
         ) : hasPerf ? (
@@ -324,9 +358,9 @@ export default function ChartsPage() {
                   axisLine={{ stroke: "#2a0050" }} tickLine={false}
                   tickFormatter={(v: number) => v.toFixed(0)} width={42} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend formatter={v => <span style={{ color: "#e2d9f3", fontFamily: "monospace", fontSize: 11 }}>{v}</span>} />
+                <Legend formatter={v => <span style={{ color: "#e2d9f3", fontFamily: "monospace", fontSize: 11 }}>{v === "Benchmark" ? benchmarkLabel : v}</span>} />
                 <Line type="monotone" dataKey="Portfolio" stroke="#bf5af2" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
-                <Line type="monotone" dataKey="S&P 500" stroke="#00f5d4" strokeWidth={2} dot={false} strokeDasharray="5 3" activeDot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Benchmark" stroke="#00f5d4" strokeWidth={2} dot={false} strokeDasharray="5 3" activeDot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -380,7 +414,7 @@ export default function ChartsPage() {
 
         {/* P&L by holding */}
         <div>
-          <SectionHeader title="P&L by Holding" sub="Profit or loss per position in GBP" />
+          <SectionHeader title="P&L by Holding" sub={`Profit or loss per position in ${currency}`} />
           {loading ? (
             <div className="synth-card rounded-xl h-64 animate-pulse" style={{ borderColor: "#2a0050" }} />
           ) : hasPnl ? (
@@ -399,7 +433,7 @@ export default function ChartsPage() {
                     tickLine={false}
                     tickFormatter={(v: number) => {
                       const abs = Math.abs(v);
-                      const str = abs >= 1000 ? `£${(abs / 1000).toFixed(1)}k` : `£${abs.toFixed(0)}`;
+                      const str = abs >= 1000 ? `${symbol}${(abs / 1000).toFixed(1)}k` : `${symbol}${abs.toFixed(0)}`;
                       return v < 0 ? `-${str}` : str;
                     }}
                   />
@@ -412,7 +446,7 @@ export default function ChartsPage() {
                     tickLine={false}
                   />
                   <Tooltip
-                    content={<ChartTooltip formatter={(v, name) => name === "pnl" ? `${v >= 0 ? "+" : ""}£${Math.abs(v).toFixed(2)}` : String(v)} />}
+                    content={<ChartTooltip formatter={(v, name) => name === "pnl" ? `${v >= 0 ? "+" : ""}${symbol}${Math.abs(v).toFixed(2)}` : String(v)} />}
                   />
                   <ReferenceLine x={0} stroke="#2a0050" strokeWidth={1.5} />
                   <Bar dataKey="pnl" radius={[0, 4, 4, 0]} maxBarSize={28}>
