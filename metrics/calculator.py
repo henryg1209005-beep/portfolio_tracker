@@ -174,36 +174,39 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
 
     Returns dict or None if insufficient data.
     """
-    port_ret = _portfolio_returns(prices_df, weights, first_buy_dates)
-    if port_ret.empty or len(port_ret) < 30:
+    port_ret_full = _portfolio_returns(prices_df, weights, first_buy_dates)
+    if port_ret_full.empty or len(port_ret_full) < 30:
         return None
 
-    bench_ret = benchmark_series.pct_change().dropna()
+    bench_ret_full = benchmark_series.pct_change().dropna()
 
-    # Align strictly on common observed dates (no synthetic zero-return fill).
-    aligned = pd.concat([port_ret, bench_ret], axis=1, join="inner").dropna()
+    # Strict overlap is used for benchmark-relative metrics only (beta/alpha/CAPM).
+    aligned = pd.concat([port_ret_full, bench_ret_full], axis=1, join="inner").dropna()
     aligned.columns = ["p", "b"]
-    port_ret = aligned["p"]
-    bench_ret = aligned["b"]
-
-    if len(port_ret) < 30:
-        return None
+    port_ret_overlap = aligned["p"]
+    bench_ret_overlap = aligned["b"]
 
     # Geometric annualised return (compound, not arithmetic)
-    actual_ret = _annualised_geometric(port_ret)
-    vol    = volatility(port_ret)
-    sharpe = sharpe_ratio(port_ret, rf_annual)
-    sortino = sortino_ratio(port_ret, rf_annual)
-    b      = beta(port_ret, bench_ret)
-    capm_ret = capm_return(b, rf_annual, bench_ret) if b is not None else None
-    alpha  = (actual_ret - capm_ret) if capm_ret is not None else None
-    var    = value_at_risk(port_ret)
-    cf_var = cornish_fisher_var(port_ret)
-    mdd    = max_drawdown(port_ret)
-    dd_recovery = drawdown_recovery_days(port_ret)
+    # Use full portfolio series for user-facing stability of absolute risk metrics.
+    actual_ret = _annualised_geometric(port_ret_full)
+    vol    = volatility(port_ret_full)
+    sharpe = sharpe_ratio(port_ret_full, rf_annual)
+    sortino = sortino_ratio(port_ret_full, rf_annual)
 
-    port_cum  = (1 + port_ret).cumprod() - 1
-    bench_cum = (1 + bench_ret).cumprod() - 1
+    b = None
+    capm_ret = None
+    if len(aligned) >= 30:
+        b = beta(port_ret_overlap, bench_ret_overlap)
+        capm_ret = capm_return(b, rf_annual, bench_ret_overlap) if b is not None else None
+
+    alpha  = (actual_ret - capm_ret) if capm_ret is not None else None
+    var    = value_at_risk(port_ret_full)
+    cf_var = cornish_fisher_var(port_ret_full)
+    mdd    = max_drawdown(port_ret_full)
+    dd_recovery = drawdown_recovery_days(port_ret_full)
+
+    port_cum  = (1 + port_ret_full).cumprod() - 1
+    bench_cum = (1 + bench_ret_overlap).cumprod() - 1 if len(aligned) > 0 else pd.Series(dtype=float)
 
     return {
         "actual_return":          actual_ret,
@@ -217,9 +220,9 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
         "var_95_cf":              cf_var,
         "max_drawdown":           mdd,
         "drawdown_recovery_days": dd_recovery,
-        "sample_days":            int(len(port_ret)),
+        "sample_days":            int(len(port_ret_full)),
         "benchmark_overlap_days": int(len(aligned)),
-        "window_years_equivalent": float(len(port_ret) / TRADING_DAYS),
+        "window_years_equivalent": float(len(port_ret_full) / TRADING_DAYS),
         "portfolio_cumulative":   port_cum,
         "benchmark_cumulative":   bench_cum,
     }
