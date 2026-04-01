@@ -15,8 +15,9 @@ function useTypewriter(target: string, active: boolean): string {
     if (s.displayed.length >= s.target.length) { s.running = false; return; }
     const nextChar = s.target[s.displayed.length] ?? "";
     const isPunct  = ".,:;!?".includes(nextChar);
-    const delay    = isPunct ? Math.random() * 55 + 35 : Math.random() * 18 + 7;
-    const chunk    = isPunct ? 1 : Math.floor(Math.random() * 4) + 1;
+    const isNewline = nextChar === "\n";
+    const delay    = isNewline ? Math.random() * 120 + 80 : isPunct ? Math.random() * 90 + 60 : Math.random() * 35 + 20;
+    const chunk    = 1;
     s.timer = setTimeout(() => {
       s.displayed = s.target.slice(0, s.displayed.length + chunk);
       setDisplayed(s.displayed);
