@@ -277,6 +277,22 @@ def get_usage(token: str, daily_limit: int) -> dict:
     return {"used": used, "limit": daily_limit, "remaining": max(0, daily_limit - used)}
 
 
+def refund_usage_increment(token: str):
+    """
+    Refund one AI analysis usage unit for today.
+    Used when analysis fails before producing a complete response.
+    """
+    today = date.today().isoformat()
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE ai_usage
+                   SET count = GREATEST(count - 1, 0)
+                   WHERE token = %s AND usage_date = %s""",
+                (token, today),
+            )
+
+
 # ── Feedback ──────────────────────────────────────────────────────────────────
 
 def save_feedback(message: str, rating: int | None, token: str | None):

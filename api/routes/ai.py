@@ -3,6 +3,7 @@ import sys
 import json
 import queue
 import threading
+import re
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -10,7 +11,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import anthropic
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from fastapi.responses import StreamingResponse
 
 from api import db
@@ -346,6 +347,16 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
 
     lines = ["=== PORTFOLIO DATA FOR ANALYSIS ===\n"]
 
+    def _fmt_money(v, decimals=2):
+        if v is None:
+            return "N/A"
+        return f"£{v:,.{decimals}f}"
+
+    def _fmt_pct(v, decimals=1):
+        if v is None:
+            return "N/A"
+        return f"{v:.{decimals}f}%"
+
     if profile:
         lines.append("--- INVESTOR PROFILE ---")
         lines.append(f"Risk Appetite:  {_RISK_LABELS.get(profile.get('risk_appetite',''), profile.get('risk_appetite','Unknown'))}")
@@ -353,9 +364,12 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
         lines.append(f"Time Horizon:   {_HORIZON_LABELS.get(profile.get('time_horizon',''), profile.get('time_horizon','Unknown'))}")
         lines.append("(Tailor every observation to this investor's stated profile — flag misalignments explicitly)\n")
 
-    lines.append(f"Total Value: £{summary.get('total_value', 0):,.2f}")
-    lines.append(f"Total Cost:  £{summary.get('total_cost', 0):,.2f}")
-    lines.append(f"Unrealised P&L: £{summary.get('total_pnl', 0):,.2f} ({summary.get('total_pnl_pct', 0):.1f}%)")
+    lines.append(f"Total Value: {_fmt_money(summary.get('total_value', 0))}")
+    lines.append(f"Total Cost:  {_fmt_money(summary.get('total_cost', 0))}")
+    lines.append(
+        f"Unrealised P&L: {_fmt_money(summary.get('total_pnl', 0))} "
+        f"({_fmt_pct(summary.get('total_pnl_pct', 0), 1)})"
+    )
     lines.append(f"Holdings: {summary.get('holding_count', 0)}")
     lines.append(f"GBP/USD: {summary.get('gbpusd', 1.34):.4f}\n")
 
@@ -366,10 +380,10 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
         lines.append(
             f"{h['ticker']} ({h['type']}) | "
             f"{h['net_shares']:.4f} shares | "
-            f"Avg cost: £{h['avg_cost']:.2f} | "
-            f"Price: £{h['current_price']:.2f} | "
-            f"Value: £{h['market_value']:.2f} | "
-            f"P&L: £{h['pnl']:.2f} ({h['pnl_pct']:.1f}%) | "
+            f"Avg cost: {_fmt_money(h.get('avg_cost'))} | "
+            f"Price: {_fmt_money(h.get('current_price'))} | "
+            f"Value: {_fmt_money(h.get('market_value'))} | "
+            f"P&L: {_fmt_money(h.get('pnl'))} ({_fmt_pct(h.get('pnl_pct'), 1)}) | "
             f"Weight: {(h['weight'] or 0)*100:.1f}%"
         )
 
@@ -490,6 +504,15 @@ def _check_and_increment(token: str) -> tuple[bool, int]:
     return db.check_and_increment_usage(token, DAILY_LIMIT)
 
 
+_TOKEN_RE = re.compile(r"^[A-Za-z0-9:_\-]{8,128}$")
+
+
+def _validate_token(token: str):
+    t = (token or "").strip()
+    if not _TOKEN_RE.match(t):
+        raise HTTPException(status_code=400, detail="Invalid portfolio token")
+
+
 def _get_api_key() -> str | None:
     env_key = os.environ.get("ANTHROPIC_API_KEY")
     if env_key:
@@ -505,19 +528,21 @@ def _get_api_key() -> str | None:
 
 
 @router.get("/usage")
-def usage(token: str):
+def usage(x_portfolio_token: str = Header(default="")):
     """Return today's analysis usage for the token."""
-    return db.get_usage(token, DAILY_LIMIT)
+    _validate_token(x_portfolio_token)
+    return db.get_usage(x_portfolio_token, DAILY_LIMIT)
 
 
-@router.get("/analysis")
-def analysis(token: str):
+@router.post("/analysis")
+def analysis(x_portfolio_token: str = Header(default="")):
     """
     Stream AI portfolio analysis as Server-Sent Events.
     Each event: data: {"text": "..."}\n\n
     Final event: data: {"done": true}\n\n
-    token: portfolio token passed as query param (EventSource doesn't support headers)
     """
+    token = x_portfolio_token
+    _validate_token(token)
     allowed, remaining = _check_and_increment(token)
     if not allowed:
         raise HTTPException(
@@ -534,6 +559,7 @@ def analysis(token: str):
         q: queue.Queue = queue.Queue()
 
         def run():
+            refunded = False
             try:
                 client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
                 with client.messages.stream(
@@ -549,21 +575,44 @@ def analysis(token: str):
                     for chunk in stream.text_stream:
                         q.put(("text", chunk))
                 q.put(("done", None))
+            except anthropic.AuthenticationError:
+                try:
+                    db.refund_usage_increment(token)
+                except Exception:
+                    pass
+                refunded = True
+                q.put(("error", {"message": "AI provider authentication failed", "code": "auth"}))
+            except anthropic.APIConnectionError:
+                try:
+                    db.refund_usage_increment(token)
+                except Exception:
+                    pass
+                refunded = True
+                q.put(("error", {"message": "AI provider connection failed", "code": "network"}))
             except Exception as exc:
-                q.put(("error", str(exc)))
+                if not refunded:
+                    try:
+                        db.refund_usage_increment(token)
+                    except Exception:
+                        pass
+                q.put(("error", {"message": "Analysis failed. Please retry.", "code": "runtime"}))
 
         t = threading.Thread(target=run, daemon=True)
         t.start()
 
         while True:
-            kind, value = q.get()
+            try:
+                kind, value = q.get(timeout=180)
+            except queue.Empty:
+                yield f"data: {json.dumps({'error': 'Analysis timed out', 'code': 'timeout'})}\n\n"
+                break
             if kind == "text":
                 yield f"data: {json.dumps({'text': value})}\n\n"
             elif kind == "done":
                 yield f"data: {json.dumps({'done': True})}\n\n"
                 break
             elif kind == "error":
-                yield f"data: {json.dumps({'error': value})}\n\n"
+                yield f"data: {json.dumps(value)}\n\n"
                 break
 
         t.join()

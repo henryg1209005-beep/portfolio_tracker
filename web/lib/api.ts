@@ -259,26 +259,98 @@ export async function searchTickers(q: string): Promise<{ ticker: string; name: 
 }
 
 export async function fetchAIUsage(): Promise<{ used: number; limit: number; remaining: number }> {
-  const token = getToken();
-  const res = await fetch(`${BASE}/ai/usage?token=${encodeURIComponent(token)}`);
+  const res = await fetch(`${BASE}/ai/usage`, { headers: authHeader() });
   if (!res.ok) throw new Error("Failed to fetch AI usage");
   return res.json();
 }
 
-/** Stream AI analysis via SSE. Token passed as query param (EventSource has no header support). */
+/** Stream AI analysis via SSE over fetch streaming (header-authenticated). */
 export function streamAnalysis(
   onChunk: (text: string) => void,
   onDone: () => void,
   onError: (msg: string) => void
 ): () => void {
-  const token = getToken();
-  const es = new EventSource(`${BASE}/ai/analysis?token=${encodeURIComponent(token)}`);
-  es.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.text) onChunk(data.text);
-    if (data.done) { onDone(); es.close(); }
-    if (data.error) { onError(data.error); es.close(); }
+  const controller = new AbortController();
+  let finished = false;
+
+  (async () => {
+    try {
+      const res = await fetch(`${BASE}/ai/analysis`, {
+        method: "POST",
+        headers: authHeader(),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        let msg = "Failed to start analysis";
+        try {
+          const data = await res.json();
+          msg = data?.detail ?? msg;
+        } catch {}
+        if (!finished) onError(msg);
+        return;
+      }
+
+      if (!res.body) {
+        if (!finished) onError("Empty analysis stream");
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let idx = buffer.indexOf("\n\n");
+        while (idx !== -1) {
+          const event = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+
+          for (const line of event.split("\n")) {
+            if (!line.startsWith("data:")) continue;
+            const raw = line.slice(5).trim();
+            if (!raw) continue;
+            let data: any;
+            try {
+              data = JSON.parse(raw);
+            } catch {
+              continue;
+            }
+            if (data.text) onChunk(data.text);
+            if (data.done) {
+              finished = true;
+              onDone();
+              controller.abort();
+              return;
+            }
+            if (data.error) {
+              finished = true;
+              onError(data.error);
+              controller.abort();
+              return;
+            }
+          }
+
+          idx = buffer.indexOf("\n\n");
+        }
+      }
+
+      if (!finished) {
+        finished = true;
+        onDone();
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      if (!finished) onError("Connection lost");
+    }
+  })();
+
+  return () => {
+    finished = true;
+    controller.abort();
   };
-  es.onerror = () => { onError("Connection lost"); es.close(); };
-  return () => es.close();
 }
