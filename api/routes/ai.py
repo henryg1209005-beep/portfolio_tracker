@@ -524,6 +524,76 @@ def _validate_token(token: str):
         raise HTTPException(status_code=400, detail="Invalid portfolio token")
 
 
+def _validate_analysis_output(text: str) -> list[str]:
+    """
+    Hard quality gate for AI analyst output.
+    Returns a list of failed rule IDs. Empty list means pass.
+    """
+    failed: list[str] = []
+    t = text or ""
+    tl = t.lower()
+
+    # 1) Mandatory structural sections
+    required_sections = [
+        "TL;DR",
+        "PORTFOLIO SCORE",
+        "1. PORTFOLIO SNAPSHOT",
+        "2. SHARPE RATIO",
+        "3. RISK METRICS",
+        "4. PERFORMANCE vs BENCHMARK",
+        "5. SECTOR & CORRELATION ANALYSIS",
+        "6. OBSERVATIONS WORTH CONSIDERING",
+        "7. OVERALL ASSESSMENT",
+    ]
+    for sec in required_sections:
+        if sec.lower() not in tl:
+            failed.append(f"missing_section:{sec}")
+
+    # 2) Sharpe/Sortino misuse checks (unitless ratios, no % on the metric itself)
+    if re.search(r"sharpe[^\\n]{0,60}%", tl):
+        failed.append("sharpe_percent_misuse")
+    if re.search(r"sortino[^\\n]{0,60}%", tl):
+        failed.append("sortino_percent_misuse")
+    if re.search(r"(sharpe|sortino)[^\\n]{0,120}per unit of volatility", tl):
+        failed.append("ratio_wording_misuse")
+
+    # 3) Horizon tagging (must explicitly include horizon labels somewhere in report)
+    for tag in ("trailing 252d", "since inception", "benchmark overlap"):
+        if tag not in tl:
+            failed.append(f"missing_horizon_tag:{tag}")
+
+    # 4) Profile alignment score narrative consistency (coarse guardrail)
+    m = re.search(r"profile alignment:\s*(\d+)\s*/\s*10", tl)
+    if m:
+        score = int(m.group(1))
+        neg_words = ("weak alignment", "poor alignment", "misalignment", "not aligned")
+        pos_words = ("strong alignment", "well aligned", "good alignment")
+        if score >= 8 and any(w in tl for w in neg_words):
+            failed.append("profile_alignment_contradiction_high_score_negative_text")
+        if score <= 3 and any(w in tl for w in pos_words):
+            failed.append("profile_alignment_contradiction_low_score_positive_text")
+
+    # 5) Avoid "skill" overclaim around alpha
+    overclaim_patterns = (
+        "exceptional stock-picking",
+        "demonstrates skill",
+        "proves skill",
+    )
+    if any(p in tl for p in overclaim_patterns):
+        failed.append("alpha_overclaim")
+
+    # 6) Fact vs inference labels
+    if "data shows:" not in tl or ("this may suggest:" not in tl and "one possible reading is:" not in tl):
+        failed.append("fact_inference_label_missing")
+
+    # 7) ETF look-through caveat if discussing unknown/estimated sector exposure
+    if ("estimated" in tl or "unknown" in tl) and ("etf look-through not computed" not in tl):
+        failed.append("missing_etf_estimation_caveat")
+
+    # De-duplicate
+    return sorted(set(failed))
+
+
 def _get_api_key() -> str | None:
     env_key = os.environ.get("ANTHROPIC_API_KEY")
     if env_key:
@@ -573,6 +643,7 @@ def analysis(x_portfolio_token: str = Header(default="")):
             refunded = False
             try:
                 client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
+                full_text: list[str] = []
                 with client.messages.stream(
                     model="claude-haiku-4-5",
                     max_tokens=3500,
@@ -584,7 +655,27 @@ def analysis(x_portfolio_token: str = Header(default="")):
                     messages=[{"role": "user", "content": context}],
                 ) as stream:
                     for chunk in stream.text_stream:
-                        q.put(("text", chunk))
+                        full_text.append(chunk)
+
+                report = "".join(full_text)
+                failed_rules = _validate_analysis_output(report)
+                if failed_rules:
+                    try:
+                        db.refund_usage_increment(token)
+                    except Exception:
+                        pass
+                    refunded = True
+                    q.put(("error", {
+                        "error": "Analysis quality check failed. Please retry.",
+                        "code": "analysis_quality_failed",
+                        "failed_rules": failed_rules,
+                    }))
+                    return
+
+                # Emit validated report in chunks to preserve client streaming UX.
+                CHUNK = 220
+                for i in range(0, len(report), CHUNK):
+                    q.put(("text", report[i:i + CHUNK]))
                 q.put(("done", None))
             except anthropic.AuthenticationError:
                 try:
