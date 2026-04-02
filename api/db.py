@@ -426,7 +426,7 @@ def get_analytics_summary(days: int = 14) -> dict:
                 """
                 SELECT
                     COUNT(*)::INT AS total_events,
-                    COUNT(DISTINCT token)::INT FILTER (WHERE token IS NOT NULL AND token <> '') AS unique_tokens
+                    COUNT(DISTINCT CASE WHEN token IS NOT NULL AND token <> '' THEN token END)::INT AS unique_tokens
                 FROM analytics_events
                 WHERE created_at >= NOW() - (%s || ' days')::interval
                 """,
