@@ -465,6 +465,65 @@ def get_analytics_summary(days: int = 14) -> dict:
             )
             funnel_rows = cur.fetchall()
 
+            cur.execute(
+                """
+                WITH token_first AS (
+                    SELECT
+                        token,
+                        COALESCE(
+                            MIN(CASE WHEN event_name = 'dashboard_first_view' THEN created_at END),
+                            MIN(created_at)
+                        ) AS cohort_at
+                    FROM analytics_events
+                    WHERE token IS NOT NULL AND token <> ''
+                    GROUP BY token
+                ),
+                token_flags AS (
+                    SELECT
+                        tf.token,
+                        DATE_TRUNC('week', tf.cohort_at)::date AS cohort_week,
+                        MAX(
+                            CASE
+                                WHEN e.event_name IN ('holdings_added', 'csv_import_completed')
+                                     AND e.created_at <= tf.cohort_at + INTERVAL '7 days'
+                                THEN 1 ELSE 0
+                            END
+                        ) AS activated_7d,
+                        MAX(
+                            CASE
+                                WHEN e.event_name = 'first_review_run'
+                                     AND e.created_at <= tf.cohort_at + INTERVAL '7 days'
+                                THEN 1 ELSE 0
+                            END
+                        ) AS review_7d,
+                        MAX(
+                            CASE
+                                WHEN e.event_name IN ('export_clicked', 'ai_analysis_run')
+                                     AND e.created_at <= tf.cohort_at + INTERVAL '7 days'
+                                THEN 1 ELSE 0
+                            END
+                        ) AS high_intent_7d
+                    FROM token_first tf
+                    LEFT JOIN analytics_events e
+                        ON e.token = tf.token
+                    WHERE tf.cohort_at >= NOW() - (%s || ' days')::interval
+                    GROUP BY tf.token, DATE_TRUNC('week', tf.cohort_at)::date
+                )
+                SELECT
+                    cohort_week,
+                    COUNT(*)::INT AS users,
+                    SUM(activated_7d)::INT AS activated_7d,
+                    SUM(review_7d)::INT AS review_7d,
+                    SUM(high_intent_7d)::INT AS high_intent_7d
+                FROM token_flags
+                GROUP BY cohort_week
+                ORDER BY cohort_week DESC
+                LIMIT 12
+                """,
+                (window_days,),
+            )
+            cohort_rows = cur.fetchall()
+
     users = len(funnel_rows)
     dashboard_users = sum(1 for r in funnel_rows if r[1] == 1)
     activated_users = sum(1 for r in funnel_rows if r[2] == 1)
@@ -487,4 +546,17 @@ def get_analytics_summary(days: int = 14) -> dict:
             {"step": "high_intent_action", "users": high_intent_users, "rate_from_review": pct(high_intent_users, review_users)},
         ],
         "events": [{"event_name": r[0], "count": int(r[1])} for r in event_rows],
+        "cohorts": [
+            {
+                "cohort_week": str(r[0]),
+                "users": int(r[1]),
+                "activated_7d": int(r[2] or 0),
+                "activation_rate_7d": pct(int(r[2] or 0), int(r[1] or 0)),
+                "review_7d": int(r[3] or 0),
+                "review_rate_7d": pct(int(r[3] or 0), int(r[1] or 0)),
+                "high_intent_7d": int(r[4] or 0),
+                "high_intent_rate_7d": pct(int(r[4] or 0), int(r[1] or 0)),
+            }
+            for r in cohort_rows
+        ],
     }
