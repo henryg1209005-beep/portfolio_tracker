@@ -176,6 +176,9 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
               Free during early access · No card required
             </div>
+            <div className="text-xs font-mono" style={{ color: "#4a3a5e" }}>
+              Works with Revolut, Freetrade, Trading 212 and any broker — add holdings manually or import via CSV.
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               {[
                 { k: "Metrics", v: "Quant-backed" },
