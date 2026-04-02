@@ -63,7 +63,7 @@ function SignalBars() {
           </div>
           <div className="h-1.5 rounded-full mt-2 overflow-hidden" style={{ background: "#1a0030" }}>
             <div
-              className="h-full rounded-full"
+              className="h-full rounded-full signal-meter"
               style={{
                 width: `${58 + i * 10}%`,
                 background: `linear-gradient(90deg, ${s.c}, #ffffff22)`,
@@ -147,6 +147,9 @@ export default function LandingPage() {
       </nav>
 
       <section className="relative overflow-hidden">
+        <div className="ambient-orb ambient-orb-cyan w-80 h-80 -left-24 -top-16" />
+        <div className="ambient-orb ambient-orb-pink w-72 h-72 -right-20 top-10" />
+        <div className="ambient-orb ambient-orb-purple w-96 h-96 left-1/3 -bottom-44" />
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -166,10 +169,10 @@ export default function LandingPage() {
               Portivex helps serious retail investors understand portfolio risk with institutional logic and plain-English interpretation.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <Link href="/sign-up" className="px-7 py-3 rounded-xl text-sm font-semibold" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 24px #bf5af244" }}>
+              <Link href="/sign-up" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 24px #bf5af244" }}>
                 Launch free -&gt;
               </Link>
-              <a href="#position" className="px-7 py-3 rounded-xl text-sm font-semibold" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
+              <a href="#position" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
                 See what is different
               </a>
             </div>
@@ -180,7 +183,7 @@ export default function LandingPage() {
                 { k: "Exports", v: "Investor-ready" },
                 { k: "Mode", v: "Full demo" },
               ].map((item) => (
-                <div key={item.k} className="rounded-lg px-3 py-2" style={{ background: "#0d0020", border: "1px solid #1a0030" }}>
+                <div key={item.k} className="rounded-lg px-3 py-2 hover-lift" style={{ background: "#0d0020", border: "1px solid #1a0030" }}>
                   <div className="text-[10px] uppercase tracking-widest font-mono" style={{ color: "#4a3a5e" }}>{item.k}</div>
                   <div className="text-sm font-semibold mt-1">{item.v}</div>
                 </div>
@@ -189,7 +192,7 @@ export default function LandingPage() {
           </div>
 
           <div className="lg:col-span-5 animate-fade-up" style={{ animationDelay: "120ms" }}>
-            <div className="rounded-2xl p-4 sm:p-5" style={{ background: "linear-gradient(140deg,#120020,#0a0014)", border: "1px solid #2a0050", boxShadow: "0 0 40px #bf5af21c" }}>
+            <div className="rounded-2xl p-4 sm:p-5 glow-breath" style={{ background: "linear-gradient(140deg,#120020,#0a0014)", border: "1px solid #2a0050", boxShadow: "0 0 40px #bf5af21c" }}>
               <div className="flex items-center justify-between text-[11px] font-mono mb-3" style={{ color: "#6b5e7e" }}>
                 <span>Risk Signal Console</span>
                 <span style={{ color: "#00f5d4" }}>LIVE</span>
@@ -217,7 +220,7 @@ export default function LandingPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {PILLARS.map((p, idx) => (
-            <div key={p.title} className="rounded-2xl p-5 animate-fade-up" style={{ animationDelay: `${idx * 90}ms`, background: "linear-gradient(135deg,#10001e,#0a0014)", border: `1px solid ${p.accent}33` }}>
+            <div key={p.title} className="rounded-2xl p-5 animate-fade-up hover-lift" style={{ animationDelay: `${idx * 90}ms`, background: "linear-gradient(135deg,#10001e,#0a0014)", border: `1px solid ${p.accent}33` }}>
               <div className="inline-flex text-[10px] px-2 py-1 rounded-full font-mono uppercase tracking-widest mb-4" style={{ color: p.accent, background: `${p.accent}11`, border: `1px solid ${p.accent}22` }}>
                 {p.tag}
               </div>
@@ -235,8 +238,8 @@ export default function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-bold">From holdings to decision-quality insight.</h2>
           </div>
           <div className="space-y-4">
-            {FLOW.map((f) => (
-              <div key={f.step} className="rounded-xl p-4 sm:p-5 flex gap-4 items-start" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
+            {FLOW.map((f, idx) => (
+              <div key={f.step} className="rounded-xl p-4 sm:p-5 flex gap-4 items-start animate-fade-up hover-lift" style={{ animationDelay: `${idx * 110}ms`, background: "#0d0020", border: "1px solid #2a0050" }}>
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-mono font-semibold shrink-0" style={{ background: "#bf5af211", border: "1px solid #bf5af244", color: "#bf5af2" }}>
                   {f.step}
                 </div>
@@ -254,7 +257,7 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto rounded-2xl p-8 sm:p-10" style={{ background: "linear-gradient(130deg,#120020,#0d0018)", border: "1px solid #2a0050" }}>
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">See your portfolio through a risk-intelligence lens.</h2>
           <p className="text-sm mb-7" style={{ color: "#8a7a9e" }}>Free during early access. No card required.</p>
-          <Link href="/sign-up" className="inline-flex px-8 py-3 rounded-xl text-sm font-semibold" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 26px #bf5af244" }}>
+          <Link href="/sign-up" className="inline-flex px-8 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 26px #bf5af244" }}>
             Create account -&gt;
           </Link>
         </div>

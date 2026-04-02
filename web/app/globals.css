@@ -31,12 +31,73 @@ body {
   50%       { opacity: 0.4; }
 }
 
+@keyframes floatSlow {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -16px, 0) scale(1.04); }
+}
+
+@keyframes driftSide {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(22px); }
+}
+
+@keyframes glowBreath {
+  0%, 100% { box-shadow: 0 0 22px #bf5af220; }
+  50% { box-shadow: 0 0 38px #bf5af244; }
+}
+
+@keyframes signalSweep {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 .animate-fade-up {
   animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-fade-row {
   animation: fadeInRow 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(36px);
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.ambient-orb-cyan {
+  background: radial-gradient(circle, #00f5d4 0%, transparent 70%);
+  animation: floatSlow 9s ease-in-out infinite;
+}
+
+.ambient-orb-pink {
+  background: radial-gradient(circle, #ff2d78 0%, transparent 70%);
+  animation: driftSide 11s ease-in-out infinite;
+}
+
+.ambient-orb-purple {
+  background: radial-gradient(circle, #bf5af2 0%, transparent 70%);
+  animation: floatSlow 13s ease-in-out infinite reverse;
+}
+
+.hover-lift {
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px #00000044;
+}
+
+.glow-breath {
+  animation: glowBreath 4.5s ease-in-out infinite;
+}
+
+.signal-meter {
+  background-size: 200% 100%;
+  animation: signalSweep 2.6s linear infinite;
 }
 
 .card-hidden {
