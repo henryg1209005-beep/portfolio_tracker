@@ -19,6 +19,8 @@ export default function OverviewPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showFix, setShowFix] = useState(false);
+  const [hasRunReview, setHasRunReview] = useState(false);
+  const [nudgeTracked, setNudgeTracked] = useState(false);
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("balanced");
   const { currency, setCurrency } = useCurrency();
   const { isDemoMode, setDemoMode } = useDemoMode();
@@ -67,6 +69,11 @@ export default function OverviewPage() {
     void trackEvent("dashboard_first_view");
   }, []);
 
+  useEffect(() => {
+    const seen = localStorage.getItem("portivex_first_review_done") === "1";
+    setHasRunReview(seen);
+  }, []);
+
   async function handleRemove(ticker: string) {
     if (isDemoMode) return;
     if (!confirm(`Remove ${ticker}?`)) return;
@@ -74,7 +81,25 @@ export default function OverviewPage() {
     load();
   }
 
+  function startReview(source: "header_button" | "first_review_nudge") {
+    localStorage.setItem("portivex_first_review_done", "1");
+    setHasRunReview(true);
+    void trackEvent("first_review_run", {
+      is_demo_mode: isDemoMode,
+      holdings_count: data?.holdings.length ?? 0,
+      source,
+    });
+    setShowFix(true);
+  }
+
   const canReview = !!data && !loading && data.holdings.length > 0;
+  const shouldShowFirstReviewNudge = !isDemoMode && canReview && !hasRunReview;
+
+  useEffect(() => {
+    if (!shouldShowFirstReviewNudge || nudgeTracked) return;
+    setNudgeTracked(true);
+    void trackEvent("first_review_nudge_shown", { holdings_count: data?.holdings.length ?? 0 });
+  }, [shouldShowFirstReviewNudge, nudgeTracked, data?.holdings.length]);
 
   return (
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-4 md:space-y-6">
@@ -184,13 +209,7 @@ export default function OverviewPage() {
 
           <div className="flex flex-col gap-1">
             <button
-              onClick={() => {
-                void trackEvent("first_review_run", {
-                  is_demo_mode: isDemoMode,
-                  holdings_count: data?.holdings.length ?? 0,
-                });
-                setShowFix(true);
-              }}
+              onClick={() => startReview("header_button")}
               disabled={!canReview}
               className="px-3 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
               style={{ background: "linear-gradient(90deg, #3d005e, #1a0030)", border: "1px solid #bf5af266", color: "#bf5af2" }}
@@ -254,6 +273,29 @@ export default function OverviewPage() {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {shouldShowFirstReviewNudge && (
+        <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ background: "#00f5d411", border: "1px solid #00f5d433" }}>
+          <div>
+            <div className="text-sm font-semibold" style={{ color: "#00f5d4" }}>
+              Run your first portfolio review
+            </div>
+            <div className="text-xs font-mono mt-1" style={{ color: "#8a7a9e" }}>
+              You have holdings loaded. Get your first actionable risk breakdown now.
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              void trackEvent("first_review_nudge_clicked", { holdings_count: data?.holdings.length ?? 0 });
+              startReview("first_review_nudge");
+            }}
+            className="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
+            style={{ background: "linear-gradient(90deg,#00f5d4,#5ac8fa)", color: "#080012" }}
+          >
+            Run Review
+          </button>
         </div>
       )}
 
