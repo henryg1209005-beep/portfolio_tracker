@@ -77,7 +77,9 @@ def _is_admin_by_token(token: str | None) -> bool:
         return False
     raw = os.environ.get("ADMIN_USER_IDS", "")
     allowed = {x.strip() for x in raw.split(",") if x.strip()}
-    return token in allowed
+    if allowed:
+        return token in allowed
+    return db.is_admin_token(token)
 
 
 @app.get("/api/health")
@@ -132,3 +134,14 @@ def admin_analytics(
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Forbidden")
     return db.get_analytics_summary(days=days)
+
+
+@app.post("/api/admin/bootstrap")
+def admin_bootstrap(x_portfolio_token: str | None = Header(default=None)):
+    # Safe one-time owner claim when no env allowlist is configured.
+    return db.bootstrap_first_admin(x_portfolio_token)
+
+
+@app.get("/api/admin/me")
+def admin_me(x_portfolio_token: str | None = Header(default=None)):
+    return {"is_admin": _is_admin_by_token(x_portfolio_token)}

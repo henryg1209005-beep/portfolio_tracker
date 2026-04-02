@@ -4,10 +4,9 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import OnboardingModal from "@/components/OnboardingModal";
-import { setToken, getToken, getProfile, type InvestorProfile } from "@/lib/api";
+import { setToken, getToken, getProfile, bootstrapAdmin, fetchAdminMe, type InvestorProfile } from "@/lib/api";
 import { CurrencyProvider } from "@/lib/currencyContext";
 import { DemoModeProvider, useDemoMode } from "@/lib/demoModeContext";
-import { isAdminUserId } from "@/lib/admin";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -28,19 +27,26 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [profile, setProfile] = useState<Partial<InvestorProfile> | null>(null);
   const [profileError, setProfileError] = useState("");
-  const isAdminUser = isAdminUserId(userId);
+  const [isAdminUser, setIsAdminUser] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) return;
     if (!userId) { router.replace("/sign-in"); return; }
     setToken(userId);
-    getProfile().then(p => {
-      if (!p.exists) {
+    Promise.all([
+      getProfile().catch(() => null),
+      bootstrapAdmin().catch(() => null),
+      fetchAdminMe().catch(() => ({ is_admin: false })),
+    ]).then(([p, _boot, admin]) => {
+      if (admin?.is_admin) setIsAdminUser(true);
+      setProfileError("");
+      if (p && p.exists) {
+        setProfile(p);
+      } else if (p && !p.exists) {
         setShowOnboarding(true);
       } else {
-        setProfile(p);
+        setProfileError("Could not verify investor profile right now.");
       }
-      setProfileError("");
       setReady(true);
     }).catch(() => {
       setProfileError("Could not verify investor profile right now.");

@@ -271,6 +271,28 @@ export async function fetchAdminAnalytics(days = 14): Promise<AnalyticsSummary> 
   return res.json();
 }
 
+export async function bootstrapAdmin(): Promise<{ claimed: boolean; is_admin: boolean }> {
+  const res = await fetch(`${BASE}/admin/bootstrap`, {
+    method: "POST",
+    headers: authHeader(),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to bootstrap admin (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchAdminMe(): Promise<{ is_admin: boolean }> {
+  const res = await fetch(`${BASE}/admin/me`, {
+    headers: authHeader(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch admin status (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function submitWaitlist(email: string): Promise<{ status: string; position?: number }> {
   const res = await fetch(`${BASE}/waitlist/join`, {
     method: "POST",

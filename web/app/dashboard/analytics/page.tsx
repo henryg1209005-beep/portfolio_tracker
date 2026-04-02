@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { fetchAdminAnalytics, type AnalyticsSummary } from "@/lib/api";
-import { isAdminUserId } from "@/lib/admin";
+import { fetchAdminAnalytics, fetchAdminMe, type AnalyticsSummary } from "@/lib/api";
 
 export default function AnalyticsPage() {
   const { userId, isLoaded } = useAuth();
@@ -12,14 +11,22 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState<AnalyticsSummary | null>(null);
-  const isAdmin = isAdminUserId(userId);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isAdmin) {
-      router.replace("/dashboard");
-    }
-  }, [isLoaded, isAdmin, router]);
+    if (!isLoaded || !userId) return;
+    fetchAdminMe()
+      .then((r) => {
+        if (!r.is_admin) {
+          router.replace("/dashboard");
+          return;
+        }
+        setIsAdmin(true);
+      })
+      .catch(() => {
+        router.replace("/dashboard");
+      });
+  }, [isLoaded, userId, router]);
 
   async function loadSummary() {
     setLoading(true);
@@ -34,12 +41,12 @@ export default function AnalyticsPage() {
   }
 
   useEffect(() => {
-    if (!isLoaded || !isAdmin) return;
+    if (!isLoaded || !isAdmin || !userId) return;
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isAdmin]);
+  }, [isLoaded, isAdmin, userId]);
 
-  if (!isLoaded || !isAdmin) return null;
+  if (!isLoaded || !isAdmin || !userId) return null;
 
   return (
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-6">

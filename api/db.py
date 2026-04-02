@@ -106,6 +106,11 @@ def init_db():
                     properties  JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at  TIMESTAMPTZ DEFAULT NOW()
                 );
+
+                CREATE TABLE IF NOT EXISTS admin_users (
+                    token       TEXT PRIMARY KEY,
+                    created_at  TIMESTAMPTZ DEFAULT NOW()
+                );
             """)
             # Profile enums as DB-level guardrails (NOT VALID avoids legacy-row migration risk).
             cur.execute("""
@@ -560,3 +565,41 @@ def get_analytics_summary(days: int = 14) -> dict:
             for r in cohort_rows
         ],
     }
+
+
+def admin_count() -> int:
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*)::INT FROM admin_users")
+            row = cur.fetchone()
+    return int(row[0] if row else 0)
+
+
+def is_admin_token(token: str | None) -> bool:
+    if not token:
+        return False
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM admin_users WHERE token = %s", (token,))
+            return cur.fetchone() is not None
+
+
+def bootstrap_first_admin(token: str | None) -> dict:
+    """
+    Claim admin for the first signed-in token only.
+    Once claimed, only that token remains admin unless DB is changed manually.
+    """
+    if not token:
+        return {"claimed": False, "is_admin": False}
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT token FROM admin_users ORDER BY created_at ASC LIMIT 1")
+            row = cur.fetchone()
+            if row is None:
+                cur.execute(
+                    "INSERT INTO admin_users (token) VALUES (%s) ON CONFLICT (token) DO NOTHING",
+                    (token,),
+                )
+                return {"claimed": True, "is_admin": True}
+            return {"claimed": False, "is_admin": row[0] == token}
