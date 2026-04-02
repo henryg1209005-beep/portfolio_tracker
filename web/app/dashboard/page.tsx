@@ -5,6 +5,7 @@ import { useCurrency, CURRENCIES } from "@/lib/currencyContext";
 import type { RiskProfile } from "@/lib/fixMyPortfolio";
 import { DEMO_REFRESH_DATA } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
+import { trackEvent } from "@/lib/analytics";
 import SummaryCards from "@/components/SummaryCards";
 import HoldingsTable from "@/components/HoldingsTable";
 import AddHoldingModal from "@/components/AddHoldingModal";
@@ -60,6 +61,10 @@ export default function OverviewPage() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    void trackEvent("dashboard_first_view");
   }, []);
 
   async function handleRemove(ticker: string) {
@@ -179,7 +184,13 @@ export default function OverviewPage() {
 
           <div className="flex flex-col gap-1">
             <button
-              onClick={() => setShowFix(true)}
+              onClick={() => {
+                void trackEvent("first_review_run", {
+                  is_demo_mode: isDemoMode,
+                  holdings_count: data?.holdings.length ?? 0,
+                });
+                setShowFix(true);
+              }}
               disabled={!canReview}
               className="px-3 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
               style={{ background: "linear-gradient(90deg, #3d005e, #1a0030)", border: "1px solid #bf5af266", color: "#bf5af2" }}

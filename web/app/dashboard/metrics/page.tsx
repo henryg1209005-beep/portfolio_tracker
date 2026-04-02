@@ -13,6 +13,7 @@ import MetricsGrid from "@/components/MetricsGrid";
 import { useCurrency } from "@/lib/currencyContext";
 import { DEMO_REFRESH_DATA, getDemoPerformance } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
+import { trackEvent } from "@/lib/analytics";
 
 type Benchmark = "sp500" | "ftse100" | "msci_world";
 const BENCHMARKS: { key: Benchmark; label: string }[] = [
@@ -117,11 +118,16 @@ export default function MetricsPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    void trackEvent("risk_metrics_viewed", { benchmark });
+  }, [benchmark]);
+
   const benchLabel = BENCHMARKS.find((b) => b.key === benchmark)?.label ?? "S&P 500";
   const canExport = !!data && !!data.metrics;
 
   function exportJson() {
     if (!data || !data.metrics) return;
+    void trackEvent("export_clicked", { format: "json", benchmark, is_demo_mode: isDemoMode });
     const now = new Date();
     const m = data.metrics as Record<string, unknown>;
     const s = data.summary;
@@ -196,6 +202,7 @@ export default function MetricsPage() {
 
   function exportCsv() {
     if (!data || !data.metrics) return;
+    void trackEvent("export_clicked", { format: "csv", benchmark, is_demo_mode: isDemoMode });
     const now = new Date();
     const m = data.metrics as Record<string, unknown>;
     const s = data.summary;

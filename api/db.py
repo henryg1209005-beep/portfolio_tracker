@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from datetime import date
 
 from psycopg2.pool import ThreadedConnectionPool
+from psycopg2.extras import Json
 
 _pool: ThreadedConnectionPool | None = None
 
@@ -95,6 +96,14 @@ def init_db():
                     id          SERIAL PRIMARY KEY,
                     token       TEXT NOT NULL,
                     report_text TEXT NOT NULL,
+                    created_at  TIMESTAMPTZ DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    id          SERIAL PRIMARY KEY,
+                    token       TEXT,
+                    event_name  TEXT NOT NULL,
+                    properties  JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at  TIMESTAMPTZ DEFAULT NOW()
                 );
             """)
@@ -395,4 +404,15 @@ def save_feedback(message: str, rating: int | None, token: str | None):
             cur.execute(
                 "INSERT INTO feedback (message, rating, token) VALUES (%s, %s, %s)",
                 (message, rating, token),
+            )
+
+
+# ── Analytics ────────────────────────────────────────────────────────────────
+
+def save_analytics_event(token: str | None, event_name: str, properties: dict | None):
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO analytics_events (token, event_name, properties) VALUES (%s, %s, %s)",
+                (token, event_name, Json(properties or {})),
             )

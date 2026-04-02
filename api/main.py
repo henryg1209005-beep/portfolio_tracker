@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api import db
-from api.routes import portfolio, market, ai, waitlist, auth, feedback, profile
+from api.routes import portfolio, market, ai, waitlist, auth, feedback, profile, analytics
 from api.routes import cache as _cache
 
 
@@ -68,6 +68,7 @@ app.include_router(waitlist.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(feedback.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
+app.include_router(analytics.router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 type DemoModeCtx = {
   isDemoMode: boolean;
@@ -26,6 +27,9 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
   function setDemoMode(enabled: boolean) {
     setIsDemoMode(enabled);
     localStorage.setItem(STORAGE_KEY, enabled ? "1" : "0");
+    if (enabled) {
+      void trackEvent("demo_mode_enabled", { enabled: true });
+    }
   }
 
   function toggleDemoMode() {

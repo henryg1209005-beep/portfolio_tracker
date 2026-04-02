@@ -3,6 +3,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { streamAnalysis, fetchRefresh, fetchAIUsage, saveAiReport, listAiReports, deleteAiReport, type AiReport } from "@/lib/api";
 import { DEMO_AI_REPORT, DEMO_REFRESH_DATA } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
+import { trackEvent } from "@/lib/analytics";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 interface Section { title: string; body: string }
@@ -420,6 +421,7 @@ export default function AiPage() {
 
   function start() {
     setText(""); setError(""); setStatus("loading"); setSaveState("idle");
+    void trackEvent("ai_analysis_run", { is_demo_mode: isDemoMode, holdings_count: holdingCount ?? 0 });
     if (isDemoMode) {
       setStatus("streaming");
       window.setTimeout(() => {

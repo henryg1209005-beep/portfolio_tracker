@@ -1,3 +1,4 @@
+import { trackEvent } from "@/lib/analytics";
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
@@ -108,7 +109,15 @@ export async function addHolding(payload: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("Failed to add holding");
-  return res.json();
+  const data = await res.json();
+  void trackEvent("holdings_added", {
+    ticker: payload.ticker,
+    asset_type: payload.type,
+    tx_type: payload.transaction.type,
+    shares: payload.transaction.shares,
+    currency: payload.transaction.price_currency,
+  });
+  return data;
 }
 
 export async function importTransactions(transactions: {
@@ -126,7 +135,13 @@ export async function importTransactions(transactions: {
     body: JSON.stringify({ transactions }),
   });
   if (!res.ok) throw new Error("Import failed");
-  return res.json();
+  const data = await res.json();
+  void trackEvent("csv_import_completed", {
+    rows_submitted: transactions.length,
+    rows_imported: data.imported,
+    rows_skipped: data.skipped,
+  });
+  return data;
 }
 
 export async function clearAllHoldings() {
