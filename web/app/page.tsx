@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, UserButton } from "@clerk/nextjs";
+import { captureLandingAttribution } from "@/lib/growthAttribution";
 
 const PILLARS = [
   {
@@ -71,6 +72,10 @@ function SignalBars() {
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    captureLandingAttribution();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#080012", color: "#e2d9f3" }}>

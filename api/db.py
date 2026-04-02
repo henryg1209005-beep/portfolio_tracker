@@ -529,6 +529,32 @@ def get_analytics_summary(days: int = 14) -> dict:
             )
             cohort_rows = cur.fetchall()
 
+            cur.execute(
+                """
+                SELECT
+                    COALESCE(NULLIF(properties->>'utm_campaign', ''), '(none)') AS campaign,
+                    COUNT(*) FILTER (WHERE event_name = 'landing_attributed_visit')::INT AS visits,
+                    COUNT(DISTINCT token) FILTER (
+                        WHERE event_name = 'signup_completed'
+                          AND token IS NOT NULL
+                          AND token <> ''
+                    )::INT AS signups,
+                    COUNT(DISTINCT token) FILTER (
+                        WHERE event_name = 'first_review_run'
+                          AND token IS NOT NULL
+                          AND token <> ''
+                    )::INT AS reviews
+                FROM analytics_events
+                WHERE created_at >= NOW() - (%s || ' days')::interval
+                  AND event_name IN ('landing_attributed_visit', 'signup_completed', 'first_review_run')
+                GROUP BY COALESCE(NULLIF(properties->>'utm_campaign', ''), '(none)')
+                ORDER BY visits DESC, signups DESC, reviews DESC, campaign ASC
+                LIMIT 20
+                """,
+                (window_days,),
+            )
+            campaign_rows = cur.fetchall()
+
     users = len(funnel_rows)
     dashboard_users = sum(1 for r in funnel_rows if r[1] == 1)
     activated_users = sum(1 for r in funnel_rows if r[2] == 1)
@@ -563,6 +589,17 @@ def get_analytics_summary(days: int = 14) -> dict:
                 "high_intent_rate_7d": pct(int(r[4] or 0), int(r[1] or 0)),
             }
             for r in cohort_rows
+        ],
+        "campaigns": [
+            {
+                "campaign": str(r[0]),
+                "visits": int(r[1] or 0),
+                "signups": int(r[2] or 0),
+                "reviews": int(r[3] or 0),
+                "signup_rate_from_visit": pct(int(r[2] or 0), int(r[1] or 0)),
+                "review_rate_from_signup": pct(int(r[3] or 0), int(r[2] or 0)),
+            }
+            for r in campaign_rows
         ],
     }
 

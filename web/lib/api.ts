@@ -229,6 +229,14 @@ export type AnalyticsSummary = {
   totals: { events: number; unique_tokens: number };
   funnel: Array<Record<string, string | number>>;
   events: Array<{ event_name: string; count: number }>;
+  campaigns: Array<{
+    campaign: string;
+    visits: number;
+    signups: number;
+    reviews: number;
+    signup_rate_from_visit: number;
+    review_rate_from_signup: number;
+  }>;
   cohorts: Array<{
     cohort_week: string;
     users: number;

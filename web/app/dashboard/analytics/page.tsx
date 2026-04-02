@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { fetchAdminAnalytics, fetchAdminMe, type AnalyticsSummary } from "@/lib/api";
 
 export default function AnalyticsPage() {
@@ -55,6 +56,15 @@ export default function AnalyticsPage() {
         <p className="text-sm mt-1" style={{ color: "#6b5e7e" }}>
           Admin-only funnel snapshot from captured product events.
         </p>
+        <div className="mt-3">
+          <Link
+            href="/dashboard/growth"
+            className="inline-flex px-3 py-2 rounded-lg text-xs font-semibold"
+            style={{ border: "1px solid #2a0050", color: "#bf5af2", background: "#bf5af211" }}
+          >
+            Open Growth OS
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-xl p-4 flex flex-col md:flex-row md:items-end gap-3" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
@@ -132,6 +142,43 @@ export default function AnalyticsPage() {
                     <tr key={ev.event_name} style={{ borderTop: "1px solid #1a0030" }}>
                       <td className="py-2 font-mono">{ev.event_name}</td>
                       <td className="py-2 text-right font-mono">{ev.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="synth-card rounded-xl p-4">
+            <h2 className="text-sm font-semibold mb-3">Campaign Breakdown</h2>
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ color: "#6b5e7e" }}>
+                    <th className="text-left pb-2">Campaign</th>
+                    <th className="text-right pb-2">Visits</th>
+                    <th className="text-right pb-2">Signups</th>
+                    <th className="text-right pb-2">Signup CVR</th>
+                    <th className="text-right pb-2">Reviews</th>
+                    <th className="text-right pb-2">Review CVR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.campaigns.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-3 text-center" style={{ color: "#6b5e7e" }}>
+                        No campaign attribution data yet.
+                      </td>
+                    </tr>
+                  )}
+                  {data.campaigns.map((c) => (
+                    <tr key={c.campaign} style={{ borderTop: "1px solid #1a0030" }}>
+                      <td className="py-2 font-mono">{c.campaign}</td>
+                      <td className="py-2 text-right font-mono">{c.visits}</td>
+                      <td className="py-2 text-right font-mono">{c.signups}</td>
+                      <td className="py-2 text-right font-mono">{c.signup_rate_from_visit}%</td>
+                      <td className="py-2 text-right font-mono">{c.reviews}</td>
+                      <td className="py-2 text-right font-mono">{c.review_rate_from_signup}%</td>
                     </tr>
                   ))}
                 </tbody>

@@ -6,6 +6,7 @@ import type { RiskProfile } from "@/lib/fixMyPortfolio";
 import { DEMO_REFRESH_DATA } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
 import { trackEvent } from "@/lib/analytics";
+import { readAttribution } from "@/lib/growthAttribution";
 import SummaryCards from "@/components/SummaryCards";
 import HoldingsTable from "@/components/HoldingsTable";
 import AddHoldingModal from "@/components/AddHoldingModal";
@@ -66,7 +67,14 @@ export default function OverviewPage() {
   }, []);
 
   useEffect(() => {
-    void trackEvent("dashboard_first_view");
+    const attribution = readAttribution();
+    void trackEvent("dashboard_first_view", attribution);
+
+    const signupTracked = localStorage.getItem("portivex_signup_tracked_v1") === "1";
+    if (!signupTracked) {
+      localStorage.setItem("portivex_signup_tracked_v1", "1");
+      void trackEvent("signup_completed", attribution);
+    }
   }, []);
 
   useEffect(() => {
@@ -88,6 +96,7 @@ export default function OverviewPage() {
       is_demo_mode: isDemoMode,
       holdings_count: data?.holdings.length ?? 0,
       source,
+      ...readAttribution(),
     });
     setShowFix(true);
   }
