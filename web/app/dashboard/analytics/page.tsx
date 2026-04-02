@@ -29,7 +29,13 @@ export default function AnalyticsPage() {
       const key = adminKey.trim();
       localStorage.setItem("portivex_admin_key", key);
       const params = new URLSearchParams({ key, days: String(days) });
-      const res = await fetch(`${BASE}/admin/analytics?${params}`, { cache: "no-store" });
+      let res: Response;
+      try {
+        res = await fetch(`${BASE}/admin/analytics?${params}`, { cache: "no-store" });
+      } catch {
+        // Fallback to same-origin route if NEXT_PUBLIC_API_URL points to an unreachable host.
+        res = await fetch(`/api/admin/analytics?${params}`, { cache: "no-store" });
+      }
       if (!res.ok) {
         let detail = "";
         try {
