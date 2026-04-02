@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { streamAnalysis, fetchRefresh, fetchAIUsage, saveAiReport, listAiReports, deleteAiReport, type AiReport } from "@/lib/api";
-import { DEMO_AI_REPORT, DEMO_REFRESH_DATA } from "@/lib/demoPortfolio";
+import { DEMO_AI_REPORT } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
 import { trackEvent } from "@/lib/analytics";
 
@@ -393,7 +393,7 @@ function NoHoldingsState() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AiPage() {
-  const { isDemoMode } = useDemoMode();
+  const { isDemoMode, demoData } = useDemoMode();
   const [text, setText]         = useState("");
   const [status, setStatus]     = useState<Status>("idle");
   const [error, setError]       = useState("");
@@ -408,7 +408,7 @@ export default function AiPage() {
 
   useEffect(() => {
     if (isDemoMode) {
-      setHoldingCount(DEMO_REFRESH_DATA.holdings.length);
+      setHoldingCount(demoData.holdings.length);
       setUsage({ used: 0, limit: 999, remaining: 999 });
       setSavedReports([]);
       return;
@@ -422,7 +422,7 @@ export default function AiPage() {
     listAiReports()
       .then(setSavedReports)
       .catch(() => {});
-  }, [isDemoMode]);
+  }, [isDemoMode, demoData.holdings.length]);
 
   async function handleSave() {
     if (!text || saveState === "saving" || saveState === "saved") return;

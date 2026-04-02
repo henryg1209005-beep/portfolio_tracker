@@ -3,7 +3,23 @@ import { useState, useEffect, useRef } from "react";
 import { addHolding, searchTickers } from "@/lib/api";
 import { inferAssetType } from "@/lib/csvImport";
 
-type Props = { onClose: () => void; onAdded: () => void };
+type AddHoldingPayload = {
+  ticker: string;
+  type: "stock" | "etf" | "crypto";
+  transaction: {
+    date: string;
+    shares: number;
+    price: number;
+    type: "buy" | "sell";
+    price_currency: "GBP" | "USD" | "EUR";
+  };
+};
+
+type Props = {
+  onClose: () => void;
+  onAdded: () => void | Promise<void>;
+  onSubmit?: (payload: AddHoldingPayload) => void | Promise<void>;
+};
 type SearchResult = { ticker: string; name: string; exchange: string };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -15,7 +31,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export default function AddHoldingModal({ onClose, onAdded }: Props) {
+export default function AddHoldingModal({ onClose, onAdded, onSubmit }: Props) {
   const [form, setForm] = useState({
     ticker: "",
     type: "stock" as "stock" | "etf" | "crypto",
@@ -76,7 +92,7 @@ export default function AddHoldingModal({ onClose, onAdded }: Props) {
     setLoading(true);
     setError("");
     try {
-      await addHolding({
+      const payload: AddHoldingPayload = {
         ticker: form.ticker,
         type: form.type,
         transaction: {
@@ -86,7 +102,9 @@ export default function AddHoldingModal({ onClose, onAdded }: Props) {
           type: form.txnType,
           price_currency: form.currency,
         },
-      });
+      };
+      if (onSubmit) await onSubmit(payload);
+      else await addHolding(payload);
       onAdded();
       onClose();
     } catch (err: unknown) {

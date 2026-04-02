@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from "react";
 import { fetchRefresh, removeHolding, clearAllHoldings, getProfile, type RefreshData } from "@/lib/api";
 import { useCurrency, CURRENCIES } from "@/lib/currencyContext";
 import type { RiskProfile } from "@/lib/fixMyPortfolio";
-import { DEMO_REFRESH_DATA } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
 import { trackEvent } from "@/lib/analytics";
 import { readAttribution } from "@/lib/growthAttribution";
@@ -24,7 +23,7 @@ export default function OverviewPage() {
   const [nudgeTracked, setNudgeTracked] = useState(false);
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("balanced");
   const { currency, setCurrency } = useCurrency();
-  const { isDemoMode, setDemoMode } = useDemoMode();
+  const { isDemoMode, setDemoMode, demoData, addDemoHolding, removeDemoHolding, resetDemoPortfolio } = useDemoMode();
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
@@ -43,9 +42,17 @@ export default function OverviewPage() {
   }
 
   function applyDemoPortfolio() {
-    setData(DEMO_REFRESH_DATA);
+    setData(demoData);
     setError("");
     setLoading(false);
+  }
+
+  function handleRefresh() {
+    if (isDemoMode) {
+      applyDemoPortfolio();
+      return;
+    }
+    void load(true);
   }
 
   useEffect(() => {
@@ -54,7 +61,7 @@ export default function OverviewPage() {
       return;
     }
     load();
-  }, [load, isDemoMode]);
+  }, [load, isDemoMode, demoData]);
 
   useEffect(() => {
     getProfile()
@@ -83,7 +90,10 @@ export default function OverviewPage() {
   }, []);
 
   async function handleRemove(ticker: string) {
-    if (isDemoMode) return;
+    if (isDemoMode) {
+      removeDemoHolding(ticker);
+      return;
+    }
     if (!confirm(`Remove ${ticker}?`)) return;
     await removeHolding(ticker);
     load();
@@ -136,7 +146,9 @@ export default function OverviewPage() {
               </span>
             )}
           </div>
-          <p className="text-muted text-sm mt-0.5">Your portfolio at a glance</p>
+          <p className="text-muted text-sm mt-0.5">
+            {isDemoMode ? "Demo sandbox: local-only edits, reset anytime." : "Your portfolio at a glance"}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {data && (
@@ -158,7 +170,7 @@ export default function OverviewPage() {
           )}
 
           <button
-            onClick={() => load(true)}
+            onClick={handleRefresh}
             disabled={loading}
             className="px-3 py-2 text-sm rounded-lg font-mono transition-all disabled:opacity-40"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
@@ -171,7 +183,7 @@ export default function OverviewPage() {
               (e.currentTarget as HTMLElement).style.borderColor = "#2a0050";
             }}
           >
-            {loading ? "Refreshing..." : "Refresh"}
+            {loading ? "Refreshing..." : isDemoMode ? "Sync Demo" : "Refresh"}
           </button>
 
           {!isDemoMode && (
@@ -213,6 +225,16 @@ export default function OverviewPage() {
               }}
             >
               Clear
+            </button>
+          )}
+
+          {isDemoMode && (
+            <button
+              onClick={resetDemoPortfolio}
+              className="px-3 py-2 text-sm font-mono rounded-lg transition-all"
+              style={{ border: "1px solid #bf5af244", color: "#bf5af2", background: "#bf5af211" }}
+            >
+              Reset Demo
             </button>
           )}
 
@@ -259,7 +281,6 @@ export default function OverviewPage() {
 
           <button
             onClick={() => setShowAdd(true)}
-            disabled={isDemoMode}
             className="px-3 py-2 text-sm font-semibold rounded-lg transition-all"
             style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff" }}
           >
@@ -331,7 +352,15 @@ export default function OverviewPage() {
 
       {showImport && <ImportCSVModal onClose={() => setShowImport(false)} onImported={load} />}
 
-      {showAdd && <AddHoldingModal onClose={() => setShowAdd(false)} onAdded={load} />}
+      {showAdd && (
+        <AddHoldingModal
+          onClose={() => setShowAdd(false)}
+          onAdded={async () => {
+            if (!isDemoMode) await load();
+          }}
+          onSubmit={isDemoMode ? addDemoHolding : undefined}
+        />
+      )}
 
       {showFix && data && (
         <FixMyPortfolioPanel
