@@ -40,6 +40,15 @@ Core rules:
 - The portfolio scores are PRE-COMPUTED by the system. Copy them exactly as given in the data — do not recalculate or modify them.
 - Be specific and grounded in the exact numbers provided.
 
+Mandatory accuracy rules — no exceptions:
+- HORIZON TAGS: Every metric you reference must include its horizon tag exactly as labelled in the data (e.g., "Trailing 252d", "Since Inception", "Benchmark Overlap"). Never omit the horizon.
+- SHARPE/SORTINO ARE DIMENSIONLESS: Never use "%" or "per unit of volatility" language for Sharpe or Sortino. They are plain ratios. Correct: "Sharpe ratio of 1.08". Incorrect: "1.08% per unit of volatility".
+- SCORE CONSISTENCY: Score narrative must match the score value. If Profile Alignment is 8/10 or 9/10, the narrative must reflect strong alignment. If it is 2/10 or 3/10, the narrative must reflect poor alignment. A high score with a negative narrative, or a low score with a positive narrative, is a factual error.
+- NO SELF-COMPUTED DELTAS: Never compute your own percentage changes or deltas. Use only the pre-computed deltas explicitly provided in the data. If a delta is not provided, describe direction only (e.g., "improved" or "declined") without a number.
+- ALPHA FRAMING: Never use language like "exceptional stock-picking" or "demonstrates skill". Alpha is conditional and noisy. Use: "this may suggest outperformance relative to expected return for this risk level" or "one possible interpretation is...".
+- FACT vs INFERENCE: Prefix observed data points with "Data shows:" and interpretations with "This may suggest:" or "One possible reading is:".
+- ETF SECTOR DATA: Sector classification for ETFs comes from yfinance top-level metadata — ETF holdings are NOT decomposed into underlying constituents. Any sector inference involving ETFs must be labelled explicitly as "(estimated — ETF look-through not computed)".
+
 Produce the report in this exact structure:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -400,7 +409,7 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
             w = (h.get("weight") or 0)
             lines.append(f"{t}: {sec} / {ind}")
             sector_weights[sec] = sector_weights.get(sec, 0) + w
-        lines.append("\nSector weights:")
+        lines.append("\nSector weights (NOTE: ETF holdings are NOT decomposed into underlying constituents — weights for ETFs reflect yfinance top-level classification only; label any ETF-based sector inference as estimated):")
         for sec, sw in sorted(sector_weights.items(), key=lambda x: -x[1]):
             lines.append(f"  {sec}: {sw*100:.1f}%")
 
@@ -421,18 +430,18 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
             if v is None: return "N/A"
             return f"{v*100:.2f}%" if pct else f"{v:.4f}"
 
-        lines.append(f"Sharpe Ratio:          {fmt(metrics.get('sharpe_ratio'))}")
-        lines.append(f"Sortino Ratio:         {fmt(metrics.get('sortino_ratio'))}")
-        lines.append(f"Annualised Return:     {fmt(metrics.get('actual_return'), pct=True)}")
-        lines.append(f"Volatility:            {fmt(metrics.get('volatility'), pct=True)}")
-        lines.append(f"Beta:                  {fmt(metrics.get('beta'))}")
-        lines.append(f"CAPM Expected Return:  {fmt(metrics.get('capm_expected_return'), pct=True)}")
-        lines.append(f"Jensen's Alpha:        {fmt(metrics.get('alpha'), pct=True)}")
-        lines.append(f"VaR 95% Historical:    {fmt(metrics.get('var_95'), pct=True)}")
-        lines.append(f"VaR 95% Cornish-Fisher:{fmt(metrics.get('var_95_cf'), pct=True)}")
-        lines.append(f"Max Drawdown:          {fmt(metrics.get('max_drawdown'), pct=True)}")
-        lines.append(f"Risk-Free Rate:        {fmt(metrics.get('rf_annual'), pct=True)}")
-        lines.append(f"Benchmark:             {metrics.get('benchmark_used', 'sp500')}")
+        lines.append(f"Sharpe Ratio [Trailing 252d]:              {fmt(metrics.get('sharpe_ratio'))}")
+        lines.append(f"Sortino Ratio [Trailing 252d]:             {fmt(metrics.get('sortino_ratio'))}")
+        lines.append(f"Annualised Return [Since Inception]:       {fmt(metrics.get('actual_return'), pct=True)}")
+        lines.append(f"Volatility [Trailing 252d]:                {fmt(metrics.get('volatility'), pct=True)}")
+        lines.append(f"Beta [Benchmark Overlap Window]:           {fmt(metrics.get('beta'))}")
+        lines.append(f"CAPM Expected Return [Benchmark Overlap]:  {fmt(metrics.get('capm_expected_return'), pct=True)}")
+        lines.append(f"Jensen's Alpha [Trailing 252d]:            {fmt(metrics.get('alpha'), pct=True)}")
+        lines.append(f"VaR 95% Historical [Trailing 252d]:        {fmt(metrics.get('var_95'), pct=True)}")
+        lines.append(f"VaR 95% Cornish-Fisher [Trailing 252d]:   {fmt(metrics.get('var_95_cf'), pct=True)}")
+        lines.append(f"Max Drawdown [Trailing 252d]:              {fmt(metrics.get('max_drawdown'), pct=True)}")
+        lines.append(f"Risk-Free Rate [Current]:                  {fmt(metrics.get('rf_annual'), pct=True)}")
+        lines.append(f"Benchmark:                                 {metrics.get('benchmark_used', 'sp500')}")
 
         dd_recovery = metrics.get("drawdown_recovery_days")
         if dd_recovery is not None:
@@ -473,10 +482,11 @@ def _build_context(market_data: dict, profile: dict | None = None) -> str:
                         trend_note = "worsening" if r < p else "improving" if r > p else "stable"
                     else:
                         trend_note = "improving" if r > p else "declining" if r < p else "stable"
+                    delta_pct = ((r - p) / abs(p) * 100) if p != 0 else 0.0
                     if key in ("volatility", "var_95", "max_drawdown"):
-                        lines.append(f"  {label}: {r*100:.2f}% (was {p*100:.2f}%) — {trend_note}")
+                        lines.append(f"  {label} [Recent 3M vs Prior 3M]: {r*100:.2f}% → {p*100:.2f}% (pre-computed delta: {delta_pct:+.1f}%) — {trend_note}")
                     else:
-                        lines.append(f"  {label}: {r:.4f} (was {p:.4f}) — {trend_note}")
+                        lines.append(f"  {label} [Recent 3M vs Prior 3M]: {r:.4f} → {p:.4f} (pre-computed delta: {delta_pct:+.1f}%) — {trend_note}")
 
     # ── Portfolio scores ─────────────────────────────────────────────────────
     overall = scores["overall"]
