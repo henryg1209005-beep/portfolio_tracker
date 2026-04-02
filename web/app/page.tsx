@@ -16,7 +16,7 @@ const PILLARS = [
   {
     title: "Decision Clarity",
     tag: "Action",
-    body: "Portfolio review surfaces concentration, overlap, and practical next moves in minutes.",
+    body: "Get specific observations on concentration, correlation, and risk trends — not just numbers, but what they mean for your portfolio right now.",
     accent: "#bf5af2",
   },
   {
@@ -48,7 +48,7 @@ const FLOW = [
   {
     step: "03",
     title: "Act with structure",
-    body: "Use review guidance and exports to improve portfolio decisions over time.",
+    body: "Receive specific observations on what's working, what's elevated, and what's worth reflecting on — in plain English.",
   },
 ];
 
@@ -165,7 +165,7 @@ export default function LandingPage() {
               Your broker tracks your gains. Portivex tells you if they were worth the risk.
             </h1>
             <p className="text-base sm:text-lg max-w-xl leading-relaxed" style={{ color: "#8a7a9e" }}>
-              Portivex helps serious retail investors understand portfolio risk with institutional logic and plain-English interpretation.
+              Portivex analyses your portfolio and tells you exactly what your risk metrics mean — and what's worth your attention.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Link href="/sign-up" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 24px #bf5af244" }}>
