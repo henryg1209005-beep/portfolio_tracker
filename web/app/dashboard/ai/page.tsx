@@ -65,7 +65,7 @@ function useTypewriter(target: string, active: boolean): string {
 
 // ─── Parser ──────────────────────────────────────────────────────────────────
 function parseSections(raw: string): Section[] {
-  const divRe = /^━{10,}$/;
+  const divRe = /^(?:[━─=\-]){8,}$/;
   const lines = raw.split("\n");
   const sections: Section[] = [];
   let i = 0;
@@ -91,7 +91,7 @@ function parseSections(raw: string): Section[] {
 
 // Extracts the section currently being written (header complete, body still streaming)
 function parsePartial(raw: string): Section | null {
-  const divRe = /^━{10,}$/;
+  const divRe = /^(?:[━─=\-]){8,}$/;
   const lines  = raw.split("\n");
   for (let i = lines.length - 1; i >= 2; i--) {
     if (divRe.test(lines[i]?.trim()) && !divRe.test(lines[i - 1]?.trim()) && divRe.test(lines[i - 2]?.trim())) {
@@ -323,6 +323,24 @@ function LoadingState({ status }: { status: Status }) {
   );
 }
 
+function StreamingRawCard({ text }: { text: string }) {
+  return (
+    <div
+      className="rounded-2xl border border-border px-6 py-5"
+      style={{ background: "rgba(255,255,255,0.02)" }}
+    >
+      <div className="flex items-center gap-2.5 mb-3">
+        <span style={{ color: "#bf5af2", fontSize: 13 }}>✦</span>
+        <span className="text-xs font-bold tracking-[0.14em] uppercase" style={{ color: "#bf5af2" }}>
+          Analysis Stream
+        </span>
+        <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-pulse ml-1" />
+      </div>
+      <p className="text-sm leading-relaxed text-white/80 whitespace-pre-wrap">{text}</p>
+    </div>
+  );
+}
+
 // ─── Idle state ───────────────────────────────────────────────────────────────
 function IdleState() {
   return (
@@ -457,6 +475,7 @@ export default function AiPage() {
   const hasHoldings = holdingCount === null || holdingCount > 0;
   const limitHit    = usage !== null && usage.remaining === 0;
   const sections    = parseSections(text);
+  const hasText     = text.trim().length > 0;
   // Keep partial alive on "done" so the typewriter can finish the last section,
   // but suppress it if parseSections already includes that section (avoids duplicate)
   const _partial    = (busy || status === "done") ? parsePartial(text) : null;
@@ -543,10 +562,12 @@ export default function AiPage() {
           <div className="bg-surface border border-border rounded-2xl">
             <IdleState />
           </div>
-        ) : (status === "loading" || (status === "streaming" && sections.length === 0)) ? (
+        ) : (status === "loading" || (status === "streaming" && sections.length === 0 && !hasText)) ? (
           <div className="bg-surface border border-border rounded-2xl px-6">
             <LoadingState status={status} />
           </div>
+        ) : status === "streaming" && sections.length === 0 && hasText ? (
+          <StreamingRawCard text={text} />
         ) : sections.length > 0 || partial ? (
           <div className="space-y-4">
             {sections.map((s, i) => (
