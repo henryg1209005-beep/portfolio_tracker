@@ -26,12 +26,19 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError("");
     try {
-      localStorage.setItem("portivex_admin_key", adminKey);
-      const params = new URLSearchParams({ key: adminKey, days: String(days) });
+      const key = adminKey.trim();
+      localStorage.setItem("portivex_admin_key", key);
+      const params = new URLSearchParams({ key, days: String(days) });
       const res = await fetch(`${BASE}/admin/analytics?${params}`, { cache: "no-store" });
       if (!res.ok) {
-        if (res.status === 403) throw new Error("Forbidden. Check ADMIN_KEY.");
-        throw new Error("Failed to fetch analytics summary.");
+        let detail = "";
+        try {
+          const body = await res.json();
+          detail = body?.detail ? ` ${body.detail}` : "";
+        } catch {}
+        if (res.status === 403) throw new Error(`Forbidden (${res.status}). Check ADMIN_KEY.${detail}`);
+        if (res.status === 404) throw new Error(`Not found (${res.status}). API route not deployed.${detail}`);
+        throw new Error(`Failed to fetch analytics summary (${res.status}).${detail}`);
       }
       setData(await res.json());
     } catch (e: any) {
