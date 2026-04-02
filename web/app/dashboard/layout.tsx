@@ -7,6 +7,7 @@ import OnboardingModal from "@/components/OnboardingModal";
 import { setToken, getToken, getProfile, type InvestorProfile } from "@/lib/api";
 import { CurrencyProvider } from "@/lib/currencyContext";
 import { DemoModeProvider, useDemoMode } from "@/lib/demoModeContext";
+import { isAdminUserId } from "@/lib/admin";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -27,6 +28,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [profile, setProfile] = useState<Partial<InvestorProfile> | null>(null);
   const [profileError, setProfileError] = useState("");
+  const isAdminUser = isAdminUserId(userId);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -68,6 +70,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         onCopyToken={copyToken}
         isDemoMode={isDemoMode}
         onToggleDemoMode={() => setDemoMode(!isDemoMode)}
+        isAdminUser={isAdminUser}
       />
         <main className="flex-1 overflow-y-auto bg-bg pb-16 md:pb-0">
           {isDemoMode && (

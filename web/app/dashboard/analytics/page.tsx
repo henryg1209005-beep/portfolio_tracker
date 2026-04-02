@@ -1,62 +1,31 @@
 "use client";
 import { useEffect, useState } from "react";
-
-type Summary = {
-  window_days: number;
-  totals: { events: number; unique_tokens: number };
-  funnel: Array<Record<string, string | number>>;
-  events: Array<{ event_name: string; count: number }>;
-  cohorts: Array<{
-    cohort_week: string;
-    users: number;
-    activated_7d: number;
-    activation_rate_7d: number;
-    review_7d: number;
-    review_rate_7d: number;
-    high_intent_7d: number;
-    high_intent_rate_7d: number;
-  }>;
-};
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { fetchAdminAnalytics, type AnalyticsSummary } from "@/lib/api";
+import { isAdminUserId } from "@/lib/admin";
 
 export default function AnalyticsPage() {
-  const [adminKey, setAdminKey] = useState("");
+  const { userId, isLoaded } = useAuth();
+  const router = useRouter();
   const [days, setDays] = useState(14);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<Summary | null>(null);
+  const [data, setData] = useState<AnalyticsSummary | null>(null);
+  const isAdmin = isAdminUserId(userId);
 
   useEffect(() => {
-    const saved = localStorage.getItem("portivex_admin_key") ?? "";
-    if (saved) setAdminKey(saved);
-  }, []);
+    if (!isLoaded) return;
+    if (!isAdmin) {
+      router.replace("/dashboard");
+    }
+  }, [isLoaded, isAdmin, router]);
 
   async function loadSummary() {
     setLoading(true);
     setError("");
     try {
-      const key = adminKey.trim();
-      localStorage.setItem("portivex_admin_key", key);
-      const params = new URLSearchParams({ key, days: String(days) });
-      let res: Response;
-      try {
-        res = await fetch(`${BASE}/admin/analytics?${params}`, { cache: "no-store" });
-      } catch {
-        // Fallback to same-origin route if NEXT_PUBLIC_API_URL points to an unreachable host.
-        res = await fetch(`/api/admin/analytics?${params}`, { cache: "no-store" });
-      }
-      if (!res.ok) {
-        let detail = "";
-        try {
-          const body = await res.json();
-          detail = body?.detail ? ` ${body.detail}` : "";
-        } catch {}
-        if (res.status === 403) throw new Error(`Forbidden (${res.status}). Check ADMIN_KEY.${detail}`);
-        if (res.status === 404) throw new Error(`Not found (${res.status}). API route not deployed.${detail}`);
-        throw new Error(`Failed to fetch analytics summary (${res.status}).${detail}`);
-      }
-      setData(await res.json());
+      setData(await fetchAdminAnalytics(days));
     } catch (e: any) {
       setError(e?.message ?? "Failed to fetch analytics summary.");
     } finally {
@@ -64,27 +33,24 @@ export default function AnalyticsPage() {
     }
   }
 
+  useEffect(() => {
+    if (!isLoaded || !isAdmin) return;
+    loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isAdmin]);
+
+  if (!isLoaded || !isAdmin) return null;
+
   return (
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Analytics</h1>
         <p className="text-sm mt-1" style={{ color: "#6b5e7e" }}>
-          Admin funnel snapshot from captured product events.
+          Admin-only funnel snapshot from captured product events.
         </p>
       </div>
 
       <div className="rounded-xl p-4 flex flex-col md:flex-row md:items-end gap-3" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
-        <div className="flex-1">
-          <label className="text-xs font-mono block mb-1.5" style={{ color: "#6b5e7e" }}>Admin Key</label>
-          <input
-            type="password"
-            value={adminKey}
-            onChange={(e) => setAdminKey(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm bg-transparent"
-            style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}
-            placeholder="Enter ADMIN_KEY"
-          />
-        </div>
         <div className="w-full md:w-36">
           <label className="text-xs font-mono block mb-1.5" style={{ color: "#6b5e7e" }}>Window (days)</label>
           <input
@@ -99,11 +65,11 @@ export default function AnalyticsPage() {
         </div>
         <button
           onClick={loadSummary}
-          disabled={loading || !adminKey.trim()}
+          disabled={loading}
           className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40"
           style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
         >
-          {loading ? "Loading..." : "Load"}
+          {loading ? "Loading..." : "Reload"}
         </button>
       </div>
 

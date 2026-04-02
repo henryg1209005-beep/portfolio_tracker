@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 
 from api import db
@@ -71,6 +71,15 @@ app.include_router(profile.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 
 
+def _is_admin_by_token(token: str | None) -> bool:
+    import os
+    if not token:
+        return False
+    raw = os.environ.get("ADMIN_USER_IDS", "")
+    allowed = {x.strip() for x in raw.split(",") if x.strip()}
+    return token in allowed
+
+
 @app.get("/api/health")
 def health():
     db_ok = False
@@ -110,10 +119,16 @@ def admin_feedback(key: str):
 
 
 @app.get("/api/admin/analytics")
-def admin_analytics(key: str, days: int = 14):
+def admin_analytics(
+    key: str = "",
+    days: int = 14,
+    x_portfolio_token: str | None = Header(default=None),
+):
     import os
     admin_key = os.environ.get("ADMIN_KEY", "")
-    if not admin_key or key != admin_key:
+    key_ok = bool(admin_key) and key == admin_key
+    token_ok = _is_admin_by_token(x_portfolio_token)
+    if not key_ok and not token_ok:
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Forbidden")
     return db.get_analytics_summary(days=days)

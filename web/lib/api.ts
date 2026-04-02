@@ -224,6 +224,23 @@ export type PerformanceData = {
   benchmark_name?: string;
 };
 
+export type AnalyticsSummary = {
+  window_days: number;
+  totals: { events: number; unique_tokens: number };
+  funnel: Array<Record<string, string | number>>;
+  events: Array<{ event_name: string; count: number }>;
+  cohorts: Array<{
+    cohort_week: string;
+    users: number;
+    activated_7d: number;
+    activation_rate_7d: number;
+    review_7d: number;
+    review_rate_7d: number;
+    high_intent_7d: number;
+    high_intent_rate_7d: number;
+  }>;
+};
+
 export async function fetchPerformance(
   period = "1Y",
   benchmark: "sp500" | "ftse100" | "msci_world" = "sp500"
@@ -234,6 +251,23 @@ export async function fetchPerformance(
     cache: "no-store",
   });
   if (!res.ok) throw new Error("Failed to fetch performance data");
+  return res.json();
+}
+
+export async function fetchAdminAnalytics(days = 14): Promise<AnalyticsSummary> {
+  const params = new URLSearchParams({ days: String(days) });
+  const res = await fetch(`${BASE}/admin/analytics?${params}`, {
+    headers: authHeader(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    let msg = `Failed to fetch analytics summary (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.detail) msg = `${msg}. ${body.detail}`;
+    } catch {}
+    throw new Error(msg);
+  }
   return res.json();
 }
 

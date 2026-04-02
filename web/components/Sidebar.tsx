@@ -23,9 +23,10 @@ type Props = {
   onCopyToken: () => void;
   isDemoMode: boolean;
   onToggleDemoMode: () => void;
+  isAdminUser: boolean;
 };
 
-export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onToggleDemoMode }: Props) {
+export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onToggleDemoMode, isAdminUser }: Props) {
   const path = usePathname();
   const { signOut } = useClerk();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -40,6 +41,8 @@ export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onTogg
     }).catch(() => {});
   }, [showProfile]);
 
+  const visibleLinks = isAdminUser ? links : links.filter((l) => l.href !== "/dashboard/analytics");
+
   return (
     <>
       <aside
@@ -50,7 +53,7 @@ export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onTogg
           <Image src="/logo.png" alt="Portivex" width={180} height={60} className="object-contain w-full" />
         </div>
 
-        {links.map((l) => {
+        {visibleLinks.map((l) => {
           const active = path === l.href;
           return (
             <Link
@@ -142,7 +145,7 @@ export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onTogg
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch"
         style={{ background: "#10001e", borderTop: "1px solid #2a0050", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {links.map((l) => {
+        {visibleLinks.map((l) => {
           const active = path === l.href;
           return (
             <Link
