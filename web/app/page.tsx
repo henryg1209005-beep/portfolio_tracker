@@ -53,7 +53,7 @@ const FLOW = [
 function SignalBars() {
   return (
     <div className="grid grid-cols-4 gap-2 mt-5">
-      {SIGNALS.map((s, i) => (
+      {SIGNALS.map((s) => (
         <div key={s.k} className="rounded-lg p-2" style={{ background: "#10001e", border: "1px solid #2a0050" }}>
           <div className="text-[10px] font-mono mb-1" style={{ color: "#6b5e7e" }}>
             {s.k}
@@ -61,15 +61,7 @@ function SignalBars() {
           <div className="text-xs font-mono font-semibold" style={{ color: s.c }}>
             {s.v}
           </div>
-          <div className="h-1.5 rounded-full mt-2 overflow-hidden" style={{ background: "#1a0030" }}>
-            <div
-              className="h-full rounded-full signal-meter"
-              style={{
-                width: `${58 + i * 10}%`,
-                background: `linear-gradient(90deg, ${s.c}, #ffffff22)`,
-              }}
-            />
-          </div>
+          <div className="text-[10px] font-mono mt-2" style={{ color: "#4a3a5e" }}>Demo snapshot</div>
         </div>
       ))}
     </div>
@@ -163,7 +155,7 @@ export default function LandingPage() {
               Portfolio Risk Intelligence Platform
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
-              Decision intelligence for personal portfolios.
+              Stop guessing. See exactly what your portfolio is really doing.
             </h1>
             <p className="text-base sm:text-lg max-w-xl leading-relaxed" style={{ color: "#8a7a9e" }}>
               Portivex helps serious retail investors understand portfolio risk with institutional logic and plain-English interpretation.
@@ -172,16 +164,19 @@ export default function LandingPage() {
               <Link href="/sign-up" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 24px #bf5af244" }}>
                 Launch free -&gt;
               </Link>
-              <a href="#position" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
-                See what is different
+              <a href="#how" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
+                See how it works
               </a>
+            </div>
+            <div className="inline-flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
+              Free during early access · No card required
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               {[
                 { k: "Metrics", v: "Quant-backed" },
                 { k: "Review", v: "Actionable" },
                 { k: "Exports", v: "Investor-ready" },
-                { k: "Mode", v: "Full demo" },
+                { k: "Confidence", v: "Signal-scored" },
               ].map((item) => (
                 <div key={item.k} className="rounded-lg px-3 py-2 hover-lift" style={{ background: "#0d0020", border: "1px solid #1a0030" }}>
                   <div className="text-[10px] uppercase tracking-widest font-mono" style={{ color: "#4a3a5e" }}>{item.k}</div>
@@ -195,7 +190,7 @@ export default function LandingPage() {
             <div className="rounded-2xl p-4 sm:p-5 glow-breath" style={{ background: "linear-gradient(140deg,#120020,#0a0014)", border: "1px solid #2a0050", boxShadow: "0 0 40px #bf5af21c" }}>
               <div className="flex items-center justify-between text-[11px] font-mono mb-3" style={{ color: "#6b5e7e" }}>
                 <span>Risk Signal Console</span>
-                <span style={{ color: "#00f5d4" }}>LIVE</span>
+                <span style={{ color: "#00f5d4" }}>DEMO</span>
               </div>
               <div className="rounded-xl p-3" style={{ background: "#0b0018", border: "1px solid #1a0030" }}>
                 <div className="flex items-center justify-between mb-2">
@@ -215,7 +210,7 @@ export default function LandingPage() {
 
       <section id="position" className="max-w-6xl mx-auto px-6 py-16">
         <div className="mb-10">
-          <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>Positioning</div>
+          <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>What makes it different</div>
           <h2 className="text-2xl sm:text-3xl font-bold">Built as risk intelligence, not a generic tracker.</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
