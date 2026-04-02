@@ -145,7 +145,7 @@ export default function MetricsPage() {
     const riskMetricsRaw = cleanObject({
       sharpe_ratio: m.sharpe_ratio,
       sortino_ratio: m.sortino_ratio,
-      annualised_return: m.actual_return,
+      annualised_return_since_inception: m.actual_return,
       volatility: m.volatility,
       beta: m.beta,
       capm_expected_return: m.capm_expected_return,
@@ -160,7 +160,7 @@ export default function MetricsPage() {
     const riskMetricsDisplay = cleanObject({
       sharpe_ratio: fmtNumber(m.sharpe_ratio, 3),
       sortino_ratio: fmtNumber(m.sortino_ratio, 3),
-      annualised_return: fmtPercent(m.actual_return, 2),
+      annualised_return_since_inception: fmtPercent(m.actual_return, 2),
       volatility: fmtPercent(m.volatility, 2),
       beta: fmtNumber(m.beta, 3),
       capm_expected_return: fmtPercent(m.capm_expected_return, 2),
@@ -230,15 +230,15 @@ export default function MetricsPage() {
 
     addRow("Risk Metrics", "Sharpe Ratio", fmtNumber(m.sharpe_ratio, 3));
     addRow("Risk Metrics", "Sortino Ratio", fmtNumber(m.sortino_ratio, 3));
-    addRow("Risk Metrics", "Annualised Return", fmtPercent(m.actual_return, 2));
-    addRow("Risk Metrics", "Volatility", fmtPercent(m.volatility, 2));
-    addRow("Risk Metrics", "Beta", fmtNumber(m.beta, 3));
-    addRow("Risk Metrics", "CAPM Expected Return", fmtPercent(m.capm_expected_return, 2));
-    addRow("Risk Metrics", "Alpha", fmtPercent(m.alpha, 2));
-    addRow("Risk Metrics", "Value at Risk (95%, Historical)", fmtPercent(m.var_95, 2));
-    addRow("Risk Metrics", "Value at Risk (95%, Cornish-Fisher)", fmtPercent(m.var_95_cf, 2));
-    addRow("Risk Metrics", "Max Drawdown", fmtPercent(m.max_drawdown, 2));
-    addRow("Risk Metrics", "Drawdown Recovery", isValidValue(m.drawdown_recovery_days) ? String(m.drawdown_recovery_days) : "", "trading days");
+    addRow("Risk Metrics", "Annualised Return (Since inception)", fmtPercent(m.actual_return, 2));
+    addRow("Risk Metrics", "Volatility (Trailing 252d annualised)", fmtPercent(m.volatility, 2));
+    addRow("Risk Metrics", "Beta (Benchmark overlap)", fmtNumber(m.beta, 3));
+    addRow("Risk Metrics", "CAPM Expected Return (Benchmark overlap)", fmtPercent(m.capm_expected_return, 2));
+    addRow("Risk Metrics", "Alpha (Benchmark overlap)", fmtPercent(m.alpha, 2));
+    addRow("Risk Metrics", "Value at Risk (95%, Historical, Trailing 252d)", fmtPercent(m.var_95, 2));
+    addRow("Risk Metrics", "Value at Risk (95%, Cornish-Fisher, Trailing 252d)", fmtPercent(m.var_95_cf, 2));
+    addRow("Risk Metrics", "Max Drawdown (Trailing 252d)", fmtPercent(m.max_drawdown, 2));
+    addRow("Risk Metrics", "Drawdown Recovery (Trailing 252d)", isValidValue(m.drawdown_recovery_days) ? String(m.drawdown_recovery_days) : "", "trading days");
     addRow("Risk Metrics", "Risk-Free Rate", fmtPercent(m.rf_annual, 2));
 
     addRow("Confidence", "Sample Days", isValidValue(m.sample_days) ? String(m.sample_days) : "", "trading days");

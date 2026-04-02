@@ -320,7 +320,6 @@ export default function MetricsGrid({
   const alpha      = metrics.alpha;
   const vol        = metrics.volatility;
   const beta       = metrics.beta;
-  const actRet     = metrics.actual_return;
   const expRet     = metrics.capm_expected_return;
   const volPct     = vol != null ? `${(vol * 100).toFixed(1)}%` : "—";
   const ddRecovery = metrics.drawdown_recovery_days;
@@ -376,8 +375,8 @@ export default function MetricsGrid({
   const alphaExplain = alpha == null
     ? "Not enough data to compare against the market."
     : alpha > 0
-    ? `Returned ${pct(actRet ?? 0)}, beating the CAPM-expected ${pct(expRet ?? 0)} by ${pct(alpha)}. You're generating excess return above market compensation.`
-    : `Returned ${pct(actRet ?? 0)}, ${pct(Math.abs(alpha ?? 0))} below the CAPM-expected ${pct(expRet ?? 0)}. The ${benchmarkLabel} has outpaced this period's performance.`;
+    ? `Alpha of ${pct(alpha)} means returns exceeded CAPM expectation (${pct(expRet ?? 0)}) on the benchmark-overlap window. You're generating excess return above market compensation.`
+    : `Alpha of ${pct(alpha)} means returns were below CAPM expectation (${pct(expRet ?? 0)}) on the benchmark-overlap window. ${benchmarkLabel} exposure alone would have implied a stronger outcome.`;
 
   const riskExplain = vol == null
     ? "Not enough data to measure volatility."
@@ -522,6 +521,18 @@ export default function MetricsGrid({
           </span>
         )}
       </div>
+      <div className="rounded-xl px-4 py-3 flex flex-wrap items-center gap-2" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
+        <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#6b5e7e" }}>Horizon Map</span>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
+          Since inception: Annualised Return
+        </span>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #2a0050", color: "#00f5d4" }}>
+          Trailing 252d: Sharpe, Sortino, Vol, VaR, Drawdown
+        </span>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #2a0050", color: "#bf5af2" }}>
+          Benchmark overlap: Beta, CAPM, Alpha
+        </span>
+      </div>
       {limitedData && (
         <div className="rounded-xl px-4 py-3 text-[11px] leading-relaxed flex items-start gap-2"
           style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
@@ -537,7 +548,7 @@ export default function MetricsGrid({
         <MetricCard
           metricKey="sharpe"
           name="Sharpe Ratio"
-          period="1Y rolling"
+          period="Trailing 252d"
           question="Is the risk worth the reward?"
           value={sharpe != null ? sharpe.toFixed(2) : "—"}
           status={sharpeStatus(sharpe, riskProfile)}
@@ -553,7 +564,7 @@ export default function MetricsGrid({
         <MetricCard
           metricKey="sortino"
           name="Sortino Ratio"
-          period="1Y rolling"
+          period="Trailing 252d"
           question="Is the downside risk worth it?"
           value={sortino != null ? (sortino > 99 ? "99+" : sortino.toFixed(2)) : "—"}
           status={sortinoStatus(sortino, riskProfile)}
@@ -567,12 +578,12 @@ export default function MetricsGrid({
         <MetricCard
           metricKey="alpha"
           name="Jensen's Alpha"
-          period={`vs ${benchmarkLabel}`}
+          period={`vs ${benchmarkLabel} (overlap)`}
           question="Are you beating the market?"
           value={alpha != null ? pct(alpha) : "—"}
           status={alphaStatus(alpha)}
           explain={alphaExplain}
-          detail={`Alpha measures return above what CAPM predicts given your beta exposure to ${benchmarkLabel}. Positive alpha means you outperformed on a risk-adjusted basis. Beating it consistently is rare — most professional funds don't.`}
+          detail={`Alpha measures return above what CAPM predicts given your beta exposure to ${benchmarkLabel}, computed on the same benchmark-overlap window. Positive alpha means outperformance on a risk-adjusted basis.`}
           tip={alphaTip}
         />
 
@@ -580,7 +591,7 @@ export default function MetricsGrid({
         <MetricCard
           metricKey="vol"
           name="Portfolio Volatility"
-          period="annualised"
+          period="Trailing 252d annualised"
           question="How large are the swings?"
           value={volPct}
           status={volStatus(vol, riskProfile)}
@@ -596,7 +607,7 @@ export default function MetricsGrid({
         <MetricCard
           metricKey="beta"
           name="Market Beta"
-          period={`vs ${benchmarkLabel}`}
+          period={`vs ${benchmarkLabel} (overlap)`}
           question="How much does the market move you?"
           value={beta != null ? beta.toFixed(2) : "—"}
           status={betaStatus(beta, riskProfile)}
@@ -612,7 +623,7 @@ export default function MetricsGrid({
         <MetricCard
           metricKey="var"
           name="Value at Risk"
-          period="95% confidence, 1-day"
+          period="95% confidence, 1-day, trailing 252d"
           question="What's the worst bad day?"
           value={varGbp != null ? gbp(varGbp) : "—"}
           status={varStatus}
@@ -628,7 +639,7 @@ export default function MetricsGrid({
         <MetricCard
           metricKey="mdd"
           name="Max Drawdown"
-          period="last 12 months"
+          period="Trailing 252d"
           question="What was the biggest dip?"
           value={mddGbp != null ? gbp(mddGbp) : "—"}
           status={mddStatus}
@@ -653,7 +664,7 @@ export default function MetricsGrid({
       >
         <span style={{ color: "#bf5af266" }} className="shrink-0 mt-0.5">⚠</span>
         <span>
-          Performance may not persist — current alpha and Sharpe may be driven by concentrated positions rather than structural edge. Metrics are benchmarked against {benchmarkLabel} over a 1-year rolling window and will shift as the holding period extends. Past performance is not indicative of future results.
+          Performance may not persist — current alpha and Sharpe may be driven by concentrated positions rather than structural edge. Horizons are mixed by design: return is since inception, absolute risk metrics are trailing 252d, and benchmark-relative metrics use strict overlap with {benchmarkLabel}. Past performance is not indicative of future results.
         </span>
       </div>
     </div>
