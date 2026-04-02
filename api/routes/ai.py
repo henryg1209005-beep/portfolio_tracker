@@ -550,11 +550,11 @@ def _validate_analysis_output(text: str) -> list[str]:
             failed.append(f"missing_section:{sec}")
 
     # 2) Sharpe/Sortino misuse checks (unitless ratios, no % on the metric itself)
-    if re.search(r"sharpe[^\\n]{0,60}%", tl):
+    if re.search(r"sharpe[^\n]{0,60}%", tl):
         failed.append("sharpe_percent_misuse")
-    if re.search(r"sortino[^\\n]{0,60}%", tl):
+    if re.search(r"sortino[^\n]{0,60}%", tl):
         failed.append("sortino_percent_misuse")
-    if re.search(r"(sharpe|sortino)[^\\n]{0,120}per unit of volatility", tl):
+    if re.search(r"(sharpe|sortino)[^\n]{0,120}per unit of volatility", tl):
         failed.append("ratio_wording_misuse")
 
     # 3) Horizon tagging (must explicitly include horizon labels somewhere in report)
@@ -583,11 +583,15 @@ def _validate_analysis_output(text: str) -> list[str]:
         failed.append("alpha_overclaim")
 
     # 6) Fact vs inference labels
-    if "data shows:" not in tl or ("this may suggest:" not in tl and "one possible reading is:" not in tl):
+    fact_ok = ("data show" in tl) or ("data indicat" in tl)
+    inference_ok = ("may suggest" in tl) or ("one possible reading" in tl) or ("this suggests" in tl)
+    if not fact_ok or not inference_ok:
         failed.append("fact_inference_label_missing")
 
     # 7) ETF look-through caveat if discussing unknown/estimated sector exposure
-    if ("estimated" in tl or "unknown" in tl) and ("etf look-through not computed" not in tl):
+    has_sector_estimate = ("estimated" in tl and "sector" in tl)
+    has_sector_unknown = bool(re.search(r"unknown.{0,40}sector|sector.{0,40}unknown", tl))
+    if (has_sector_estimate or has_sector_unknown) and ("etf look-through not computed" not in tl):
         failed.append("missing_etf_estimation_caveat")
 
     # De-duplicate
