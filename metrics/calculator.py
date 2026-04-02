@@ -177,6 +177,9 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
     port_ret_full = _portfolio_returns(prices_df, weights, first_buy_dates)
     if port_ret_full.empty or len(port_ret_full) < 30:
         return None
+    # Institutional convention: compute absolute risk metrics on a fixed
+    # trailing 1Y window (252 trading days) to avoid age-dependent noise.
+    port_ret_1y = port_ret_full.iloc[-TRADING_DAYS:]
 
     bench_ret_full = benchmark_series.pct_change().dropna()
 
@@ -187,11 +190,11 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
     bench_ret_overlap = aligned["b"]
 
     # Geometric annualised return (compound, not arithmetic)
-    # Use full portfolio series for user-facing stability of absolute risk metrics.
+    # Keep realised return over full available history.
     actual_ret = _annualised_geometric(port_ret_full)
-    vol    = volatility(port_ret_full)
-    sharpe = sharpe_ratio(port_ret_full, rf_annual)
-    sortino = sortino_ratio(port_ret_full, rf_annual)
+    vol    = volatility(port_ret_1y)
+    sharpe = sharpe_ratio(port_ret_1y, rf_annual)
+    sortino = sortino_ratio(port_ret_1y, rf_annual)
 
     b = None
     capm_ret = None
@@ -200,10 +203,10 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
         capm_ret = capm_return(b, rf_annual, bench_ret_overlap) if b is not None else None
 
     alpha  = (actual_ret - capm_ret) if capm_ret is not None else None
-    var    = value_at_risk(port_ret_full)
-    cf_var = cornish_fisher_var(port_ret_full)
-    mdd    = max_drawdown(port_ret_full)
-    dd_recovery = drawdown_recovery_days(port_ret_full)
+    var    = value_at_risk(port_ret_1y)
+    cf_var = cornish_fisher_var(port_ret_1y)
+    mdd    = max_drawdown(port_ret_1y)
+    dd_recovery = drawdown_recovery_days(port_ret_1y)
 
     port_cum  = (1 + port_ret_full).cumprod() - 1
     bench_cum = (1 + bench_ret_overlap).cumprod() - 1 if len(aligned) > 0 else pd.Series(dtype=float)
