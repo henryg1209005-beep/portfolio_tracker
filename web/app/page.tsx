@@ -81,7 +81,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />
           <div className="hidden md:flex items-center gap-7">
-            <a href="#position" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>Position</a>
+            <a href="#position" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>Why Portivex</a>
             <a href="#how" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>How It Works</a>
             <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" className="text-sm transition-colors" style={{ color: "#bf5af2" }}>
               Discord
@@ -126,7 +126,7 @@ export default function LandingPage() {
         {mobileMenuOpen && (
           <div className="md:hidden px-6 pb-4 border-t" style={{ borderColor: "#1a0030" }}>
             <a href="#position" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
-              Position
+              Why Portivex
             </a>
             <a href="#how" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
               How It Works

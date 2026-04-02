@@ -107,3 +107,13 @@ def admin_feedback(key: str):
         {"id": r[0], "message": r[1], "rating": r[2], "token": r[3], "created_at": str(r[4])}
         for r in rows
     ]
+
+
+@app.get("/api/admin/analytics")
+def admin_analytics(key: str, days: int = 14):
+    import os
+    admin_key = os.environ.get("ADMIN_KEY", "")
+    if not admin_key or key != admin_key:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return db.get_analytics_summary(days=days)

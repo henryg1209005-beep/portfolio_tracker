@@ -416,3 +416,75 @@ def save_analytics_event(token: str | None, event_name: str, properties: dict | 
                 "INSERT INTO analytics_events (token, event_name, properties) VALUES (%s, %s, %s)",
                 (token, event_name, Json(properties or {})),
             )
+
+
+def get_analytics_summary(days: int = 14) -> dict:
+    window_days = max(1, min(days, 365))
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*)::INT AS total_events,
+                    COUNT(DISTINCT token)::INT FILTER (WHERE token IS NOT NULL AND token <> '') AS unique_tokens
+                FROM analytics_events
+                WHERE created_at >= NOW() - (%s || ' days')::interval
+                """,
+                (window_days,),
+            )
+            totals = cur.fetchone()
+
+            cur.execute(
+                """
+                SELECT event_name, COUNT(*)::INT AS c
+                FROM analytics_events
+                WHERE created_at >= NOW() - (%s || ' days')::interval
+                GROUP BY event_name
+                ORDER BY c DESC, event_name ASC
+                LIMIT 30
+                """,
+                (window_days,),
+            )
+            event_rows = cur.fetchall()
+
+            cur.execute(
+                """
+                SELECT
+                    token,
+                    MAX(CASE WHEN event_name = 'dashboard_first_view' THEN 1 ELSE 0 END) AS seen_dashboard,
+                    MAX(CASE WHEN event_name IN ('holdings_added', 'csv_import_completed') THEN 1 ELSE 0 END) AS activated_import_or_add,
+                    MAX(CASE WHEN event_name = 'first_review_run' THEN 1 ELSE 0 END) AS ran_review,
+                    MAX(CASE WHEN event_name IN ('export_clicked', 'ai_analysis_run') THEN 1 ELSE 0 END) AS high_intent_action
+                FROM analytics_events
+                WHERE created_at >= NOW() - (%s || ' days')::interval
+                  AND token IS NOT NULL
+                  AND token <> ''
+                GROUP BY token
+                """,
+                (window_days,),
+            )
+            funnel_rows = cur.fetchall()
+
+    users = len(funnel_rows)
+    dashboard_users = sum(1 for r in funnel_rows if r[1] == 1)
+    activated_users = sum(1 for r in funnel_rows if r[2] == 1)
+    review_users = sum(1 for r in funnel_rows if r[3] == 1)
+    high_intent_users = sum(1 for r in funnel_rows if r[4] == 1)
+
+    def pct(n: int, d: int) -> float:
+        return round((n / d) * 100, 2) if d > 0 else 0.0
+
+    return {
+        "window_days": window_days,
+        "totals": {
+            "events": int(totals[0] if totals and totals[0] is not None else 0),
+            "unique_tokens": int(totals[1] if totals and totals[1] is not None else 0),
+        },
+        "funnel": [
+            {"step": "dashboard_first_view", "users": dashboard_users, "rate_from_total": pct(dashboard_users, users)},
+            {"step": "activated_import_or_add", "users": activated_users, "rate_from_dashboard": pct(activated_users, dashboard_users)},
+            {"step": "first_review_run", "users": review_users, "rate_from_activated": pct(review_users, activated_users)},
+            {"step": "high_intent_action", "users": high_intent_users, "rate_from_review": pct(high_intent_users, review_users)},
+        ],
+        "events": [{"event_name": r[0], "count": int(r[1])} for r in event_rows],
+    }
