@@ -160,7 +160,7 @@ export default function LandingPage() {
               Portfolio Risk Intelligence Platform
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
-              Stop guessing. See exactly what your portfolio is really doing.
+              Your broker tracks your gains. Portivex tells you if they were worth the risk.
             </h1>
             <p className="text-base sm:text-lg max-w-xl leading-relaxed" style={{ color: "#8a7a9e" }}>
               Portivex helps serious retail investors understand portfolio risk with institutional logic and plain-English interpretation.
