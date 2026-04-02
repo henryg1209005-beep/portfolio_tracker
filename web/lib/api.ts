@@ -301,6 +301,19 @@ export async function fetchAdminMe(): Promise<{ is_admin: boolean }> {
   return res.json();
 }
 
+export async function registerDemoEmail(email: string): Promise<{ status: string }> {
+  const res = await fetch(`${BASE}/demo/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.detail ?? "Invalid email address");
+  }
+  return res.json();
+}
+
 export async function submitWaitlist(email: string): Promise<{ status: string; position?: number }> {
   const res = await fetch(`${BASE}/waitlist/join`, {
     method: "POST",

@@ -111,6 +111,12 @@ def init_db():
                     token       TEXT PRIMARY KEY,
                     created_at  TIMESTAMPTZ DEFAULT NOW()
                 );
+
+                CREATE TABLE IF NOT EXISTS demo_emails (
+                    id          SERIAL PRIMARY KEY,
+                    email       TEXT NOT NULL,
+                    created_at  TIMESTAMPTZ DEFAULT NOW()
+                );
             """)
             # Profile enums as DB-level guardrails (NOT VALID avoids legacy-row migration risk).
             cur.execute("""
@@ -619,6 +625,17 @@ def is_admin_token(token: str | None) -> bool:
         with conn.cursor() as cur:
             cur.execute("SELECT 1 FROM admin_users WHERE token = %s", (token,))
             return cur.fetchone() is not None
+
+
+def save_demo_email(email: str) -> int:
+    """Store a demo email capture. Returns the new row id."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO demo_emails (email) VALUES (%s) RETURNING id",
+                (email.strip().lower(),),
+            )
+            return cur.fetchone()[0]
 
 
 def bootstrap_first_admin(token: str | None) -> dict:

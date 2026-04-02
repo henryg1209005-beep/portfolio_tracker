@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { captureLandingAttribution } from "@/lib/growthAttribution";
+import DemoEmailModal from "@/components/DemoEmailModal";
 
 const PILLARS = [
   {
@@ -72,6 +73,7 @@ function SignalBars() {
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   useEffect(() => {
     captureLandingAttribution();
@@ -169,9 +171,13 @@ export default function LandingPage() {
               <Link href="/sign-up" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 24px #bf5af244" }}>
                 Launch free -&gt;
               </Link>
-              <a href="#how" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
-                See how it works
-              </a>
+              <button
+                onClick={() => setShowDemoModal(true)}
+                className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift"
+                style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}
+              >
+                Try demo
+              </button>
             </div>
             <div className="inline-flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
               Free during early access · No card required
@@ -275,6 +281,8 @@ export default function LandingPage() {
           <p className="text-xs" style={{ color: "#2a1a40" }}>For informational purposes only. Not financial advice.</p>
         </div>
       </footer>
+
+      {showDemoModal && <DemoEmailModal onClose={() => setShowDemoModal(false)} />}
     </div>
   );
 }
