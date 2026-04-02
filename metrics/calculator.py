@@ -190,8 +190,11 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
     bench_ret_overlap = aligned["b"]
 
     # Geometric annualised return (compound, not arithmetic)
-    # Keep realised return over full available history.
-    actual_ret = _annualised_geometric(port_ret_full)
+    # Full-history return shown to user as their actual P&L since inception.
+    # A separate 1Y window return is used for alpha so both sides of the
+    # calculation share the same horizon.
+    actual_ret    = _annualised_geometric(port_ret_full)
+    actual_ret_1y = _annualised_geometric(port_ret_1y)
     vol    = volatility(port_ret_1y)
     sharpe = sharpe_ratio(port_ret_1y, rf_annual)
     sortino = sortino_ratio(port_ret_1y, rf_annual)
@@ -202,7 +205,7 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
         b = beta(port_ret_overlap, bench_ret_overlap)
         capm_ret = capm_return(b, rf_annual, bench_ret_overlap) if b is not None else None
 
-    alpha  = (actual_ret - capm_ret) if capm_ret is not None else None
+    alpha  = (actual_ret_1y - capm_ret) if capm_ret is not None else None
     var    = value_at_risk(port_ret_1y)
     cf_var = cornish_fisher_var(port_ret_1y)
     mdd    = max_drawdown(port_ret_1y)
