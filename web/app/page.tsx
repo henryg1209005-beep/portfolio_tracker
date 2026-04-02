@@ -1,482 +1,273 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, UserButton } from "@clerk/nextjs";
 
-const FEATURES = [
+const PILLARS = [
   {
-    icon: "◈",
-    accent: "#bf5af2",
-    glow: "#bf5af222",
-    title: "Risk Metrics",
-    tag: "Institutional-grade",
-    description:
-      "Sharpe ratio, annualised volatility, max drawdown, VaR, beta, and Jensen's alpha computed from your holdings with live market data, with confidence signals when sample quality is limited.",
-    bullets: ["1-year rolling with benchmark selection", "Confidence strip with sample quality", "Profile-aware risk status bands"],
-    screen: "/screen-metrics2.png",
-  },
-  {
-    icon: "✦",
+    title: "Risk Intelligence",
+    tag: "Core",
+    body: "Institutional risk metrics translated into plain language with confidence context, not just raw numbers.",
     accent: "#00f5d4",
-    glow: "#00f5d422",
-    title: "AI Overview",
-    tag: "Powered by AI",
-    description:
-      "A private-wealth-grade portfolio report generated in seconds. Plain-English explanations of every metric, hidden exposures, and an honest assessment of your portfolio construction.",
-    bullets: ["Live data, not generic advice", "Streams in real time", "8-section structured report"],
-    screen: "/screen-ai.png",
   },
   {
-    icon: "⬡",
+    title: "Decision Clarity",
+    tag: "Action",
+    body: "Portfolio review surfaces concentration, overlap, and practical next moves in minutes.",
+    accent: "#bf5af2",
+  },
+  {
+    title: "Investor-Ready Output",
+    tag: "Proof",
+    body: "Clean exports and structured reports you can share, track, and revisit without spreadsheet cleanup.",
     accent: "#ff2d78",
-    glow: "#ff2d7822",
-    title: "Portfolio Review",
-    tag: "Quantitative analysis",
-    description:
-      "Concentration risk scored by HHI and MCTR. Actionable rebalancing recommendations with GBP amounts. CGT warnings on sell actions. Tested against balanced, growth, and conservative profiles.",
-    bullets: ["HHI & Effective-N scoring", "MCTR risk attribution", "Includes CGT disclosure"],
-    screen: "/screen-review.png",
-  },
-  {
-    icon: "↗",
-    accent: "#f5a623",
-    glow: "#f5a62322",
-    title: "Charts & Tracking",
-    tag: "Visual analytics",
-    description:
-      "Portfolio vs benchmark performance indexed to 100. Drawdown from peak. P&L by holding. Allocation breakdown. All charts update in real time when you add or remove positions.",
-    bullets: ["1M · 3M · 6M · 1Y · 5Y timeframes", "Correlation heatmap", "Live P&L tracking"],
-    screen: "/screen-charts.png",
   },
 ];
 
-const STEPS = [
+const SIGNALS = [
+  { k: "Sharpe", v: "1.08", c: "#00f5d4" },
+  { k: "Max DD", v: "-12.4%", c: "#ff2d78" },
+  { k: "VaR 95", v: "-2.1%", c: "#f5a623" },
+  { k: "Beta", v: "0.93", c: "#bf5af2" },
+];
+
+const FLOW = [
   {
-    n: "01",
-    title: "Add your holdings",
-    body: "Enter ticker, date, shares, and price. Supports GBP, USD, and EUR transactions. Or import everything at once via CSV.",
+    step: "01",
+    title: "Bring in holdings",
+    body: "Add positions manually or import via CSV in GBP, USD, or EUR.",
   },
   {
-    n: "02",
-    title: "Live data loads automatically",
-    body: "Prices, FX rates, and historical data are fetched from global markets. No manual updates. No spreadsheet maintenance.",
+    step: "02",
+    title: "Observe true risk",
+    body: "See return quality, downside profile, benchmark-relative behaviour, and confidence.",
   },
   {
-    n: "03",
-    title: "Get professional analysis",
-    body: "Risk metrics, AI report, portfolio review, and exportable CSV/JSON reports all on demand. Built for investors who need numbers they can trust and share.",
+    step: "03",
+    title: "Act with structure",
+    body: "Use review guidance and exports to improve portfolio decisions over time.",
   },
 ];
 
-function Particles() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animId: number;
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const COLORS = ["#bf5af2", "#ff2d78", "#00f5d4"];
-    const particles = Array.from({ length: 60 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.random() * 1.5 + 0.4,
-      vx: (Math.random() - 0.5) * 0.25,
-      vy: (Math.random() - 0.5) * 0.25,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      alpha: Math.random() * 0.5 + 0.15,
-    }));
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha;
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      animId = requestAnimationFrame(draw);
-    };
-    draw();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
-}
-
-function Meteors() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animId: number;
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    type Meteor = { x: number; y: number; len: number; speed: number; alpha: number; color: string; active: boolean };
-    const COLORS = ["#bf5af2", "#ff2d78", "#00f5d4"];
-    const meteors: Meteor[] = Array.from({ length: 6 }, () => ({ x: 0, y: 0, len: 0, speed: 0, alpha: 0, color: "", active: false }));
-
-    const spawn = (m: Meteor) => {
-      m.x = Math.random() * canvas.width * 1.5;
-      m.y = Math.random() * canvas.height * 0.5;
-      m.len = Math.random() * 120 + 60;
-      m.speed = Math.random() * 6 + 4;
-      m.alpha = 1;
-      m.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-      m.active = true;
-    };
-
-    meteors.forEach((m, i) => setTimeout(() => spawn(m), i * 1800 + Math.random() * 3000));
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const m of meteors) {
-        if (!m.active) continue;
-        m.x += m.speed;
-        m.y += m.speed * 0.5;
-        m.alpha -= 0.012;
-        if (m.alpha <= 0) {
-          m.active = false;
-          setTimeout(() => spawn(m), Math.random() * 4000 + 1500);
-          continue;
-        }
-        const grad = ctx.createLinearGradient(m.x, m.y, m.x - m.len, m.y - m.len * 0.5);
-        grad.addColorStop(0, m.color);
-        grad.addColorStop(1, "transparent");
-        ctx.beginPath();
-        ctx.moveTo(m.x, m.y);
-        ctx.lineTo(m.x - m.len, m.y - m.len * 0.5);
-        ctx.strokeStyle = grad;
-        ctx.globalAlpha = m.alpha;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
-      animId = requestAnimationFrame(draw);
-    };
-    draw();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
-}
-
-function useInView(ref: React.RefObject<HTMLElement | null>) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) {
-        setVisible(true);
-        obs.disconnect();
-      }
-    }, { threshold: 0.12 });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [ref]);
-  return visible;
+function SignalBars() {
+  return (
+    <div className="grid grid-cols-4 gap-2 mt-5">
+      {SIGNALS.map((s, i) => (
+        <div key={s.k} className="rounded-lg p-2" style={{ background: "#10001e", border: "1px solid #2a0050" }}>
+          <div className="text-[10px] font-mono mb-1" style={{ color: "#6b5e7e" }}>
+            {s.k}
+          </div>
+          <div className="text-xs font-mono font-semibold" style={{ color: s.c }}>
+            {s.v}
+          </div>
+          <div className="h-1.5 rounded-full mt-2 overflow-hidden" style={{ background: "#1a0030" }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${58 + i * 10}%`,
+                background: `linear-gradient(90deg, ${s.c}, #ffffff22)`,
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useUser();
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const featuresVisible = useInView(featuresRef);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#080012", color: "#e2d9f3" }}>
-      <nav className="sticky top-0 z-50 flex flex-col" style={{ background: "#08001299", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}>
-        <div className="flex items-center justify-between px-6 py-4">
+      <nav
+        className="sticky top-0 z-50"
+        style={{ background: "linear-gradient(180deg,#080012ee,#080012aa)", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}
+      >
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />
           <div className="hidden md:flex items-center gap-7">
-            {[
-              { label: "Features", href: "#features" },
-              { label: "How it works", href: "#how-it-works" },
-              { label: "Discord", href: "https://discord.gg/MabTm9Z4zR", external: true },
-            ].map(({ label, href, external }) => (
-              <a
-                key={label}
-                href={href}
-                {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                className="text-sm transition-colors"
-                style={{ color: "#6b5e7e" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = label === "Discord" ? "#bf5af2" : "#e2d9f3")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b5e7e")}
-              >
-                {label}
-              </a>
-            ))}
+            <a href="#position" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>Position</a>
+            <a href="#how" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>How It Works</a>
+            <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" className="text-sm transition-colors" style={{ color: "#bf5af2" }}>
+              Discord
+            </a>
           </div>
-
           <div className="flex items-center gap-3">
             {isLoaded && isSignedIn ? (
               <>
-                <Link href="/dashboard" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
-                  Dashboard →
+                <Link
+                  href="/dashboard"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold"
+                  style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
+                >
+                  Dashboard -&gt;
                 </Link>
                 <UserButton />
               </>
             ) : (
               <>
-                <Link href="/sign-in" className="hidden sm:block px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
+                <Link href="/sign-in" className="hidden sm:block px-4 py-2 rounded-lg text-sm font-medium" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
                   Sign in
                 </Link>
-                <Link href="/sign-up" className="px-4 py-2 rounded-lg text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}>
-                  Get started →
+                <Link
+                  href="/sign-up"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold"
+                  style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
+                >
+                  Start free -&gt;
                 </Link>
                 <button
-                  className="md:hidden p-2 rounded-lg transition-colors text-base leading-none"
+                  className="md:hidden p-2 rounded-lg text-base leading-none"
                   style={{ color: "#6b5e7e", border: "1px solid #1a0030" }}
                   onClick={() => setMobileMenuOpen((m) => !m)}
                   aria-label="Menu"
                 >
-                  {mobileMenuOpen ? "✕" : "☰"}
+                  {mobileMenuOpen ? "x" : "="}
                 </button>
               </>
             )}
           </div>
         </div>
-
         {mobileMenuOpen && (
-          <div className="md:hidden flex flex-col px-6 pb-4 gap-1" style={{ borderTop: "1px solid #1a0030" }}>
-            {[
-              { label: "Features", href: "#features" },
-              { label: "How it works", href: "#how-it-works" },
-            ].map(({ label, href }) => (
-              <a key={label} href={href} onClick={() => setMobileMenuOpen(false)} className="py-3 text-sm border-b transition-colors" style={{ color: "#6b5e7e", borderColor: "#1a0030" }}>
-                {label}
-              </a>
-            ))}
-            <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="py-3 text-sm border-b transition-colors" style={{ color: "#bf5af2", borderColor: "#1a0030" }}>
-              Discord →
+          <div className="md:hidden px-6 pb-4 border-t" style={{ borderColor: "#1a0030" }}>
+            <a href="#position" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
+              Position
             </a>
-            <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)} className="py-3 text-sm transition-colors" style={{ color: "#6b5e7e" }}>
-              Sign in
-            </Link>
+            <a href="#how" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
+              How It Works
+            </a>
+            <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#bf5af2" }}>
+              Discord -&gt;
+            </a>
           </div>
         )}
       </nav>
 
-      <section className="relative flex flex-col items-center justify-center text-center px-6 pt-28 pb-24 overflow-hidden">
-        <Particles />
-        <Meteors />
+      <section className="relative overflow-hidden">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse 80% 50% at 50% -10%, #bf5af218 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 80% 60%, #ff2d7810 0%, transparent 60%)",
+              "radial-gradient(1200px 420px at 15% -10%, #00f5d414 0%, transparent 70%), radial-gradient(1000px 500px at 100% 0%, #ff2d7816 0%, transparent 65%), radial-gradient(900px 380px at 50% 110%, #bf5af214 0%, transparent 65%)",
           }}
         />
-
-        <div className="animate-fade-up inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-8" style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2", animationDelay: "0ms" }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-          Early Access · Retail Investors
-        </div>
-
-        <h1 className="animate-fade-up text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight max-w-3xl mb-6" style={{ color: "#e2d9f3", animationDelay: "120ms" }}>
-          Stop guessing.{" "}
-          <span style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            See exactly what your portfolio is really doing.
-          </span>
-        </h1>
-
-        <p className="animate-fade-up text-base sm:text-lg leading-relaxed max-w-xl mb-10" style={{ color: "#6b5e7e", animationDelay: "240ms" }}>
-          Institutional-grade risk metrics with confidence signals, AI-powered insights,
-          and exportable investor-ready reports.
-        </p>
-
-        <div className="animate-fade-up flex flex-col items-center gap-4" style={{ animationDelay: "360ms" }}>
-          <Link href="/sign-up" className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}>
-            Get started free →
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
-              Free during early access
-            </span>
-            <span className="text-xs" style={{ color: "#3a2a50" }}>· No card required</span>
-          </div>
-        </div>
-
-        <div className="animate-fade-up relative mt-16 w-full max-w-5xl mx-auto" style={{ animationDelay: "480ms" }}>
-          <div className="absolute -inset-px rounded-2xl pointer-events-none" style={{ boxShadow: "0 0 80px 10px #bf5af222, 0 0 140px 30px #ff2d7808" }} />
-          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #bf5af233" }}>
-            <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#0d0020", borderBottom: "1px solid #1a0030" }}>
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ff2d7866" }} />
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#f5a62366" }} />
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#00f5d466" }} />
-              <span className="ml-3 text-[11px] font-mono px-3 py-0.5 rounded" style={{ background: "#1a0030", color: "#3a2a50" }}>
-                portivex.com/dashboard
-              </span>
+        <div className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          <div className="lg:col-span-7 space-y-6 animate-fade-up">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
+              Portfolio Risk Intelligence Platform
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/screen-metrics.png" alt="Portivex Risk Metrics dashboard" className="w-full object-cover object-top" />
-          </div>
-        </div>
-      </section>
-
-      <section id="features" className="px-6 py-20 max-w-6xl mx-auto w-full">
-        <div className="text-center mb-14">
-          <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>
-            What&apos;s inside
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: "#e2d9f3" }}>
-            Everything your broker doesn&apos;t tell you
-          </h2>
-        </div>
-
-        <div ref={featuresRef} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {FEATURES.map((f, i) => (
-            <div
-              key={f.title}
-              className={`rounded-2xl flex flex-col overflow-hidden card-hidden ${featuresVisible ? "card-visible" : ""}`}
-              style={{
-                background: "linear-gradient(135deg, #0f002088, #0a001288)",
-                border: `1px solid ${f.accent}22`,
-                transitionDelay: featuresVisible ? `${i * 120}ms` : "0ms",
-              }}
-            >
-              <div className="p-6 flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ background: f.glow, border: `1px solid ${f.accent}33` }}>
-                    <span style={{ color: f.accent }}>{f.icon}</span>
-                  </div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-full mt-1" style={{ background: `${f.accent}11`, color: f.accent, border: `1px solid ${f.accent}22` }}>
-                    {f.tag}
-                  </span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
+              Decision intelligence for personal portfolios.
+            </h1>
+            <p className="text-base sm:text-lg max-w-xl leading-relaxed" style={{ color: "#8a7a9e" }}>
+              Portivex helps serious retail investors understand portfolio risk with institutional logic and plain-English interpretation.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/sign-up" className="px-7 py-3 rounded-xl text-sm font-semibold" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 24px #bf5af244" }}>
+                Launch free -&gt;
+              </Link>
+              <a href="#position" className="px-7 py-3 rounded-xl text-sm font-semibold" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
+                See what is different
+              </a>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              {[
+                { k: "Metrics", v: "Quant-backed" },
+                { k: "Review", v: "Actionable" },
+                { k: "Exports", v: "Investor-ready" },
+                { k: "Mode", v: "Full demo" },
+              ].map((item) => (
+                <div key={item.k} className="rounded-lg px-3 py-2" style={{ background: "#0d0020", border: "1px solid #1a0030" }}>
+                  <div className="text-[10px] uppercase tracking-widest font-mono" style={{ color: "#4a3a5e" }}>{item.k}</div>
+                  <div className="text-sm font-semibold mt-1">{item.v}</div>
                 </div>
+              ))}
+            </div>
+          </div>
 
-                <h3 className="text-lg font-bold" style={{ color: "#e2d9f3" }}>{f.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: "#6b5e7e" }}>{f.description}</p>
-
-                <ul className="flex flex-col gap-1.5 pt-2" style={{ borderTop: `1px solid ${f.accent}11` }}>
-                  {f.bullets.map((b) => (
-                    <li key={b} className="flex items-center gap-2 text-xs" style={{ color: "#4a3a5e" }}>
-                      <span style={{ color: f.accent }}>·</span>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
+          <div className="lg:col-span-5 animate-fade-up" style={{ animationDelay: "120ms" }}>
+            <div className="rounded-2xl p-4 sm:p-5" style={{ background: "linear-gradient(140deg,#120020,#0a0014)", border: "1px solid #2a0050", boxShadow: "0 0 40px #bf5af21c" }}>
+              <div className="flex items-center justify-between text-[11px] font-mono mb-3" style={{ color: "#6b5e7e" }}>
+                <span>Risk Signal Console</span>
+                <span style={{ color: "#00f5d4" }}>LIVE</span>
               </div>
-
-              <div className="mx-4 mb-4 rounded-xl overflow-hidden" style={{ border: `1px solid ${f.accent}18` }}>
+              <div className="rounded-xl p-3" style={{ background: "#0b0018", border: "1px solid #1a0030" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-mono" style={{ color: "#4a3a5e" }}>Model: Current Holdings</div>
+                  <div className="text-xs font-mono" style={{ color: "#bf5af2" }}>Confidence: Medium</div>
+                </div>
+                <SignalBars />
+              </div>
+              <div className="mt-4 rounded-xl overflow-hidden" style={{ border: "1px solid #2a0050" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.screen} alt={`${f.title} screenshot`} className="w-full object-cover object-top" style={{ maxHeight: "220px" }} />
+                <img src="/screen-metrics2.png" alt="Risk metrics preview" className="w-full object-cover object-top" />
               </div>
             </div>
-          ))}
+          </div>
         </div>
+      </section>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          {[
-            { icon: "⬡", label: "Correlation Matrix" },
-            { icon: "↑", label: "CSV Import" },
-            { icon: "◉", label: "Multi-currency (GBP / USD / EUR)" },
-            { icon: "▦", label: "Live P&L per holding" },
-            { icon: "◈", label: "CSV broker import" },
-            { icon: "✦", label: "Exportable CSV/JSON reports" },
-            { icon: "◎", label: "Confidence-scored metrics" },
-          ].map(({ icon, label }) => (
-            <div key={label} className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "#0d0020", border: "1px solid #2a0050", color: "#8a7a9e" }}>
-              <span style={{ color: "#6b5e7e" }}>{icon}</span>
-              {label}
+      <section id="position" className="max-w-6xl mx-auto px-6 py-16">
+        <div className="mb-10">
+          <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>Positioning</div>
+          <h2 className="text-2xl sm:text-3xl font-bold">Built as risk intelligence, not a generic tracker.</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {PILLARS.map((p, idx) => (
+            <div key={p.title} className="rounded-2xl p-5 animate-fade-up" style={{ animationDelay: `${idx * 90}ms`, background: "linear-gradient(135deg,#10001e,#0a0014)", border: `1px solid ${p.accent}33` }}>
+              <div className="inline-flex text-[10px] px-2 py-1 rounded-full font-mono uppercase tracking-widest mb-4" style={{ color: p.accent, background: `${p.accent}11`, border: `1px solid ${p.accent}22` }}>
+                {p.tag}
+              </div>
+              <h3 className="text-lg font-semibold mb-2">{p.title}</h3>
+              <p className="text-sm leading-relaxed" style={{ color: "#8a7a9e" }}>{p.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="how-it-works" className="px-6 py-20" style={{ background: "linear-gradient(180deg, transparent, #0d001888, transparent)" }}>
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
-            <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>
-              How it works
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: "#e2d9f3" }}>
-              Up and running in minutes
-            </h2>
+      <section id="how" className="px-6 py-16" style={{ background: "linear-gradient(180deg,transparent,#0d001888,transparent)" }}>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>Workflow</div>
+            <h2 className="text-2xl sm:text-3xl font-bold">From holdings to decision-quality insight.</h2>
           </div>
-
-          <div className="flex flex-col gap-6">
-            {STEPS.map((s, i) => (
-              <div key={s.n} className="flex gap-5 items-start">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold font-mono shrink-0 mt-0.5" style={{ background: "#bf5af211", border: "1px solid #bf5af233", color: "#bf5af2" }}>
-                  {s.n}
+          <div className="space-y-4">
+            {FLOW.map((f) => (
+              <div key={f.step} className="rounded-xl p-4 sm:p-5 flex gap-4 items-start" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-mono font-semibold shrink-0" style={{ background: "#bf5af211", border: "1px solid #bf5af244", color: "#bf5af2" }}>
+                  {f.step}
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1.5" style={{ color: "#e2d9f3" }}>{s.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "#6b5e7e" }}>{s.body}</p>
+                <div>
+                  <h3 className="font-semibold mb-1">{f.title}</h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "#8a7a9e" }}>{f.body}</p>
                 </div>
-                {i < STEPS.length - 1 && <div className="absolute ml-5 mt-12 w-px h-6" style={{ background: "#1a0030" }} />}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-24 flex flex-col items-center text-center">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-8" style={{ background: "linear-gradient(135deg, #bf5af222, #ff2d7811)", border: "1px solid #bf5af233" }}>
-          ✦
-        </div>
-        <h2 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: "#e2d9f3" }}>
-          Ready to see what your portfolio is really doing?
-        </h2>
-        <p className="text-sm mb-8 max-w-sm" style={{ color: "#6b5e7e" }}>
-          Free during early access. No card required.
-        </p>
-        <Link href="/sign-up" className="px-8 py-3.5 rounded-xl text-sm font-semibold transition-all" style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff", boxShadow: "0 0 30px #bf5af244" }}>
-          Get started free →
-        </Link>
-      </section>
-
-      <footer className="px-6 py-8 flex flex-col items-center gap-4" style={{ borderTop: "1px solid #1a0030" }}>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full max-w-5xl">
-          <div className="text-sm font-bold">
-            <span style={{ color: "#ff2d78" }}>Porti</span>
-            <span style={{ color: "#e2d9f3" }}>vex</span>
-          </div>
-          <p className="text-xs text-center" style={{ color: "#3a2a50" }}>
-            Built by a UK investor who got frustrated with spreadsheets.
-          </p>
-          <Link href="/dashboard" className="text-xs transition-colors" style={{ color: "#3a2a50" }} onMouseEnter={(e) => (e.currentTarget.style.color = "#bf5af2")} onMouseLeave={(e) => (e.currentTarget.style.color = "#3a2a50")}>
-            Launch App →
+      <section className="px-6 py-20 text-center">
+        <div className="max-w-2xl mx-auto rounded-2xl p-8 sm:p-10" style={{ background: "linear-gradient(130deg,#120020,#0d0018)", border: "1px solid #2a0050" }}>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3">See your portfolio through a risk-intelligence lens.</h2>
+          <p className="text-sm mb-7" style={{ color: "#8a7a9e" }}>Free during early access. No card required.</p>
+          <Link href="/sign-up" className="inline-flex px-8 py-3 rounded-xl text-sm font-semibold" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 26px #bf5af244" }}>
+            Create account -&gt;
           </Link>
         </div>
-        <p className="text-xs" style={{ color: "#2a1a40" }}>
-          © 2026 Portivex. For informational purposes only. Not financial advice.
-        </p>
+      </section>
+
+      <footer className="px-6 py-8 border-t" style={{ borderColor: "#1a0030" }}>
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs" style={{ color: "#4a3a5e" }}>Portivex - Portfolio Risk Intelligence Platform</p>
+          <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#bf5af2" }}>
+            Join Discord -&gt;
+          </a>
+          <p className="text-xs" style={{ color: "#2a1a40" }}>For informational purposes only. Not financial advice.</p>
+        </div>
       </footer>
     </div>
   );

@@ -19,8 +19,8 @@ const config: Config = {
         text:    "#e2d9f3",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "Courier New", "monospace"],
+        sans: ["Space Grotesk", "system-ui", "sans-serif"],
+        mono: ["IBM Plex Mono", "Courier New", "monospace"],
       },
       boxShadow: {
         pink:   "0 0 20px #ff2d7844",
