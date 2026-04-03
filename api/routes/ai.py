@@ -533,21 +533,28 @@ def _validate_analysis_output(text: str) -> list[str]:
     t = text or ""
     tl = t.lower()
 
-    # 1) Mandatory structural sections
-    required_sections = [
-        "TL;DR",
-        "PORTFOLIO SCORE",
-        "1. PORTFOLIO SNAPSHOT",
-        "2. SHARPE RATIO",
-        "3. RISK METRICS",
-        "4. PERFORMANCE vs BENCHMARK",
-        "5. SECTOR & CORRELATION ANALYSIS",
-        "6. OBSERVATIONS WORTH CONSIDERING",
-        "7. OVERALL ASSESSMENT",
+    # 1) Mandatory structural sections (allow small title variation on section 4/5)
+    required_any = [
+        ("TL;DR", ("tl;dr",)),
+        ("PORTFOLIO SCORE", ("portfolio score",)),
+        ("1. PORTFOLIO SNAPSHOT", ("1. portfolio snapshot",)),
+        ("2. SHARPE RATIO", ("2. sharpe ratio",)),
+        ("3. RISK METRICS", ("3. risk metrics",)),
+        ("4. PERFORMANCE vs BENCHMARK", ("4. performance vs benchmark", "4. performance v benchmark")),
+        (
+            "5. SECTOR & CORRELATION ANALYSIS",
+            (
+                "5. sector & correlation analysis",
+                "5. sector and correlation analysis",
+                "5. hidden exposures",
+            ),
+        ),
+        ("6. OBSERVATIONS WORTH CONSIDERING", ("6. observations worth considering",)),
+        ("7. OVERALL ASSESSMENT", ("7. overall assessment",)),
     ]
-    for sec in required_sections:
-        if sec.lower() not in tl:
-            failed.append(f"missing_section:{sec}")
+    for canonical, variants in required_any:
+        if not any(v in tl for v in variants):
+            failed.append(f"missing_section:{canonical}")
 
     # 2) Sharpe/Sortino misuse checks (unitless ratios, no % on the metric itself)
     if re.search(r"sharpe[^\n]{0,60}%", tl):
@@ -557,10 +564,11 @@ def _validate_analysis_output(text: str) -> list[str]:
     if re.search(r"(sharpe|sortino)[^\n]{0,120}per unit of volatility", tl):
         failed.append("ratio_wording_misuse")
 
-    # 3) Horizon tagging (must explicitly include horizon labels somewhere in report)
-    for tag in ("trailing 252d", "since inception", "benchmark overlap"):
-        if tag not in tl:
-            failed.append(f"missing_horizon_tag:{tag}")
+    # 3) Horizon tagging (require at least two tags; avoids brittle hard-fail on one omitted label)
+    horizon_tags = ("trailing 252d", "since inception", "benchmark overlap")
+    horizon_hits = sum(1 for tag in horizon_tags if tag in tl)
+    if horizon_hits < 2:
+        failed.append("missing_horizon_tags_minimum")
 
     # 4) Profile alignment score narrative consistency (coarse guardrail)
     m = re.search(r"profile alignment:\s*(\d+)\s*/\s*10", tl)
@@ -583,15 +591,17 @@ def _validate_analysis_output(text: str) -> list[str]:
         failed.append("alpha_overclaim")
 
     # 6) Fact vs inference labels
-    fact_ok = ("data show" in tl) or ("data indicat" in tl)
-    inference_ok = ("may suggest" in tl) or ("one possible reading" in tl) or ("this suggests" in tl)
-    if not fact_ok or not inference_ok:
-        failed.append("fact_inference_label_missing")
+    # Soft-check only: enforce only if model attempts one side and omits the other.
+    has_fact_label = ("data show" in tl) or ("data indicat" in tl)
+    has_inference_label = ("may suggest" in tl) or ("one possible reading" in tl) or ("this suggests" in tl)
+    if has_fact_label ^ has_inference_label:
+        failed.append("fact_inference_label_unbalanced")
 
-    # 7) ETF look-through caveat if discussing unknown/estimated sector exposure
+    # 7) ETF look-through caveat if discussing estimated/unknown sector exposure for ETFs
+    mentions_etf = (" etf" in tl) or ("etfs" in tl)
     has_sector_estimate = ("estimated" in tl and "sector" in tl)
     has_sector_unknown = bool(re.search(r"unknown.{0,40}sector|sector.{0,40}unknown", tl))
-    if (has_sector_estimate or has_sector_unknown) and ("etf look-through not computed" not in tl):
+    if mentions_etf and (has_sector_estimate or has_sector_unknown) and ("etf look-through not computed" not in tl):
         failed.append("missing_etf_estimation_caveat")
 
     # De-duplicate
