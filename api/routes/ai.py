@@ -556,13 +556,11 @@ def _validate_analysis_output(text: str) -> list[str]:
         if not any(v in tl for v in variants):
             failed.append(f"missing_section:{canonical}")
 
-    # 2) Sharpe/Sortino misuse checks (unitless ratios, no % on the metric itself)
-    if re.search(r"sharpe[^\n]{0,60}%", tl):
+    # 2) Sharpe/Sortino misuse checks (unitless ratios, no % immediately attached to the ratio value)
+    if re.search(r"sharpe[^\n]{0,20}\b\d+(?:\.\d+)?\s*%", tl):
         failed.append("sharpe_percent_misuse")
-    if re.search(r"sortino[^\n]{0,60}%", tl):
+    if re.search(r"sortino[^\n]{0,20}\b\d+(?:\.\d+)?\s*%", tl):
         failed.append("sortino_percent_misuse")
-    if re.search(r"(sharpe|sortino)[^\n]{0,120}per unit of volatility", tl):
-        failed.append("ratio_wording_misuse")
 
     # 3) Horizon tagging (require at least two tags; avoids brittle hard-fail on one omitted label)
     horizon_tags = ("trailing 252d", "since inception", "benchmark overlap")
@@ -591,11 +589,7 @@ def _validate_analysis_output(text: str) -> list[str]:
         failed.append("alpha_overclaim")
 
     # 6) Fact vs inference labels
-    # Soft-check only: enforce only if model attempts one side and omits the other.
-    has_fact_label = ("data show" in tl) or ("data indicat" in tl)
-    has_inference_label = ("may suggest" in tl) or ("one possible reading" in tl) or ("this suggests" in tl)
-    if has_fact_label ^ has_inference_label:
-        failed.append("fact_inference_label_unbalanced")
+    # Do not hard-fail on phrasing style; prompt guidance handles this.
 
     # 7) ETF look-through caveat if discussing estimated/unknown sector exposure for ETFs
     mentions_etf = (" etf" in tl) or ("etfs" in tl)
