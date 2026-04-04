@@ -85,13 +85,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 className="rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3"
                 style={{ background: "#bf5af211", border: "1px solid #bf5af244", color: "#bf5af2" }}
               >
-                <span>Demo mode enabled. Dashboard is showing sample data.</span>
+                <span>Exploring with sample data — exit demo when you&apos;re ready to add your real holdings.</span>
                 <button
                   onClick={() => setDemoMode(false)}
                   className="px-3 py-1.5 rounded-lg text-xs font-mono"
                   style={{ border: "1px solid #bf5af244", color: "#bf5af2" }}
                 >
-                  Exit Demo
+                  Add real holdings →
                 </button>
               </div>
             </div>
