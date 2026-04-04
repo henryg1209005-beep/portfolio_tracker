@@ -108,7 +108,7 @@ export default function OnboardingModal({ onDone, initialProfile, onSaved }: Pro
               <div>
                 <h2 className="text-xl font-bold mb-2" style={{ color: "#e2d9f3" }}>You&apos;re all set</h2>
                 <p className="text-sm leading-relaxed" style={{ color: "#4a3a5e" }}>
-                  Your investor profile is saved. Add your first holding to start seeing live prices, risk metrics, and AI analysis.
+                  Profile saved. We&apos;ve loaded a sample portfolio so you can explore Portivex straight away — add your real holdings whenever you&apos;re ready.
                 </p>
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function OnboardingModal({ onDone, initialProfile, onSaved }: Pro
               className="px-6 py-3 rounded-xl text-sm font-semibold transition-all"
               style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
             >
-              + Add your first holding →
+              Explore Portivex →
             </button>
           </>
         ) : step === -1 ? (

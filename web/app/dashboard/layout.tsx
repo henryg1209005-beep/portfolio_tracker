@@ -117,7 +117,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         </main>
         {showOnboarding && (
           <OnboardingModal
-            onDone={() => setShowOnboarding(false)}
+            onDone={() => {
+              setShowOnboarding(false);
+              setDemoMode(true);
+            }}
             initialProfile={profile}
             onSaved={(saved) => setProfile(saved)}
           />
