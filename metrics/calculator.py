@@ -181,6 +181,16 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
     # trailing 1Y window (252 trading days) to avoid age-dependent noise.
     port_ret_1y = port_ret_full.iloc[-TRADING_DAYS:]
 
+    # Winsorise at ±5 standard deviations to neutralise bad yfinance price
+    # ticks that create phantom outlier return days. Genuine market moves
+    # rarely exceed 4-5 sigma; data feed errors frequently do.
+    _mean, _std = port_ret_1y.mean(), port_ret_1y.std()
+    if _std > 0:
+        port_ret_1y = port_ret_1y.clip(
+            lower=_mean - 5 * _std,
+            upper=_mean + 5 * _std,
+        )
+
     bench_ret_full = benchmark_series.pct_change().dropna()
 
     # Strict overlap is used for benchmark-relative metrics only (beta/alpha/CAPM).
