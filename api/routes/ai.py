@@ -639,9 +639,6 @@ def analysis(x_portfolio_token: str = Header(default="")):
             detail=f"Daily analysis limit reached ({DAILY_LIMIT}/day). Resets at midnight."
         )
 
-    market_data = _refresh_data(token)
-    profile = _load_profile(token)
-    context = _build_context(market_data, profile)
     api_key = _get_api_key()
 
     def generate():
@@ -650,6 +647,9 @@ def analysis(x_portfolio_token: str = Header(default="")):
         def run():
             refunded = False
             try:
+                market_data = _refresh_data(token)
+                profile = _load_profile(token)
+                context = _build_context(market_data, profile)
                 client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
                 full_text: list[str] = []
                 with client.messages.stream(
@@ -691,29 +691,42 @@ def analysis(x_portfolio_token: str = Header(default="")):
                 except Exception:
                     pass
                 refunded = True
-                q.put(("error", {"message": "AI provider authentication failed", "code": "auth"}))
+                q.put(("error", {"error": "AI provider authentication failed", "code": "auth"}))
             except anthropic.APIConnectionError:
                 try:
                     db.refund_usage_increment(token)
                 except Exception:
                     pass
                 refunded = True
-                q.put(("error", {"message": "AI provider connection failed", "code": "network"}))
-            except Exception as exc:
+                q.put(("error", {"error": "AI provider connection failed", "code": "network"}))
+            except HTTPException as exc:
                 if not refunded:
                     try:
                         db.refund_usage_increment(token)
                     except Exception:
                         pass
-                q.put(("error", {"message": "Analysis failed. Please retry.", "code": "runtime"}))
+                q.put(("error", {"error": str(exc.detail), "code": f"http_{exc.status_code}"}))
+            except Exception:
+                if not refunded:
+                    try:
+                        db.refund_usage_increment(token)
+                    except Exception:
+                        pass
+                q.put(("error", {"error": "Analysis failed. Please retry.", "code": "runtime"}))
 
         t = threading.Thread(target=run, daemon=True)
         t.start()
+        # Force headers/body flush quickly so upstream proxies don't time out before first token.
+        yield f"data: {json.dumps({'status': 'started'})}\n\n"
 
         while True:
             try:
-                kind, value = q.get(timeout=180)
+                kind, value = q.get(timeout=15)
             except queue.Empty:
+                if t.is_alive():
+                    # Keepalive heartbeat to prevent idle disconnects while model is running.
+                    yield f"data: {json.dumps({'status': 'working'})}\n\n"
+                    continue
                 yield f"data: {json.dumps({'error': 'Analysis timed out', 'code': 'timeout'})}\n\n"
                 break
             if kind == "text":

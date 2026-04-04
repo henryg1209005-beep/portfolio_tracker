@@ -383,7 +383,8 @@ export function streamAnalysis(
     try {
       const res = await fetch(`${BASE}/ai/analysis`, {
         method: "POST",
-        headers: authHeader(),
+        headers: { Accept: "text/event-stream", ...authHeader() },
+        cache: "no-store",
         signal: controller.signal,
       });
 
@@ -411,12 +412,13 @@ export function streamAnalysis(
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        let idx = buffer.indexOf("\n\n");
+        let idx = buffer.search(/\r?\n\r?\n/);
         while (idx !== -1) {
           const event = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 2);
+          const sepLen = buffer[idx] === "\r" ? 4 : 2;
+          buffer = buffer.slice(idx + sepLen);
 
-          for (const line of event.split("\n")) {
+          for (const line of event.split(/\r?\n/)) {
             if (!line.startsWith("data:")) continue;
             const raw = line.slice(5).trim();
             if (!raw) continue;
@@ -433,15 +435,15 @@ export function streamAnalysis(
               controller.abort();
               return;
             }
-            if (data.error) {
+            if (data.error || data.message) {
               finished = true;
-              onError(data.error);
+              onError(data.error ?? data.message);
               controller.abort();
               return;
             }
           }
 
-          idx = buffer.indexOf("\n\n");
+          idx = buffer.search(/\r?\n\r?\n/);
         }
       }
 
