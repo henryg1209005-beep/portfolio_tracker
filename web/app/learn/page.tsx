@@ -40,9 +40,12 @@ export default function LearnIndexPage() {
         }}
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/">
-            <Image src="/logo.png" alt="Portivex" width={120} height={40} className="object-contain" />
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-sm font-medium" style={{ color: "#6b5e7e" }}>← Back</Link>
+            <Link href="/">
+              <Image src="/logo.png" alt="Portivex" width={120} height={40} className="object-contain" />
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
             <Link href="/sign-in" className="hidden sm:block px-4 py-2 rounded-lg text-sm font-medium" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
               Sign in
