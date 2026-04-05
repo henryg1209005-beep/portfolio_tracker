@@ -111,10 +111,29 @@ function highlightNumbers(text: string): React.ReactNode {
   return (
     <>
       {parts.map((p, i) => {
-        if (/^£/.test(p))            return <span key={i} className="text-cyan font-semibold font-mono">{p}</span>;
-        if (/^\+/.test(p) && p.endsWith("%")) return <span key={i} className="text-emerald-400 font-semibold">{p}</span>;
-        if (/^-/.test(p) && p.endsWith("%"))  return <span key={i} className="text-red-400 font-semibold">{p}</span>;
-        if (p.endsWith("%"))         return <span key={i} className="text-white/90 font-semibold">{p}</span>;
+        if (/^£/.test(p))
+          return (
+            <span key={i} className="font-semibold font-mono text-[13px] px-1.5 py-0.5 rounded-md mx-0.5"
+              style={{ color: "#00e6b4", background: "rgba(0,230,180,0.08)", border: "1px solid rgba(0,230,180,0.15)" }}>
+              {p}
+            </span>
+          );
+        if (/^\+/.test(p) && p.endsWith("%"))
+          return (
+            <span key={i} className="font-semibold font-mono text-[13px] px-1 py-0.5 rounded mx-0.5"
+              style={{ color: "#34d399", background: "rgba(52,211,153,0.08)" }}>
+              {p}
+            </span>
+          );
+        if (/^-/.test(p) && p.endsWith("%"))
+          return (
+            <span key={i} className="font-semibold font-mono text-[13px] px-1 py-0.5 rounded mx-0.5"
+              style={{ color: "#f87171", background: "rgba(248,113,113,0.08)" }}>
+              {p}
+            </span>
+          );
+        if (p.endsWith("%"))
+          return <span key={i} className="font-semibold text-white/90">{p}</span>;
         return <span key={i}>{p}</span>;
       })}
     </>
@@ -127,7 +146,7 @@ function inlineBold(text: string): React.ReactNode {
     <>
       {parts.map((p, i) =>
         i % 2 === 1
-          ? <strong key={i} className="font-bold text-white">{p}</strong>
+          ? <strong key={i} className="font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>{p}</strong>
           : <span key={i}>{highlightNumbers(p)}</span>
       )}
     </>
@@ -202,17 +221,20 @@ function TldrSection({ body }: { body: string }) {
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {bullets.map((b, i) => {
         const v = variants[i] ?? variants[2];
         return (
-          <div key={i} className="flex gap-4 p-4 rounded-xl"
+          <div key={i} className="flex gap-4 px-4 py-4 rounded-2xl"
             style={{ background: v.bg, border: `1px solid ${v.border}` }}>
-            <div className="shrink-0 flex flex-col items-center gap-1 pt-0.5">
-              <span className="text-base leading-none" style={{ color: v.accent }}>{v.icon}</span>
-              <span className="text-[9px] font-bold tracking-widest" style={{ color: v.accent, opacity: 0.7 }}>{v.label}</span>
+            <div className="shrink-0 flex flex-col items-center gap-1.5 pt-0.5 min-w-[40px]">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
+                style={{ background: `${v.accent}14`, border: `1px solid ${v.border}` }}>
+                <span style={{ color: v.accent }}>{v.icon}</span>
+              </div>
+              <span className="text-[8px] font-bold tracking-widest leading-tight text-center" style={{ color: v.accent, opacity: 0.6 }}>{v.label}</span>
             </div>
-            <p className="text-sm leading-relaxed text-white/90 font-medium">{b}</p>
+            <p className="text-sm leading-relaxed pt-1" style={{ color: "rgba(255,255,255,0.88)" }}>{b}</p>
           </div>
         );
       })}
@@ -233,8 +255,8 @@ const SECTION_META: Record<string, { icon: string; accent?: string }> = {
   "7. OVERALL ASSESSMENT":             { icon: "▣" },
 };
 
-function SectionCard({ section, isLast, isStreaming }: {
-  section: Section; isLast: boolean; isStreaming: boolean;
+function SectionCard({ section, isLast, isStreaming, index = 0 }: {
+  section: Section; isLast: boolean; isStreaming: boolean; index?: number;
 }) {
   const meta = SECTION_META[section.title.toUpperCase()] ?? { icon: "◈" };
   const accent = meta.accent ?? "#bf5af2";
@@ -243,19 +265,20 @@ function SectionCard({ section, isLast, isStreaming }: {
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{
-        background: "rgba(255,255,255,0.025)",
-        animation: "ai-fadein 0.35s ease both",
-        border: "1px solid rgba(42,0,80,0.9)",
-        borderLeft: `3px solid ${accent}70`,
+        background: `linear-gradient(160deg, ${accent}07 0%, rgba(8,0,18,0.55) 55%)`,
+        animation: `ai-fadein 0.4s ease both`,
+        animationDelay: `${index * 0.04}s`,
+        border: "1px solid rgba(42,0,80,0.85)",
+        borderLeft: `3px solid ${accent}80`,
       }}>
       {/* Header bar */}
-      <div className="flex items-center gap-2.5 px-5 py-3 border-b"
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b"
         style={{
-          background: `linear-gradient(90deg, ${accent}10 0%, transparent 70%)`,
-          borderColor: "rgba(42,0,80,0.7)",
+          background: `linear-gradient(90deg, ${accent}18 0%, transparent 65%)`,
+          borderColor: "rgba(42,0,80,0.6)",
         }}>
-        <span style={{ color: accent, fontSize: 12, opacity: 0.9 }}>{meta.icon}</span>
-        <span className="text-[11px] font-bold tracking-[0.16em] uppercase" style={{ color: accent, opacity: 0.85 }}>
+        <span className="text-sm" style={{ color: accent }}>{meta.icon}</span>
+        <span className="text-[11px] font-bold tracking-[0.18em] uppercase" style={{ color: accent }}>
           {section.title}
         </span>
       </div>
@@ -282,18 +305,18 @@ function StreamingSectionCard({ section, active }: { section: Section; active: b
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{
-        background: "rgba(255,255,255,0.025)",
-        animation: "ai-fadein 0.35s ease both",
-        border: "1px solid rgba(42,0,80,0.9)",
-        borderLeft: `3px solid ${accent}70`,
+        background: `linear-gradient(160deg, ${accent}07 0%, rgba(8,0,18,0.55) 55%)`,
+        animation: "ai-fadein 0.4s ease both",
+        border: "1px solid rgba(42,0,80,0.85)",
+        borderLeft: `3px solid ${accent}80`,
       }}>
-      <div className="flex items-center gap-2.5 px-5 py-3 border-b"
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b"
         style={{
-          background: `linear-gradient(90deg, ${accent}10 0%, transparent 70%)`,
-          borderColor: "rgba(42,0,80,0.7)",
+          background: `linear-gradient(90deg, ${accent}18 0%, transparent 65%)`,
+          borderColor: "rgba(42,0,80,0.6)",
         }}>
-        <span style={{ color: accent, fontSize: 12, opacity: 0.9 }}>{meta.icon}</span>
-        <span className="text-[11px] font-bold tracking-[0.16em] uppercase" style={{ color: accent, opacity: 0.85 }}>
+        <span className="text-sm" style={{ color: accent }}>{meta.icon}</span>
+        <span className="text-[11px] font-bold tracking-[0.18em] uppercase" style={{ color: accent }}>
           {section.title}
         </span>
       </div>
@@ -602,6 +625,7 @@ export default function AiPage() {
                 section={s}
                 isLast={i === sections.length - 1 && !partial}
                 isStreaming={busy}
+                index={i}
               />
             ))}
             {partial && (
