@@ -5,7 +5,7 @@ import {
   type CorrelationData, type SuggestionsData, type RollingCorrelationData,
 } from "@/lib/api";
 import { computeCorrelationAnalytics, type CorrelationAnalytics, type PairResult } from "@/lib/correlationAnalytics";
-import { DEMO_CORRELATION_DATA, DEMO_ROLLING_CORRELATION_DATA, DEMO_SUGGESTIONS_DATA } from "@/lib/demoPortfolio";
+import { buildDemoCorrelationBundle } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
 import CorrelationHeatmap from "@/components/CorrelationHeatmap";
 import RollingCorrelationChart from "@/components/RollingCorrelationChart";
@@ -303,7 +303,7 @@ function InsightsPanel({ analytics }: { analytics: CorrelationAnalytics }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CorrelationPage() {
-  const { isDemoMode } = useDemoMode();
+  const { isDemoMode, demoData } = useDemoMode();
   const [data,        setData]        = useState<CorrelationData | null>(null);
   const [suggestions, setSuggestions]  = useState<SuggestionsData | null>(null);
   const [rolling,     setRolling]     = useState<RollingCorrelationData | null>(null);
@@ -318,9 +318,10 @@ export default function CorrelationPage() {
     setSuggestions(null);
     setRolling(null);
     if (isDemoMode) {
-      setData({ ...DEMO_CORRELATION_DATA, method: m });
-      setSuggestions(DEMO_SUGGESTIONS_DATA);
-      setRolling(DEMO_ROLLING_CORRELATION_DATA);
+      const demo = buildDemoCorrelationBundle(demoData.holdings, tf, m);
+      setData(demo.correlation);
+      setSuggestions(demo.suggestions);
+      setRolling(demo.rolling);
       setLoading(false);
       return;
     }
@@ -336,9 +337,9 @@ export default function CorrelationPage() {
       setError("Could not reach the API right now. Please try again in a moment.");
       setLoading(false);
     }
-  }, [isDemoMode]);
+  }, [isDemoMode, demoData.holdings]);
 
-  useEffect(() => { load(timeframe, method); }, [timeframe, method, load, isDemoMode]);
+  useEffect(() => { load(timeframe, method); }, [timeframe, method, load, isDemoMode, demoData.refreshed_at]);
 
   const analytics = useMemo<CorrelationAnalytics | null>(() => {
     if (!data || data.tickers.length < 2) return null;

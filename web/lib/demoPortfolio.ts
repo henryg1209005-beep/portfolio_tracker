@@ -1,4 +1,5 @@
 import type {
+  Holding,
   CorrelationData,
   PerformanceData,
   RefreshData,
@@ -8,6 +9,8 @@ import type {
 
 type Timeframe = "1M" | "3M" | "6M" | "1Y" | "5Y";
 type Benchmark = "sp500" | "ftse100" | "msci_world";
+type CorrMethod = "pearson" | "spearman";
+type DemoAssetClass = "equity_etf" | "bond_etf" | "commodity_etf" | "stock" | "crypto";
 
 const BENCHMARK_DRIFT: Record<Benchmark, number> = {
   sp500: 0.065,
@@ -22,6 +25,38 @@ const TIMEFRAME_LENGTH: Record<Timeframe, number> = {
   "1Y": 252,
   "5Y": 252 * 5,
 };
+
+const DEMO_SUGGESTION_CANDIDATES: Array<{
+  ticker: string;
+  name: string;
+  asset_class: string;
+  kind: DemoAssetClass;
+}> = [
+  {
+    ticker: "IGIL.L",
+    name: "iShares Global Inflation Linked Govt Bond UCITS ETF",
+    asset_class: "Bond ETF",
+    kind: "bond_etf",
+  },
+  {
+    ticker: "GLDM",
+    name: "SPDR Gold MiniShares Trust",
+    asset_class: "Commodity ETF",
+    kind: "commodity_etf",
+  },
+  {
+    ticker: "VNQ",
+    name: "Vanguard Real Estate ETF",
+    asset_class: "REIT ETF",
+    kind: "equity_etf",
+  },
+  {
+    ticker: "TLT",
+    name: "iShares 20+ Year Treasury Bond ETF",
+    asset_class: "Bond ETF",
+    kind: "bond_etf",
+  },
+];
 
 function toIsoDate(d: Date): string {
   const y = d.getFullYear();
@@ -50,6 +85,185 @@ function buildSeries(length: number, yearlyDrift: number, amplitude: number, pha
     out.push(100 * (1 + trend + wave));
   }
   return out.map((v) => Number(v.toFixed(2)));
+}
+
+function tickerHash(text: string): number {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 100000;
+  return h;
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function inferAssetClass(holding: Pick<Holding, "ticker" | "type">): DemoAssetClass {
+  if (holding.type === "crypto") return "crypto";
+  if (holding.type === "stock") return "stock";
+  const t = holding.ticker.toUpperCase();
+  if (/(BOND|GILT|TREAS|AGG|LQD|IGIL|TLT|BND)/.test(t)) return "bond_etf";
+  if (/(GOLD|GLD|IAU|SGLN|SLV|DBC|COM)/.test(t)) return "commodity_etf";
+  return "equity_etf";
+}
+
+function baseCorrelation(a: DemoAssetClass, b: DemoAssetClass): number {
+  const key = [a, b].sort().join("|");
+  switch (key) {
+    case "bond_etf|bond_etf": return 0.55;
+    case "bond_etf|commodity_etf": return 0.12;
+    case "bond_etf|crypto": return 0.05;
+    case "bond_etf|equity_etf": return 0.2;
+    case "bond_etf|stock": return 0.18;
+    case "commodity_etf|commodity_etf": return 0.6;
+    case "commodity_etf|crypto": return 0.1;
+    case "commodity_etf|equity_etf": return 0.18;
+    case "commodity_etf|stock": return 0.2;
+    case "crypto|crypto": return 0.62;
+    case "crypto|equity_etf": return 0.24;
+    case "crypto|stock": return 0.26;
+    case "equity_etf|equity_etf": return 0.78;
+    case "equity_etf|stock": return 0.72;
+    case "stock|stock": return 0.66;
+    default: return 0.35;
+  }
+}
+
+function pairCorrelation(tickerA: string, classA: DemoAssetClass, tickerB: string, classB: DemoAssetClass, method: CorrMethod): number {
+  const base = baseCorrelation(classA, classB);
+  const jitter = ((tickerHash(`${tickerA}|${tickerB}`) % 17) - 8) / 100; // [-0.08, 0.08]
+  const spearmanScale = method === "spearman" ? 0.95 : 1;
+  return Number(clamp((base + jitter) * spearmanScale, -0.15, 0.95).toFixed(3));
+}
+
+function normalisedWeight(holding: Holding, totalValue: number, count: number): number {
+  if (totalValue > 0 && holding.market_value != null) return holding.market_value / totalValue;
+  if (holding.weight != null && Number.isFinite(holding.weight) && holding.weight > 0) return holding.weight;
+  return 1 / Math.max(1, count);
+}
+
+function averageUniqueCorrelation(data: CorrelationData): number {
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < data.tickers.length; i++) {
+    for (let j = i + 1; j < data.tickers.length; j++) {
+      const row = data.matrix.find((m) => m.row === data.tickers[i] && m.col === data.tickers[j]);
+      if (!row) continue;
+      sum += row.value;
+      count += 1;
+    }
+  }
+  return count > 0 ? sum / count : 0;
+}
+
+function avgCorrVsCandidate(holdings: Holding[], candidateKind: DemoAssetClass): number {
+  if (holdings.length === 0) return 0;
+  const total = holdings.reduce((s, h) => s + (h.market_value ?? 0), 0);
+  let weighted = 0;
+  let wsum = 0;
+  for (const h of holdings) {
+    const cls = inferAssetClass(h);
+    const w = normalisedWeight(h, total, holdings.length);
+    const corr = baseCorrelation(cls, candidateKind);
+    weighted += w * corr;
+    wsum += w;
+  }
+  return wsum > 0 ? weighted / wsum : 0;
+}
+
+function buildSuggestions(holdings: Holding[], currentAvg: number): SuggestionsData {
+  const suggestions = DEMO_SUGGESTION_CANDIDATES.map((c) => {
+    const candidateCorr = avgCorrVsCandidate(holdings, c.kind);
+    const estimatedNewAvg = holdings.length > 0
+      ? ((currentAvg * holdings.length) + candidateCorr) / (holdings.length + 1)
+      : candidateCorr;
+    const reduction = Math.max(0, currentAvg - estimatedNewAvg);
+    return {
+      ticker: c.ticker,
+      name: c.name,
+      asset_class: c.asset_class,
+      avg_corr_vs_portfolio: Number(candidateCorr.toFixed(2)),
+      estimated_new_avg: Number(estimatedNewAvg.toFixed(2)),
+      correlation_reduction: Number(reduction.toFixed(2)),
+    };
+  })
+    .sort((a, b) => b.correlation_reduction - a.correlation_reduction)
+    .slice(0, 3);
+
+  return {
+    current_avg_correlation: Number(currentAvg.toFixed(2)),
+    suggestions,
+  };
+}
+
+function buildRollingData(data: CorrelationData, timeframe: Timeframe): RollingCorrelationData {
+  const pairs = data.matrix
+    .filter((m) => m.row !== m.col)
+    .filter((m) => data.tickers.indexOf(m.row) < data.tickers.indexOf(m.col))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, 2);
+
+  const length = Math.min(120, TIMEFRAME_LENGTH[timeframe]);
+  const dates = generateDates(length);
+  const rollingPairs = pairs.map((p, idx) => {
+    const amp = 0.05 + idx * 0.01;
+    const phase = (tickerHash(`${p.row}/${p.col}`) % 9) + idx;
+    const values = Array.from({ length }, (_, i) => {
+      const wave = Math.sin((i + phase) / 8) * amp + Math.cos((i + phase) / 17) * (amp * 0.45);
+      return Number(clamp(p.value + wave, -0.95, 0.95).toFixed(3));
+    });
+    return {
+      pair: `${p.row} / ${p.col}`,
+      ticker_a: p.row,
+      ticker_b: p.col,
+      static_correlation: p.value,
+      dates,
+      values,
+    };
+  });
+
+  return { window: 60, pairs: rollingPairs };
+}
+
+export function buildDemoCorrelationBundle(
+  holdings: Holding[],
+  timeframe: Timeframe,
+  method: CorrMethod,
+): {
+  correlation: CorrelationData;
+  suggestions: SuggestionsData;
+  rolling: RollingCorrelationData;
+} {
+  const sorted = [...holdings].sort((a, b) => (b.market_value ?? 0) - (a.market_value ?? 0));
+  const tickers = sorted.map((h) => h.ticker);
+  const overlap = TIMEFRAME_LENGTH[timeframe];
+  const totalValue = sorted.reduce((s, h) => s + (h.market_value ?? 0), 0);
+
+  const weights: Record<string, number> = {};
+  for (const h of sorted) {
+    weights[h.ticker] = Number(normalisedWeight(h, totalValue, sorted.length).toFixed(6));
+  }
+
+  const matrix: CorrelationData["matrix"] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = 0; j < sorted.length; j++) {
+      const a = sorted[i];
+      const b = sorted[j];
+      matrix.push({
+        row: a.ticker,
+        col: b.ticker,
+        value: i === j ? 1 : pairCorrelation(a.ticker, inferAssetClass(a), b.ticker, inferAssetClass(b), method),
+        overlap,
+      });
+    }
+  }
+
+  const correlation: CorrelationData = { tickers, method, weights, matrix };
+  const currentAvg = averageUniqueCorrelation(correlation);
+  return {
+    correlation,
+    suggestions: buildSuggestions(sorted, currentAvg),
+    rolling: buildRollingData(correlation, timeframe),
+  };
 }
 
 export const DEMO_REFRESH_DATA: RefreshData = {
