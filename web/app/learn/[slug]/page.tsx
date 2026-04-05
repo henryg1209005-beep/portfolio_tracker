@@ -8,6 +8,10 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+export function generateStaticParams() {
+  return METRICS.map((metric) => ({ slug: metric.slug }));
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const metric = getMetric(slug);
@@ -53,10 +57,36 @@ function JsonLd({ metric }: { metric: ReturnType<typeof getMetric> }) {
     })),
   };
 
+  const breadcrumbList = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://portivex.co.uk/",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Metric Library",
+        item: "https://portivex.co.uk/learn",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: metric.name,
+        item: `https://portivex.co.uk/learn/${metric.slug}`,
+      },
+    ],
+  };
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(article) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }} />
     </>
   );
 }
