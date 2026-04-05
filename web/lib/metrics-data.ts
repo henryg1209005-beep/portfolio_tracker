@@ -446,6 +446,54 @@ export const METRICS: PortivexMetric[] = [
     ],
     related: ["beta", "sharpe-ratio", "r-squared", "sortino-ratio"],
   },
+  {
+    slug: "correlation",
+    name: "Correlation",
+    shortName: "Correlation",
+    tagline: "How much your holdings move together — and why it defines true diversification",
+    metaDescription:
+      "Learn what correlation means in a portfolio, how the correlation coefficient works, why low correlation reduces risk, and how to use a correlation matrix to diversify effectively.",
+    category: "distribution",
+    accent: "#bf5af2",
+    formula: "Cov(X, Y) / (σX × σY)",
+    formulaDescription:
+      "the covariance of two return series divided by the product of their standard deviations, producing a value between −1 and +1.",
+    whatItIs:
+      "Correlation measures how closely two assets move in relation to each other. A correlation of +1 means they move in perfect lockstep — when one rises, the other rises by a proportional amount. A correlation of −1 means they move in perfect opposition. Zero means no linear relationship. In portfolio construction, correlation is the mathematical foundation of diversification: mixing assets with low or negative correlations reduces overall portfolio volatility without necessarily reducing expected return.",
+    howToInterpret:
+      "Correlation is always between −1 and +1. For portfolio purposes, you want pairs of holdings with correlation below 0.7 — above that, you're getting limited diversification benefit. A portfolio where every holding has a correlation above 0.9 with every other holding is effectively a concentrated bet on a single theme, regardless of how many positions it contains. Correlation is not static — it tends to spike towards +1 during market crises, precisely when diversification is needed most.",
+    goodRange: [
+      { label: "+0.9 to +1.0", description: "Near-perfect positive correlation — holdings move almost identically; minimal diversification benefit" },
+      { label: "+0.5 to +0.9", description: "High positive — common in same-sector holdings; some diversification but limited" },
+      { label: "0 to +0.5", description: "Low to moderate — meaningful diversification; ideal range for portfolio pairs" },
+      { label: "−0.5 to 0", description: "Low to negative — strong diversifier; reduces portfolio volatility materially" },
+      { label: "−1.0 to −0.5", description: "Strong negative — natural hedge; assets offset each other's losses" },
+    ],
+    whatAffectsIt: [
+      "Sector overlap — holdings in the same sector tend to be highly correlated",
+      "Geographic exposure — assets in the same country or region share macro drivers",
+      "Market regime — correlations rise sharply in risk-off environments and crashes",
+      "Asset class — bonds and equities have historically had low or negative correlation, though this broke down in 2022",
+      "Factor exposure — two different stocks with the same value or momentum tilt will correlate more than they appear to on the surface",
+    ],
+    howPortivexUses:
+      "Portivex builds a full pairwise correlation matrix across all your holdings using daily returns. The correlation heatmap visualises this — dark cells indicate high correlation (a warning sign for concentration), lighter cells indicate genuine diversification. Holdings above 0.85 correlation are flagged. The matrix updates daily as new price data comes in, so you can see how correlations shift during volatile periods.",
+    faqs: [
+      {
+        q: "Can I have too many holdings and still be undiversified?",
+        a: "Yes — this is one of the most common portfolio mistakes. Holding 30 technology stocks gives you the illusion of diversification but if they all have pairwise correlations above 0.85, your effective number of independent bets is much smaller. True diversification requires low correlation between holdings, not just a large number of them.",
+      },
+      {
+        q: "Why did my diversified portfolio fall just as much as the market in the 2020 crash?",
+        a: "Because correlations converge to 1 in a crisis. In normal markets, your equity, bond, and commodity holdings may all have low correlations. But during a sharp sell-off driven by liquidity and panic, almost everything falls together. This is known as correlation breakdown and it's why tail-risk hedging exists as a separate discipline beyond simple diversification.",
+      },
+      {
+        q: "What's the difference between correlation and covariance?",
+        a: "Covariance measures the direction and magnitude of co-movement between two assets in absolute terms — it depends on the scale of each asset's returns. Correlation normalises covariance by each asset's standard deviation, producing a dimensionless number between −1 and +1 that's comparable across any pair of assets. For portfolio analysis, correlation is almost always more useful because it's standardised.",
+      },
+    ],
+    related: ["volatility", "beta", "r-squared", "maximum-drawdown"],
+  },
 ];
 
 export function getMetric(slug: string): PortivexMetric | undefined {
