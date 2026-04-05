@@ -148,10 +148,10 @@ function renderBody(body: string): React.ReactNode {
         i++;
       }
       els.push(
-        <ul key={`ul${i}`} className="space-y-2.5 my-3">
+        <ul key={`ul${i}`} className="space-y-3 my-4 pl-1">
           {bullets.map((b, j) => (
-            <li key={j} className="flex gap-3 text-sm leading-relaxed text-white/75">
-              <span className="mt-[7px] w-1 h-1 rounded-full shrink-0" style={{ background: "#bf5af2" }} />
+            <li key={j} className="flex gap-3.5 text-sm leading-relaxed text-white/80">
+              <span className="mt-[6px] w-1.5 h-1.5 rounded-full shrink-0 opacity-80" style={{ background: "#bf5af2", boxShadow: "0 0 4px #bf5af260" }} />
               <span>{inlineBold(b)}</span>
             </li>
           ))}
@@ -162,23 +162,28 @@ function renderBody(body: string): React.ReactNode {
     if (/^\d+\./.test(line)) {
       const num = line.match(/^(\d+\.)/)?.[1] ?? "";
       els.push(
-        <div key={i} className="flex gap-3 text-sm leading-relaxed text-white/75 my-1.5">
-          <span className="font-bold text-white/40 shrink-0 tabular-nums">{num}</span>
+        <div key={i} className="flex gap-3.5 text-sm leading-relaxed text-white/80 my-2.5">
+          <span
+            className="shrink-0 tabular-nums text-[11px] font-bold mt-0.5 w-5 h-5 rounded-md flex items-center justify-center"
+            style={{ background: "rgba(191,90,242,0.12)", color: "#bf5af2", border: "1px solid rgba(191,90,242,0.2)" }}
+          >
+            {num.replace(".", "")}
+          </span>
           <span>{inlineBold(line.replace(/^\d+\.\s*/, ""))}</span>
         </div>
       );
     } else if (line.trim() === "") {
-      els.push(<div key={i} className="h-1.5" />);
+      els.push(<div key={i} className="h-3" />);
     } else {
       els.push(
-        <p key={i} className="text-sm leading-relaxed text-white/75">
+        <p key={i} className="text-sm leading-relaxed text-white/80">
           {inlineBold(line)}
         </p>
       );
     }
     i++;
   }
-  return <div className="space-y-0.5">{els}</div>;
+  return <div className="space-y-2.5">{els}</div>;
 }
 
 // ─── TL;DR section ───────────────────────────────────────────────────────────
@@ -236,18 +241,26 @@ function SectionCard({ section, isLast, isStreaming }: {
   const isTldr = section.title.toUpperCase() === "TL;DR";
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-border"
-      style={{ background: "rgba(255,255,255,0.02)", animation: "ai-fadein 0.35s ease both" }}>
+    <div className="rounded-2xl overflow-hidden"
+      style={{
+        background: "rgba(255,255,255,0.025)",
+        animation: "ai-fadein 0.35s ease both",
+        border: "1px solid rgba(42,0,80,0.9)",
+        borderLeft: `3px solid ${accent}70`,
+      }}>
       {/* Header bar */}
-      <div className="flex items-center gap-2.5 px-6 py-3.5 border-b border-border/50"
-        style={{ background: `linear-gradient(90deg, ${accent}08 0%, transparent 60%)` }}>
-        <span style={{ color: accent, fontSize: 13 }}>{meta.icon}</span>
-        <span className="text-xs font-bold tracking-[0.14em] uppercase" style={{ color: accent }}>
+      <div className="flex items-center gap-2.5 px-5 py-3 border-b"
+        style={{
+          background: `linear-gradient(90deg, ${accent}10 0%, transparent 70%)`,
+          borderColor: "rgba(42,0,80,0.7)",
+        }}>
+        <span style={{ color: accent, fontSize: 12, opacity: 0.9 }}>{meta.icon}</span>
+        <span className="text-[11px] font-bold tracking-[0.16em] uppercase" style={{ color: accent, opacity: 0.85 }}>
           {section.title}
         </span>
       </div>
       {/* Body */}
-      <div className="px-6 py-5">
+      <div className="px-5 py-5">
         {section.body
           ? isTldr ? <TldrSection body={section.body} /> : renderBody(section.body)
           : null}
@@ -267,16 +280,24 @@ function StreamingSectionCard({ section, active }: { section: Section; active: b
   const typed  = useTypewriter(section.body, active);
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-border"
-      style={{ background: "rgba(255,255,255,0.02)", animation: "ai-fadein 0.35s ease both" }}>
-      <div className="flex items-center gap-2.5 px-6 py-3.5 border-b border-border/50"
-        style={{ background: `linear-gradient(90deg, ${accent}08 0%, transparent 60%)` }}>
-        <span style={{ color: accent, fontSize: 13 }}>{meta.icon}</span>
-        <span className="text-xs font-bold tracking-[0.14em] uppercase" style={{ color: accent }}>
+    <div className="rounded-2xl overflow-hidden"
+      style={{
+        background: "rgba(255,255,255,0.025)",
+        animation: "ai-fadein 0.35s ease both",
+        border: "1px solid rgba(42,0,80,0.9)",
+        borderLeft: `3px solid ${accent}70`,
+      }}>
+      <div className="flex items-center gap-2.5 px-5 py-3 border-b"
+        style={{
+          background: `linear-gradient(90deg, ${accent}10 0%, transparent 70%)`,
+          borderColor: "rgba(42,0,80,0.7)",
+        }}>
+        <span style={{ color: accent, fontSize: 12, opacity: 0.9 }}>{meta.icon}</span>
+        <span className="text-[11px] font-bold tracking-[0.16em] uppercase" style={{ color: accent, opacity: 0.85 }}>
           {section.title}
         </span>
       </div>
-      <div className="px-6 py-5">
+      <div className="px-5 py-5">
         {typed ? (isTldr ? <TldrSection body={typed} /> : renderBody(typed)) : null}
         <span className="inline-block w-1.5 h-4 rounded-sm bg-cyan animate-pulse align-text-bottom ml-1" />
       </div>
@@ -574,7 +595,7 @@ export default function AiPage() {
         ) : (status === "streaming" || status === "done") && sections.length === 0 && hasText ? (
           <StreamingRawCard text={text} />
         ) : sections.length > 0 || partial ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {sections.map((s, i) => (
               <SectionCard
                 key={i}
