@@ -80,6 +80,30 @@ export default function LearnIndexPage() {
 
       {/* Metric cards grouped by category */}
       <main className="max-w-4xl mx-auto px-6 pb-20 w-full">
+        <section className="mb-10">
+          <div
+            className="rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            style={{ background: "linear-gradient(135deg,#10001e,#0a0014)", border: "1px solid #2a0050" }}
+          >
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "#6b5e7e" }}>
+                New
+              </p>
+              <h2 className="text-lg font-semibold">Metric comparison guides</h2>
+              <p className="text-sm" style={{ color: "#8a7a9e" }}>
+                Side-by-side explainers for Sharpe vs Sortino, VaR vs Maximum Drawdown, and Beta vs Correlation.
+              </p>
+            </div>
+            <Link
+              href="/learn/compare"
+              className="px-4 py-2 rounded-lg text-sm font-semibold shrink-0"
+              style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
+            >
+              Explore comparisons
+            </Link>
+          </div>
+        </section>
+
         {categories.map((cat) => {
           const group = METRICS.filter((m) => m.category === cat);
           if (group.length === 0) return null;
