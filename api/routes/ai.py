@@ -682,7 +682,7 @@ def analysis(x_portfolio_token: str = Header(default="")):
                 client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
                 full_text: list[str] = []
                 with client.messages.stream(
-                    model="claude-haiku-4-5",
+                    model="claude-haiku-4-5-20251001",
                     max_tokens=3500,
                     system=[{
                         "type": "text",
@@ -797,7 +797,7 @@ def analysis_once(x_portfolio_token: str = Header(default="")):
 
         full_text: list[str] = []
         with client.messages.stream(
-            model="claude-haiku-4-5",
+            model="claude-haiku-4-5-20251001",
             max_tokens=3500,
             system=[{
                 "type": "text",
