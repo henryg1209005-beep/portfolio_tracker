@@ -80,15 +80,17 @@ export function DemoModeProvider({ children, userId = "guest" }: { children: Rea
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoData, setDemoData] = useState<RefreshData>(cloneDefaultDemoData());
 
+  // Re-run when userId resolves (Clerk loads after initial render with "guest")
   useEffect(() => {
+    if (userId === "guest") return; // wait for real userId
     const saved = localStorage.getItem(STORAGE_KEY);
     setIsDemoMode(saved === "1");
 
     const raw = localStorage.getItem(DEMO_HOLDINGS_KEY);
-    if (!raw) return;
+    if (!raw) { setDemoData(cloneDefaultDemoData()); return; }
     try {
       const parsed = JSON.parse(raw) as Holding[];
-      if (!Array.isArray(parsed)) return;
+      if (!Array.isArray(parsed)) { setDemoData(cloneDefaultDemoData()); return; }
       const holdings = normaliseWeights(parsed);
       setDemoData({
         ...cloneDefaultDemoData(),
@@ -97,17 +99,18 @@ export function DemoModeProvider({ children, userId = "guest" }: { children: Rea
         refreshed_at: Math.floor(Date.now() / 1000),
       });
     } catch {
-      // Ignore corrupted local demo data and use defaults
+      setDemoData(cloneDefaultDemoData());
     }
-  }, []);
+  }, [userId, STORAGE_KEY, DEMO_HOLDINGS_KEY]);
 
   useEffect(() => {
+    if (userId === "guest") return; // don't write to guest key
     localStorage.setItem(DEMO_HOLDINGS_KEY, JSON.stringify(demoData.holdings));
-  }, [demoData.holdings]);
+  }, [userId, DEMO_HOLDINGS_KEY, demoData.holdings]);
 
   function setDemoMode(enabled: boolean) {
     setIsDemoMode(enabled);
-    localStorage.setItem(STORAGE_KEY, enabled ? "1" : "0");
+    if (userId !== "guest") localStorage.setItem(STORAGE_KEY, enabled ? "1" : "0");
     if (enabled) {
       void trackEvent("demo_mode_enabled", { enabled: true });
     }
