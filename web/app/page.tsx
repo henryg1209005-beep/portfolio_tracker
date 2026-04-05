@@ -1,10 +1,28 @@
-"use client";
-import { useEffect, useState } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
-import { useUser, UserButton } from "@clerk/nextjs";
-import { captureLandingAttribution } from "@/lib/growthAttribution";
-import DemoEmailModal from "@/components/DemoEmailModal";
+import LandingNav from "@/components/LandingNav";
+import LandingHeroCTA from "@/components/LandingHeroCTA";
+
+export const metadata: Metadata = {
+  title: "Portivex — Portfolio Risk Analytics | Sharpe Ratio, Beta, VaR & More",
+  description:
+    "Analyse your investment portfolio with institutional risk metrics. Calculate Sharpe Ratio, Sortino, Beta, VaR, and Maximum Drawdown with plain-English interpretation and confidence scoring. Works with any broker. Free to start.",
+  alternates: { canonical: "https://portivex.co.uk" },
+  openGraph: {
+    title: "Portivex — Portfolio Risk Analytics",
+    description:
+      "Institutional risk metrics for retail investors. Track Sharpe Ratio, Sortino, Beta, VaR, Maximum Drawdown and more — with plain-English interpretation. Free to start.",
+    url: "https://portivex.co.uk",
+    siteName: "Portivex",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Portivex — Portfolio Risk Analytics",
+    description:
+      "Institutional risk metrics for retail investors. Sharpe, Sortino, Beta, VaR, Max Drawdown — with plain-English interpretation.",
+  },
+};
 
 const PILLARS = [
   {
@@ -57,12 +75,8 @@ function SignalBars() {
     <div className="grid grid-cols-4 gap-2 mt-5">
       {SIGNALS.map((s) => (
         <div key={s.k} className="rounded-lg p-2" style={{ background: "#10001e", border: "1px solid #2a0050" }}>
-          <div className="text-[10px] font-mono mb-1" style={{ color: "#6b5e7e" }}>
-            {s.k}
-          </div>
-          <div className="text-xs font-mono font-semibold" style={{ color: s.c }}>
-            {s.v}
-          </div>
+          <div className="text-[10px] font-mono mb-1" style={{ color: "#6b5e7e" }}>{s.k}</div>
+          <div className="text-xs font-mono font-semibold" style={{ color: s.c }}>{s.v}</div>
           <div className="text-[10px] font-mono mt-2" style={{ color: "#4a3a5e" }}>Demo snapshot</div>
         </div>
       ))}
@@ -71,83 +85,9 @@ function SignalBars() {
 }
 
 export default function LandingPage() {
-  const { isSignedIn, isLoaded } = useUser();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showDemoModal, setShowDemoModal] = useState(false);
-
-  useEffect(() => {
-    captureLandingAttribution();
-  }, []);
-
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#080012", color: "#e2d9f3" }}>
-      <nav
-        className="sticky top-0 z-50"
-        style={{ background: "linear-gradient(180deg,#080012ee,#080012aa)", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}
-      >
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />
-          <div className="hidden md:flex items-center gap-7">
-            <a href="#position" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>Why Portivex</a>
-            <a href="#how" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>How It Works</a>
-            <Link href="/learn" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>Metric Library</Link>
-            <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" className="text-sm transition-colors" style={{ color: "#bf5af2" }}>
-              Discord
-            </a>
-          </div>
-          <div className="flex items-center gap-3">
-            {isLoaded && isSignedIn ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold"
-                  style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
-                >
-                  Dashboard -&gt;
-                </Link>
-                <UserButton />
-              </>
-            ) : (
-              <>
-                <Link href="/sign-in" className="hidden sm:block px-4 py-2 rounded-lg text-sm font-medium" style={{ color: "#e2d9f3", border: "1px solid #2a0050" }}>
-                  Sign in
-                </Link>
-                <Link
-                  href="/sign-up"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold"
-                  style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff" }}
-                >
-                  Start free -&gt;
-                </Link>
-                <button
-                  className="md:hidden p-2 rounded-lg text-base leading-none"
-                  style={{ color: "#6b5e7e", border: "1px solid #1a0030" }}
-                  onClick={() => setMobileMenuOpen((m) => !m)}
-                  aria-label="Menu"
-                >
-                  {mobileMenuOpen ? "x" : "="}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        {mobileMenuOpen && (
-          <div className="md:hidden px-6 pb-4 border-t" style={{ borderColor: "#1a0030" }}>
-            <a href="#position" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
-              Why Portivex
-            </a>
-            <a href="#how" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
-              How It Works
-            </a>
-            <Link href="/learn" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
-              Metric Library
-            </Link>
-            <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#bf5af2" }}>
-              Discord -&gt;
-            </a>
-          </div>
-        )}
-      </nav>
+      <LandingNav />
 
       <section className="relative overflow-hidden">
         <div className="ambient-orb ambient-orb-cyan w-80 h-80 -left-24 -top-16" />
@@ -169,20 +109,9 @@ export default function LandingPage() {
               Your broker tracks your gains. Portivex tells you if they were worth the risk.
             </h1>
             <p className="text-base sm:text-lg max-w-xl leading-relaxed" style={{ color: "#8a7a9e" }}>
-              Portivex analyses your portfolio and tells you exactly what your risk metrics mean — and what's worth your attention.
+              Portivex analyses your portfolio and tells you exactly what your risk metrics mean — and what&apos;s worth your attention.
             </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/sign-up" className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 24px #bf5af244" }}>
-                Launch free -&gt;
-              </Link>
-              <button
-                onClick={() => setShowDemoModal(true)}
-                className="px-7 py-3 rounded-xl text-sm font-semibold hover-lift"
-                style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}
-              >
-                Try demo
-              </button>
-            </div>
+            <LandingHeroCTA />
             <div className="inline-flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
               Free during early access · No card required
             </div>
@@ -219,7 +148,7 @@ export default function LandingPage() {
               </div>
               <div className="mt-4 rounded-xl overflow-hidden" style={{ border: "1px solid #2a0050" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/screen-metrics2.png" alt="Risk metrics preview" className="w-full object-cover object-top" />
+                <img src="/screen-metrics2.png" alt="Portfolio risk metrics dashboard showing Sharpe Ratio, Beta, VaR and Maximum Drawdown" className="w-full object-cover object-top" />
               </div>
             </div>
           </div>
@@ -266,12 +195,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="max-w-4xl mx-auto px-6 py-12 w-full">
+        <div className="text-center mb-8">
+          <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>Learn</div>
+          <h2 className="text-2xl sm:text-3xl font-bold">Understand every number in your portfolio.</h2>
+          <p className="text-sm mt-3 max-w-xl mx-auto" style={{ color: "#8a7a9e" }}>
+            Plain-English explanations of Sharpe Ratio, Sortino, Beta, VaR, Maximum Drawdown, and more.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+          {[
+            { name: "Sharpe Ratio", slug: "sharpe-ratio", accent: "#00f5d4" },
+            { name: "Sortino Ratio", slug: "sortino-ratio", accent: "#bf5af2" },
+            { name: "Beta", slug: "beta", accent: "#ff2d78" },
+            { name: "Value at Risk", slug: "value-at-risk", accent: "#f5a623" },
+            { name: "Max Drawdown", slug: "maximum-drawdown", accent: "#ff2d78" },
+            { name: "Correlation", slug: "correlation", accent: "#bf5af2" },
+          ].map((m) => (
+            <Link
+              key={m.slug}
+              href={`/learn/${m.slug}`}
+              className="rounded-xl p-3 text-sm font-medium text-center transition-all hover:scale-[1.02]"
+              style={{ background: "#0d0020", border: `1px solid ${m.accent}33`, color: m.accent }}
+            >
+              {m.name}
+            </Link>
+          ))}
+        </div>
+        <div className="text-center">
+          <Link href="/learn" className="text-sm font-medium" style={{ color: "#6b5e7e" }}>
+            View full metric library →
+          </Link>
+        </div>
+      </section>
+
       <section className="px-6 py-20 text-center">
         <div className="max-w-2xl mx-auto rounded-2xl p-8 sm:p-10" style={{ background: "linear-gradient(130deg,#120020,#0d0018)", border: "1px solid #2a0050" }}>
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">See your portfolio through a risk-intelligence lens.</h2>
           <p className="text-sm mb-7" style={{ color: "#8a7a9e" }}>Free during early access. No card required.</p>
           <Link href="/sign-up" className="inline-flex px-8 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 26px #bf5af244" }}>
-            Create account -&gt;
+            Create account &rarr;
           </Link>
         </div>
       </section>
@@ -279,14 +242,15 @@ export default function LandingPage() {
       <footer className="px-6 py-8 border-t" style={{ borderColor: "#1a0030" }}>
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs" style={{ color: "#4a3a5e" }}>Portivex - Portfolio Risk Intelligence Platform</p>
-          <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#bf5af2" }}>
-            Join Discord -&gt;
-          </a>
+          <div className="flex items-center gap-5">
+            <Link href="/learn" className="text-xs" style={{ color: "#6b5e7e" }}>Metric Library</Link>
+            <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "#bf5af2" }}>
+              Join Discord &rarr;
+            </a>
+          </div>
           <p className="text-xs" style={{ color: "#2a1a40" }}>For informational purposes only. Not financial advice.</p>
         </div>
       </footer>
-
-      {showDemoModal && <DemoEmailModal onClose={() => setShowDemoModal(false)} />}
     </div>
   );
 }
