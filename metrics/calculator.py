@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 TRADING_DAYS = 252
+MIN_BENCHMARK_OVERLAP_DAYS = 15
 
 
 def _strip_tz_index(series: pd.Series) -> pd.Series:
@@ -86,13 +87,18 @@ def sortino_ratio(port_returns, rf_annual):
 
 
 def beta(port_returns, bench_returns):
-    aligned = pd.concat([port_returns, bench_returns], axis=1).dropna()
-    if len(aligned) < 30:
+    aligned = pd.concat([port_returns, bench_returns], axis=1)
+    aligned = aligned.replace([np.inf, -np.inf], np.nan).dropna()
+    if len(aligned) < MIN_BENCHMARK_OVERLAP_DAYS:
         return None
-    aligned.columns = ["p", "b"]
-    cov = aligned.cov()
-    var_b = cov.loc["b", "b"]
-    return float(cov.loc["p", "b"] / var_b) if var_b != 0 else None
+    p = aligned.iloc[:, 0].astype(float).to_numpy()
+    b = aligned.iloc[:, 1].astype(float).to_numpy()
+    var_b = float(np.var(b, ddof=1))
+    if not np.isfinite(var_b) or var_b <= 1e-12:
+        return 0.0
+    cov_pb = float(np.cov(p, b, ddof=1)[0, 1])
+    beta_val = cov_pb / var_b
+    return float(beta_val) if np.isfinite(beta_val) else None
 
 
 def _annualised_geometric(daily_returns: pd.Series) -> float:
@@ -227,7 +233,7 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
 
     b = None
     capm_ret = None
-    if len(aligned) >= 30:
+    if len(aligned) >= MIN_BENCHMARK_OVERLAP_DAYS:
         b = beta(port_ret_overlap, bench_ret_overlap)
         capm_ret = capm_return(b, rf_annual, bench_ret_overlap) if b is not None else None
 

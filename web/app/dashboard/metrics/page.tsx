@@ -79,7 +79,7 @@ export default function MetricsPage() {
   const [benchmark, setBenchmark] = useState<Benchmark>("sp500");
   const [riskProfile, setRiskProfile] = useState<InvestorProfile["risk_appetite"]>("balanced");
 
-  const load = useCallback(async (bench: Benchmark) => {
+  const load = useCallback(async (bench: Benchmark, force = false) => {
     setLoading(true);
     setError("");
     if (isDemoMode) {
@@ -94,7 +94,7 @@ export default function MetricsPage() {
     }
     try {
       const [refresh, perf] = await Promise.all([
-        fetchRefresh(bench),
+        fetchRefresh(bench, force),
         fetchPerformance("1Y", bench).catch(() => null),
       ]);
       setData(refresh);
@@ -289,7 +289,7 @@ export default function MetricsPage() {
           </div>
 
           <button
-            onClick={() => load(benchmark)}
+            onClick={() => load(benchmark, true)}
             disabled={loading}
             className="px-3 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
             style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
