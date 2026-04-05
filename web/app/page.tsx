@@ -90,6 +90,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-7">
             <a href="#position" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>Why Portivex</a>
             <a href="#how" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>How It Works</a>
+            <Link href="/learn" className="text-sm transition-colors" style={{ color: "#6b5e7e" }}>Metric Library</Link>
             <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" className="text-sm transition-colors" style={{ color: "#bf5af2" }}>
               Discord
             </a>
@@ -138,6 +139,9 @@ export default function LandingPage() {
             <a href="#how" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
               How It Works
             </a>
+            <Link href="/learn" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#6b5e7e" }}>
+              Metric Library
+            </Link>
             <a href="https://discord.gg/MabTm9Z4zR" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-sm" style={{ color: "#bf5af2" }}>
               Discord -&gt;
             </a>
