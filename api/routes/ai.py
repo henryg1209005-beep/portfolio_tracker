@@ -615,6 +615,22 @@ def _is_hard_quality_failure(failed_rules: list[str]) -> bool:
     return False
 
 
+def _sanitize_report_text(text: str) -> str:
+    """
+    Remove noisy standalone divider lines (---, ****, long bar separators)
+    that degrade frontend readability.
+    """
+    cleaned: list[str] = []
+    for line in (text or "").splitlines():
+        t = line.strip()
+        if re.fullmatch(r"[-*_]{3,}", t):
+            continue
+        if re.fullmatch(r"[━─—–=\-]{6,}", t):
+            continue
+        cleaned.append(line.rstrip())
+    return "\n".join(cleaned).strip()
+
+
 def _get_api_key() -> str | None:
     env_key = os.environ.get("ANTHROPIC_API_KEY")
     if env_key:
@@ -678,7 +694,7 @@ def analysis(x_portfolio_token: str = Header(default="")):
                     for chunk in stream.text_stream:
                         full_text.append(chunk)
 
-                report = "".join(full_text)
+                report = _sanitize_report_text("".join(full_text))
                 failed_rules = _validate_analysis_output(report)
                 if failed_rules and _is_hard_quality_failure(failed_rules):
                     try:
@@ -793,7 +809,7 @@ def analysis_once(x_portfolio_token: str = Header(default="")):
             for chunk in stream.text_stream:
                 full_text.append(chunk)
 
-        report = "".join(full_text)
+        report = _sanitize_report_text("".join(full_text))
         failed_rules = _validate_analysis_output(report)
         if failed_rules and _is_hard_quality_failure(failed_rules):
             db.refund_usage_increment(token)
