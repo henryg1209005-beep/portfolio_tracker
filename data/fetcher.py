@@ -8,9 +8,9 @@ GBPEUR_TICKER    = "GBPEUR=X"
 
 # Benchmarks — user-selectable
 BENCHMARKS = {
-    "sp500": "^GSPC",
-    "ftse100": "^FTSE",
-    "msci_world": "URTH",
+    "sp500": ("^GSPC",),
+    "ftse100": ("^FTSE",),
+    "msci_world": ("URTH", "ACWI", "VT"),
 }
 DEFAULT_BENCHMARK = "sp500"
 
@@ -404,32 +404,45 @@ def _normalise_close_to_gbp(close, sym, gbpusd_series=None):
 
 def fetch_benchmark_data(period="1y", start=None, benchmark="sp500"):
     """Fetch benchmark index in GBP terms."""
-    bench_ticker = BENCHMARKS.get(benchmark, BENCHMARKS[DEFAULT_BENCHMARK])
+    bench_tickers = BENCHMARKS.get(benchmark, BENCHMARKS[DEFAULT_BENCHMARK])
     try:
         if start:
-            sp_data = yf.download(bench_ticker,  start=start, auto_adjust=True, progress=False)
             fx_data = yf.download(GBPUSD_TICKER, start=start, auto_adjust=True, progress=False)
         else:
-            sp_data = yf.download(bench_ticker,  period=period, auto_adjust=True, progress=False)
             fx_data = yf.download(GBPUSD_TICKER, period=period, auto_adjust=True, progress=False)
-
-        sp_close = _extract_close(sp_data, bench_ticker)
         fx_close = _extract_close(fx_data, GBPUSD_TICKER)
+        if isinstance(fx_close.index, pd.DatetimeIndex) and fx_close.index.tz is not None:
+            fx_close = fx_close.copy()
+            fx_close.index = fx_close.index.tz_localize(None)
 
-        if sp_close.empty:
-            return pd.Series(dtype=float)
+        for bench_ticker in bench_tickers:
+            if start:
+                sp_data = yf.download(bench_ticker, start=start, auto_adjust=True, progress=False)
+            else:
+                sp_data = yf.download(bench_ticker, period=period, auto_adjust=True, progress=False)
+            sp_close = _extract_close(sp_data, bench_ticker)
+            if sp_close.empty:
+                continue
 
-        # FTSE 100 is already in GBP — no FX conversion needed
-        if benchmark == "ftse100":
-            if getattr(sp_close.index, "tz", None) is not None:
-                sp_close.index = sp_close.tz_localize(None)
-            return sp_close.dropna()
+            if isinstance(sp_close.index, pd.DatetimeIndex) and sp_close.index.tz is not None:
+                sp_close = sp_close.copy()
+                sp_close.index = sp_close.index.tz_localize(None)
 
-        if not fx_close.empty:
-            fx_aligned = fx_close.reindex(sp_close.index).ffill()
-            return (sp_close / fx_aligned).dropna()
+            # FTSE 100 is already in GBP.
+            if benchmark == "ftse100":
+                return sp_close.dropna()
 
-        return (sp_close / fetch_gbp_usd_rate()).dropna()
+            if not fx_close.empty:
+                fx_aligned = fx_close.reindex(sp_close.index).ffill()
+                out = (sp_close / fx_aligned).dropna()
+                if len(out) >= 30:
+                    return out
+
+            out = (sp_close / fetch_gbp_usd_rate()).dropna()
+            if len(out) >= 30:
+                return out
+
+        return pd.Series(dtype=float)
     except Exception as e:
         print(f"Error fetching benchmark: {e}")
         return pd.Series(dtype=float)

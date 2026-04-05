@@ -4,6 +4,20 @@ import pandas as pd
 TRADING_DAYS = 252
 
 
+def _strip_tz_index(series: pd.Series) -> pd.Series:
+    """
+    Normalise DatetimeIndex timezone handling before joins.
+
+    yfinance can return tz-aware or tz-naive indices depending on ticker and
+    endpoint. Mixing them causes concat/join alignment to silently fail,
+    collapsing benchmark-overlap days and making beta unavailable.
+    """
+    if isinstance(series.index, pd.DatetimeIndex) and series.index.tz is not None:
+        series = series.copy()
+        series.index = series.index.tz_localize(None)
+    return series
+
+
 def _portfolio_returns(prices_df, weights, first_buy_dates=None):
     """
     Compute weighted daily portfolio returns with dynamic per-day weights.
@@ -177,6 +191,7 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
     port_ret_full = _portfolio_returns(prices_df, weights, first_buy_dates)
     if port_ret_full.empty or len(port_ret_full) < 30:
         return None
+    port_ret_full = _strip_tz_index(port_ret_full)
     # Institutional convention: compute absolute risk metrics on a fixed
     # trailing 1Y window (252 trading days) to avoid age-dependent noise.
     port_ret_1y = port_ret_full.iloc[-TRADING_DAYS:]
@@ -192,6 +207,7 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
         )
 
     bench_ret_full = benchmark_series.pct_change().dropna()
+    bench_ret_full = _strip_tz_index(bench_ret_full)
 
     # Strict overlap is used for benchmark-relative metrics only (beta/alpha/CAPM).
     aligned = pd.concat([port_ret_full, bench_ret_full], axis=1, join="inner").dropna()
