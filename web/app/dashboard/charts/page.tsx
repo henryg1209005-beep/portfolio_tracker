@@ -132,7 +132,7 @@ function ActiveShape(props: {
 
 export default function ChartsPage() {
   const { currency } = useCurrency();
-  const { isDemoMode } = useDemoMode();
+  const { isDemoMode, demoData } = useDemoMode();
   const symbol = CURRENCY_SYMBOL[currency] ?? "£";
   const [perfData,    setPerfData]    = useState<PerformanceData | null>(null);
   const [portData,    setPortData]    = useState<RefreshData | null>(null);
@@ -173,7 +173,7 @@ export default function ChartsPage() {
   const loadPort = useCallback(async () => {
     setPortLoading(true);
     if (isDemoMode) {
-      setPortData(DEMO_REFRESH_DATA);
+      setPortData(demoData);
       setPortLoading(false);
       return;
     }
@@ -184,7 +184,7 @@ export default function ChartsPage() {
     } finally {
       setPortLoading(false);
     }
-  }, [isDemoMode]);
+  }, [isDemoMode, demoData]);
 
   useEffect(() => { loadPerf(timeframe, benchmark); }, [timeframe, benchmark, loadPerf]);
   useEffect(() => { loadPort(); }, [loadPort, isDemoMode]);

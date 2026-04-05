@@ -71,7 +71,7 @@ function fmtCurrency(v: unknown): string {
 
 export default function MetricsPage() {
   const { currency } = useCurrency();
-  const { isDemoMode } = useDemoMode();
+  const { isDemoMode, demoData } = useDemoMode();
   const [data, setData] = useState<RefreshData | null>(null);
   const [perfData, setPerfData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +84,7 @@ export default function MetricsPage() {
     setError("");
     if (isDemoMode) {
       const demoRefresh = {
-        ...DEMO_REFRESH_DATA,
+        ...demoData,
         metrics: DEMO_REFRESH_DATA.metrics ? { ...DEMO_REFRESH_DATA.metrics, benchmark_used: bench } : null,
       };
       setData(demoRefresh);
@@ -104,7 +104,7 @@ export default function MetricsPage() {
     } finally {
       setLoading(false);
     }
-  }, [isDemoMode]);
+  }, [isDemoMode, demoData]);
 
   useEffect(() => {
     load(benchmark);
