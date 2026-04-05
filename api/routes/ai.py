@@ -743,6 +743,69 @@ def analysis(x_portfolio_token: str = Header(default="")):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
+@router.post("/analysis_once")
+def analysis_once(x_portfolio_token: str = Header(default="")):
+    """
+    Non-streaming fallback for environments where SSE/proxy streaming is unreliable.
+    Returns the full validated report as JSON.
+    """
+    token = x_portfolio_token
+    _validate_token(token)
+    allowed, _remaining = _check_and_increment(token)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily analysis limit reached ({DAILY_LIMIT}/day). Resets at midnight."
+        )
+
+    refunded = False
+    try:
+        market_data = _refresh_data(token)
+        profile = _load_profile(token)
+        context = _build_context(market_data, profile)
+        api_key = _get_api_key()
+        client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
+
+        full_text: list[str] = []
+        with client.messages.stream(
+            model="claude-haiku-4-5",
+            max_tokens=3500,
+            system=[{
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }],
+            messages=[{"role": "user", "content": context}],
+        ) as stream:
+            for chunk in stream.text_stream:
+                full_text.append(chunk)
+
+        report = "".join(full_text)
+        failed_rules = _validate_analysis_output(report)
+        if failed_rules:
+            db.refund_usage_increment(token)
+            refunded = True
+            raise HTTPException(
+                status_code=422,
+                detail="Analysis quality check failed. Please retry."
+            )
+        return {"text": report}
+    except anthropic.AuthenticationError:
+        if not refunded:
+            db.refund_usage_increment(token)
+        raise HTTPException(status_code=502, detail="AI provider authentication failed")
+    except anthropic.APIConnectionError:
+        if not refunded:
+            db.refund_usage_increment(token)
+        raise HTTPException(status_code=502, detail="AI provider connection failed")
+    except HTTPException:
+        raise
+    except Exception:
+        if not refunded:
+            db.refund_usage_increment(token)
+        raise HTTPException(status_code=500, detail="Analysis failed. Please retry.")
+
+
 # ── Saved Reports ─────────────────────────────────────────────────────────────
 
 class _SaveReportBody(pydantic.BaseModel):

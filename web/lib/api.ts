@@ -378,6 +378,38 @@ export function streamAnalysis(
 ): () => void {
   const controller = new AbortController();
   let finished = false;
+  let fallbackStarted = false;
+
+  async function runFallbackOnce() {
+    if (fallbackStarted || finished) return;
+    fallbackStarted = true;
+    try {
+      const res = await fetch(`${BASE}/ai/analysis_once`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        let msg = "Failed to start analysis";
+        try {
+          const data = await res.json();
+          msg = data?.detail ?? msg;
+        } catch {}
+        if (!finished) onError(msg);
+        return;
+      }
+      const data = await res.json();
+      if (data?.text) onChunk(data.text);
+      if (!finished) {
+        finished = true;
+        onDone();
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      if (!finished) onError("Connection lost");
+    }
+  }
 
   (async () => {
     try {
@@ -453,7 +485,9 @@ export function streamAnalysis(
       }
     } catch (err: any) {
       if (err?.name === "AbortError") return;
-      if (!finished) onError("Connection lost");
+      if (!finished) {
+        await runFallbackOnce();
+      }
     }
   })();
 
