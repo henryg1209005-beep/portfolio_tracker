@@ -602,6 +602,19 @@ def _validate_analysis_output(text: str) -> list[str]:
     return sorted(set(failed))
 
 
+def _is_hard_quality_failure(failed_rules: list[str]) -> bool:
+    """
+    Treat quality checks as hard-fail only when structure is clearly broken.
+    Minor phrasing/format misses should not block delivery.
+    """
+    missing_sections = [r for r in failed_rules if r.startswith("missing_section:")]
+    if len(missing_sections) >= 3:
+        return True
+    if "missing_section:TL;DR" in missing_sections and len(missing_sections) >= 2:
+        return True
+    return False
+
+
 def _get_api_key() -> str | None:
     env_key = os.environ.get("ANTHROPIC_API_KEY")
     if env_key:
@@ -667,7 +680,7 @@ def analysis(x_portfolio_token: str = Header(default="")):
 
                 report = "".join(full_text)
                 failed_rules = _validate_analysis_output(report)
-                if failed_rules:
+                if failed_rules and _is_hard_quality_failure(failed_rules):
                     try:
                         db.refund_usage_increment(token)
                     except Exception:
@@ -782,7 +795,7 @@ def analysis_once(x_portfolio_token: str = Header(default="")):
 
         report = "".join(full_text)
         failed_rules = _validate_analysis_output(report)
-        if failed_rules:
+        if failed_rules and _is_hard_quality_failure(failed_rules):
             db.refund_usage_increment(token)
             refunded = True
             raise HTTPException(
