@@ -144,16 +144,21 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (idx === -1) {
+        const knownPrice =
+          DEMO_REFRESH_DATA.holdings.find((h) => h.ticker.toUpperCase() === ticker)?.current_price ?? null;
+        const currentPrice = knownPrice ?? null;
+        const marketValue = currentPrice != null ? shares * currentPrice : shares * priceGbp;
+        const pnl = currentPrice != null ? marketValue - shares * priceGbp : 0;
         holdings.push({
           ticker,
           type: payload.type,
           net_shares: shares,
           avg_cost: priceGbp,
-          current_price: priceGbp,
-          market_value: shares * priceGbp,
+          current_price: currentPrice,
+          market_value: marketValue,
           cost_basis: shares * priceGbp,
-          pnl: 0,
-          pnl_pct: 0,
+          pnl,
+          pnl_pct: priceGbp > 0 ? (pnl / (shares * priceGbp)) * 100 : 0,
           total_dividends: 0,
           weight: null,
           transaction_count: 1,
