@@ -408,7 +408,8 @@ export default function AiPage() {
 
   useEffect(() => {
     if (isDemoMode) {
-      setHoldingCount(demoData.holdings.length);
+      // In demo mode, always allow analysis — use 1 as minimum so the button isn't disabled
+      setHoldingCount(Math.max(1, demoData.holdings.length));
       setUsage({ used: 0, limit: 999, remaining: 999 });
       setSavedReports([]);
       return;
@@ -499,8 +500,12 @@ export default function AiPage() {
             <p className="text-white/35 text-sm mt-1">
               Private-wealth-grade analysis · Live data
             </p>
-            {usage && (
-              <p className="text-[11px] mt-1 font-mono" style={{ color: limitHit ? "#ff2d78" : "#3a2a50" }}>
+            {isDemoMode ? (
+              <p className="text-[11px] mt-1 font-mono" style={{ color: "#4a3a5e" }}>
+                Demo mode · Unlimited analyses
+              </p>
+            ) : usage && (
+              <p className="text-[11px] mt-1 font-mono" style={{ color: limitHit ? "#ff2d78" : "#6b5e7e" }}>
                 {limitHit
                   ? "Daily limit reached — resets at midnight"
                   : `${usage.remaining} of ${usage.limit} analyses remaining today`}
