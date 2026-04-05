@@ -5,11 +5,12 @@ import Image from "next/image";
 import { METRICS, getMetric, getRelatedMetrics } from "@/lib/metrics-data";
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const metric = getMetric(params.slug);
+  const { slug } = await params;
+  const metric = getMetric(slug);
   if (!metric) return {};
 
   return {
@@ -60,8 +61,9 @@ function JsonLd({ metric }: { metric: ReturnType<typeof getMetric> }) {
   );
 }
 
-export default function MetricDetailPage({ params }: Props) {
-  const metric = getMetric(params.slug);
+export default async function MetricDetailPage({ params }: Props) {
+  const { slug } = await params;
+  const metric = getMetric(slug);
   if (!metric) notFound();
 
   const related = getRelatedMetrics(metric);
