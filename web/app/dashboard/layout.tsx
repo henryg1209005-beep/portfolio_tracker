@@ -9,9 +9,10 @@ import { CurrencyProvider } from "@/lib/currencyContext";
 import { DemoModeProvider, useDemoMode } from "@/lib/demoModeContext";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { userId } = useAuth();
   return (
     <CurrencyProvider>
-      <DemoModeProvider>
+      <DemoModeProvider userId={userId ?? "guest"}>
         <DashboardShell>{children}</DashboardShell>
       </DemoModeProvider>
     </CurrencyProvider>

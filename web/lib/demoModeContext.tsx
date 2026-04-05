@@ -24,8 +24,8 @@ type DemoModeCtx = {
   resetDemoPortfolio: () => void;
 };
 
-const STORAGE_KEY = "portivex_demo_mode";
-const DEMO_HOLDINGS_KEY = "portivex_demo_holdings_v1";
+function storageKey(userId: string) { return `portivex_demo_mode_${userId}`; }
+function holdingsKey(userId: string) { return `portivex_demo_holdings_v1_${userId}`; }
 
 function cloneDefaultDemoData(): RefreshData {
   return {
@@ -74,7 +74,9 @@ const Ctx = createContext<DemoModeCtx>({
   resetDemoPortfolio: () => {},
 });
 
-export function DemoModeProvider({ children }: { children: React.ReactNode }) {
+export function DemoModeProvider({ children, userId = "guest" }: { children: React.ReactNode; userId?: string }) {
+  const STORAGE_KEY = storageKey(userId);
+  const DEMO_HOLDINGS_KEY = holdingsKey(userId);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoData, setDemoData] = useState<RefreshData>(cloneDefaultDemoData());
 
