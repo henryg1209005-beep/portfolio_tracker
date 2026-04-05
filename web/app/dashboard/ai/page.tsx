@@ -571,7 +571,7 @@ export default function AiPage() {
           <div className="bg-surface border border-border rounded-2xl px-6">
             <LoadingState status={status} />
           </div>
-        ) : status === "streaming" && sections.length === 0 && hasText ? (
+        ) : (status === "streaming" || status === "done") && sections.length === 0 && hasText ? (
           <StreamingRawCard text={text} />
         ) : sections.length > 0 || partial ? (
           <div className="space-y-4">
