@@ -125,10 +125,10 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 type Status = "good" | "ok" | "bad" | "neutral";
 
 const STATUS_COLORS: Record<Status, string> = {
-  good:    "#00f5d4",
-  ok:      "#bf5af2",
-  bad:     "#ff2d78",
-  neutral: "#6b5e7e",
+  good:    "#4dd2ff",
+  ok:      "#7ca8ff",
+  bad:     "#ff6b8a",
+  neutral: "#7f93ad",
 };
 
 const STATUS_LABELS: Record<string, Record<Status, string>> = {
@@ -163,15 +163,15 @@ function MetricCard({
   const statusText = STATUS_LABELS[metricKey]?.[status] ?? (status === "neutral" ? "No data" : status);
 
   const tipBg: Record<Status, string> = {
-    good:    "rgba(0,245,212,0.04)",
-    ok:      "rgba(191,90,242,0.04)",
-    bad:     "rgba(255,45,120,0.05)",
+    good:    "rgba(77,210,255,0.06)",
+    ok:      "rgba(124,168,255,0.06)",
+    bad:     "rgba(255,107,138,0.08)",
     neutral: "transparent",
   };
   const tipBorder: Record<Status, string> = {
-    good:    "#00f5d433",
-    ok:      "#bf5af233",
-    bad:     "#ff2d7844",
+    good:    "#4dd2ff44",
+    ok:      "#7ca8ff44",
+    bad:     "#ff6b8a44",
     neutral: "transparent",
   };
 
@@ -495,7 +495,7 @@ export default function MetricsGrid({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-xl px-4 py-3 flex flex-wrap items-center gap-3" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
+      <div className="rounded-xl px-4 py-3 flex flex-wrap items-center gap-3 ops-panel">
         <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#6b5e7e" }}>Methodology</span>
         <span className="text-xs font-semibold" style={{ color: "#e2d9f3" }}>
           {metrics.risk_model === "current_holdings_cost_weighted" ? "Current Holdings Risk Model" : "Portfolio Risk Model"}
@@ -503,39 +503,39 @@ export default function MetricsGrid({
         <span
           className="text-[10px] font-mono px-2 py-0.5 rounded-full"
           style={{
-            color: confidence === "High" ? "#00f5d4" : confidence === "Medium" ? "#bf5af2" : "#ff2d78",
-            border: "1px solid #2a0050",
+            color: confidence === "High" ? "#4dd2ff" : confidence === "Medium" ? "#7ca8ff" : "#ff6b8a",
+            border: "1px solid #1f3248",
           }}
         >
           Confidence: {confidence}
         </span>
         {metrics.sample_days != null && (
-          <span className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>Sample: {metrics.sample_days} trading days</span>
+          <span className="text-[10px] font-mono" style={{ color: "#7f93ad" }}>Sample: {metrics.sample_days} trading days</span>
         )}
         {metrics.benchmark_overlap_days != null && (
-          <span className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>Benchmark overlap: {metrics.benchmark_overlap_days} days</span>
+          <span className="text-[10px] font-mono" style={{ color: "#7f93ad" }}>Benchmark overlap: {metrics.benchmark_overlap_days} days</span>
         )}
         {(metrics.window_years_equivalent != null || metrics.sample_days != null) && (
-          <span className="text-[10px] font-mono" style={{ color: "#6b5e7e" }}>
+          <span className="text-[10px] font-mono" style={{ color: "#7f93ad" }}>
             Window: ~{(metrics.window_years_equivalent ?? ((metrics.sample_days ?? 0) / 252)).toFixed(2)} years
           </span>
         )}
       </div>
-      <div className="rounded-xl px-4 py-3 flex flex-wrap items-center gap-2" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
-        <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#6b5e7e" }}>Horizon Map</span>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #2a0050", color: "#e2d9f3" }}>
+      <div className="rounded-xl px-4 py-3 flex flex-wrap items-center gap-2 ops-panel">
+        <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "#7f93ad" }}>Horizon Map</span>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #1f3248", color: "#d9e4f2" }}>
           Since inception: Annualised Return
         </span>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #2a0050", color: "#00f5d4" }}>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #1f3248", color: "#4dd2ff" }}>
           Trailing 252d: Sharpe, Sortino, Vol, VaR, Drawdown
         </span>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #2a0050", color: "#bf5af2" }}>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ border: "1px solid #1f3248", color: "#7ca8ff" }}>
           Benchmark overlap: Beta, CAPM, Alpha
         </span>
       </div>
       {limitedData && (
         <div className="rounded-xl px-4 py-3 text-[11px] leading-relaxed flex items-start gap-2"
-          style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
+          style={{ background: "#ff6b8a12", border: "1px solid #ff6b8a44", color: "#ff6b8a" }}>
           <span className="shrink-0 mt-0.5">⚠</span>
           <span>
             Limited data quality: fewer than 60 trading days. Treat this as directional only until more observations accumulate.
@@ -660,9 +660,9 @@ export default function MetricsGrid({
       {/* Risk warning */}
       <div
         className="rounded-xl px-4 py-3 text-[11px] leading-relaxed flex items-start gap-2"
-        style={{ background: "#1a001a", border: "1px solid #3d005e33", color: "#6b5e7e" }}
+        style={{ background: "#0d1828", border: "1px solid #1f3248", color: "#7f93ad" }}
       >
-        <span style={{ color: "#bf5af266" }} className="shrink-0 mt-0.5">⚠</span>
+        <span style={{ color: "#7ca8ff88" }} className="shrink-0 mt-0.5">⚠</span>
         <span>
           Performance may not persist — current alpha and Sharpe may be driven by concentrated positions rather than structural edge. Horizons are mixed by design: return is since inception, absolute risk metrics are trailing 252d, and benchmark-relative metrics use strict overlap with {benchmarkLabel}. Past performance is not indicative of future results.
         </span>

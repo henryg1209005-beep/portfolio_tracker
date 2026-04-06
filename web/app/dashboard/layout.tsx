@@ -63,8 +63,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center" style={{ background: "#080012" }}>
-        <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#bf5af266", borderTopColor: "transparent" }} />
+      <div className="flex h-screen items-center justify-center" style={{ background: "#050b14" }}>
+        <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#4dd2ff55", borderTopColor: "transparent" }} />
       </div>
     );
   }
@@ -80,19 +80,24 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         isAdminUser={isAdminUser}
       />
         <main className="flex-1 overflow-y-auto bg-bg pb-16 md:pb-0">
+          <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-3">
+            <div className="ops-panel rounded-lg px-3 py-2 text-[10px] font-mono uppercase tracking-[0.16em] text-muted">
+              PORTIVEX INTELLIGENCE CONSOLE
+            </div>
+          </div>
           {isDemoMode && (
             <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-4">
               <div
                 className="rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3"
-                style={{ background: "#bf5af211", border: "1px solid #bf5af244", color: "#bf5af2" }}
+                style={{ background: "#7ca8ff12", border: "1px solid #7ca8ff44", color: "#7ca8ff" }}
               >
-                <span>Exploring with sample data — exit demo when you&apos;re ready to add your real holdings.</span>
+                <span>Exploring with sample data. Exit demo when you&apos;re ready to add your real holdings.</span>
                 <button
                   onClick={() => setDemoMode(false)}
                   className="px-3 py-1.5 rounded-lg text-xs font-mono"
-                  style={{ border: "1px solid #bf5af244", color: "#bf5af2" }}
+                  style={{ border: "1px solid #7ca8ff44", color: "#7ca8ff" }}
                 >
-                  Add real holdings →
+                  Add real holdings -&gt;
                 </button>
               </div>
             </div>
@@ -101,13 +106,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-4">
               <div
                 className="rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3"
-                style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}
+                style={{ background: "#ff6b8a12", border: "1px solid #ff6b8a44", color: "#ff6b8a" }}
               >
                 <span>{profileError}</span>
                 <button
                   onClick={() => window.location.reload()}
                   className="px-3 py-1.5 rounded-lg text-xs font-mono"
-                  style={{ border: "1px solid #ff2d7833", color: "#ff2d78" }}
+                  style={{ border: "1px solid #ff6b8a44", color: "#ff6b8a" }}
                 >
                   Retry
                 </button>

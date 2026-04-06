@@ -129,9 +129,9 @@ export default function OverviewPage() {
             {!loading && data && (
               <span
                 className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full animate-fade-up"
-                style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4", animationDelay: "400ms" }}
+                style={{ background: "#4dd2ff14", border: "1px solid #4dd2ff44", color: "#4dd2ff", animationDelay: "400ms" }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4dd2ff" }} />
                 {data.refreshed_at
                   ? `Updated ${Math.round((Date.now() / 1000 - data.refreshed_at) / 60)}m ago`
                   : "LIVE"}
@@ -140,7 +140,7 @@ export default function OverviewPage() {
             {isDemoMode && (
               <span
                 className="text-[10px] font-mono px-2 py-0.5 rounded-full"
-                style={{ background: "#bf5af211", border: "1px solid #bf5af244", color: "#bf5af2" }}
+                style={{ background: "#7ca8ff14", border: "1px solid #7ca8ff44", color: "#7ca8ff" }}
               >
                 DEMO PORTFOLIO
               </span>
@@ -152,15 +152,15 @@ export default function OverviewPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {data && (
-            <div className="flex items-center rounded-lg overflow-hidden font-mono text-xs" style={{ border: "1px solid #2a0050" }}>
+            <div className="ops-segment flex items-center rounded-lg overflow-hidden font-mono text-xs">
               {CURRENCIES.map((c) => (
                 <button
                   key={c}
                   onClick={() => setCurrency(c)}
                   className="px-3 py-2 transition-all"
                   style={{
-                    background: currency === c ? "linear-gradient(90deg,#bf5af2,#ff2d78)" : "transparent",
-                    color: currency === c ? "#fff" : "#6b5e7e",
+                    background: currency === c ? "linear-gradient(90deg,#1f4b67,#1a3653)" : "transparent",
+                    color: currency === c ? "#d9f2ff" : undefined,
                   }}
                 >
                   {c}
@@ -172,16 +172,7 @@ export default function OverviewPage() {
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="px-3 py-2 text-sm rounded-lg font-mono transition-all disabled:opacity-40"
-            style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#e2d9f3";
-              (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#6b5e7e";
-              (e.currentTarget as HTMLElement).style.borderColor = "#2a0050";
-            }}
+            className="ops-btn px-3 py-2 text-sm rounded-lg font-mono disabled:opacity-40"
           >
             {loading ? "Refreshing..." : isDemoMode ? "Sync Demo" : "Refresh"}
           </button>
@@ -189,8 +180,7 @@ export default function OverviewPage() {
           {!isDemoMode && (
             <button
               onClick={enableDemoPortfolio}
-              className="px-3 py-2 text-sm rounded-lg font-mono transition-all"
-              style={{ border: "1px solid #bf5af244", color: "#bf5af2", background: "#bf5af211" }}
+              className="ops-btn-soft px-3 py-2 text-sm rounded-lg font-mono"
             >
               Try Demo
             </button>
@@ -199,8 +189,7 @@ export default function OverviewPage() {
           {isDemoMode && (
             <button
               onClick={() => setDemoMode(false)}
-              className="px-3 py-2 text-sm rounded-lg font-mono transition-all"
-              style={{ border: "1px solid #00f5d444", color: "#00f5d4", background: "#00f5d411" }}
+              className="ops-btn px-3 py-2 text-sm rounded-lg font-mono"
             >
               Exit Demo
             </button>
@@ -213,16 +202,7 @@ export default function OverviewPage() {
                 await clearAllHoldings();
                 load();
               }}
-              className="px-3 py-2 text-sm font-mono rounded-lg transition-all"
-              style={{ border: "1px solid #ff2d7833", color: "#ff2d7866" }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "#ff2d78";
-                (e.currentTarget as HTMLElement).style.borderColor = "#ff2d78";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "#ff2d7866";
-                (e.currentTarget as HTMLElement).style.borderColor = "#ff2d7833";
-              }}
+              className="ops-btn-danger px-3 py-2 text-sm font-mono rounded-lg"
             >
               Clear
             </button>
@@ -231,8 +211,7 @@ export default function OverviewPage() {
           {isDemoMode && (
             <button
               onClick={resetDemoPortfolio}
-              className="px-3 py-2 text-sm font-mono rounded-lg transition-all"
-              style={{ border: "1px solid #bf5af244", color: "#bf5af2", background: "#bf5af211" }}
+              className="ops-btn-soft px-3 py-2 text-sm font-mono rounded-lg"
             >
               Reset Demo
             </button>
@@ -242,21 +221,12 @@ export default function OverviewPage() {
             <button
               onClick={() => startReview("header_button")}
               disabled={!canReview}
-              className="px-3 py-2 text-sm font-semibold rounded-lg transition-all disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
-              style={{ background: "linear-gradient(90deg, #3d005e, #1a0030)", border: "1px solid #bf5af266", color: "#bf5af2" }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2";
-                (e.currentTarget as HTMLElement).style.boxShadow = "0 0 16px #bf5af244";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = "#bf5af266";
-                (e.currentTarget as HTMLElement).style.boxShadow = "none";
-              }}
+              className="ops-btn-primary px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-40 relative overflow-hidden flex items-center gap-2"
             >
               Review
             </button>
             {!canReview && (
-              <span className="text-[10px] font-mono" style={{ color: "#4a3a5e" }}>
+              <span className="text-[10px] font-mono text-muted">
                 Add at least one holding to run review.
               </span>
             )}
@@ -265,24 +235,14 @@ export default function OverviewPage() {
           <button
             onClick={() => setShowImport(true)}
             disabled={isDemoMode}
-            className="px-3 py-2 text-sm font-mono rounded-lg transition-all"
-            style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#e2d9f3";
-              (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#6b5e7e";
-              (e.currentTarget as HTMLElement).style.borderColor = "#2a0050";
-            }}
+            className="ops-btn px-3 py-2 text-sm font-mono rounded-lg disabled:opacity-40"
           >
             Import
           </button>
 
           <button
             onClick={() => setShowAdd(true)}
-            className="px-3 py-2 text-sm font-semibold rounded-lg transition-all"
-            style={{ background: "linear-gradient(90deg, #bf5af2, #ff2d78)", color: "#fff" }}
+            className="ops-btn-primary px-3 py-2 text-sm font-semibold rounded-lg"
           >
             + Add
           </button>
@@ -290,14 +250,13 @@ export default function OverviewPage() {
       </div>
 
       {error && (
-        <div className="rounded-xl p-4 text-sm" style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
+        <div className="rounded-xl p-4 text-sm" style={{ background: "#ff6b8a12", border: "1px solid #ff6b8a44", color: "#ff6b8a" }}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>{error}</span>
             {!isDemoMode && (
               <button
                 onClick={enableDemoPortfolio}
-                className="px-3 py-2 text-xs rounded-lg font-mono transition-all"
-                style={{ border: "1px solid #bf5af244", color: "#bf5af2", background: "#bf5af211" }}
+                className="ops-btn-soft px-3 py-2 text-xs rounded-lg font-mono"
               >
                 Try Demo Portfolio
               </button>
@@ -307,12 +266,12 @@ export default function OverviewPage() {
       )}
 
       {shouldShowFirstReviewNudge && (
-        <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ background: "#00f5d411", border: "1px solid #00f5d433" }}>
+        <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ background: "#4dd2ff14", border: "1px solid #4dd2ff44" }}>
           <div>
-            <div className="text-sm font-semibold" style={{ color: "#00f5d4" }}>
+            <div className="text-sm font-semibold" style={{ color: "#4dd2ff" }}>
               Run your first portfolio review
             </div>
-            <div className="text-xs font-mono mt-1" style={{ color: "#8a7a9e" }}>
+            <div className="text-xs font-mono mt-1 text-muted">
               You have holdings loaded. Get your first actionable risk breakdown now.
             </div>
           </div>
@@ -321,8 +280,7 @@ export default function OverviewPage() {
               void trackEvent("first_review_nudge_clicked", { holdings_count: data?.holdings.length ?? 0 });
               startReview("first_review_nudge");
             }}
-            className="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
-            style={{ background: "linear-gradient(90deg,#00f5d4,#5ac8fa)", color: "#080012" }}
+            className="ops-btn-primary px-4 py-2 text-sm font-semibold rounded-lg"
           >
             Run Review
           </button>

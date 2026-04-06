@@ -59,10 +59,10 @@ function Card({
   const animated = useCountUp(rawValue, 900, index * 80);
 
   const accents = {
-    pink:    { color: "#ff2d78", border: "#ff2d7844", glow: "0 0 18px #ff2d7833, inset 0 0 12px #ff2d7808" },
-    cyan:    { color: "#00f5d4", border: "#00f5d444", glow: "0 0 18px #00f5d433, inset 0 0 12px #00f5d408" },
-    purple:  { color: "#bf5af2", border: "#bf5af244", glow: "0 0 18px #bf5af233, inset 0 0 12px #bf5af208" },
-    default: { color: "#e2d9f3", border: "#2a0050",   glow: "none" },
+    pink:    { color: "#ff6b8a", border: "#ff6b8a44", glow: "0 0 14px #ff6b8a22, inset 0 0 10px #ff6b8a10" },
+    cyan:    { color: "#4dd2ff", border: "#4dd2ff44", glow: "0 0 14px #4dd2ff22, inset 0 0 10px #4dd2ff10" },
+    purple:  { color: "#7ca8ff", border: "#7ca8ff44", glow: "0 0 14px #7ca8ff22, inset 0 0 10px #7ca8ff10" },
+    default: { color: "#d9e4f2", border: "#1f3248",   glow: "none" },
   };
   const a = accents[accent];
 

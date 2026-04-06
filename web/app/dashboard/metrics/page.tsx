@@ -266,21 +266,21 @@ export default function MetricsPage() {
           <h1 className="text-2xl font-bold">Risk Metrics</h1>
           <p className="text-muted text-sm mt-0.5">1-year rolling, {benchLabel} benchmark</p>
           {isDemoMode && (
-            <p className="text-[11px] font-mono mt-1" style={{ color: "#bf5af2" }}>
+            <p className="text-[11px] font-mono mt-1" style={{ color: "#7ca8ff" }}>
               Demo mode data
             </p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="flex items-center rounded-lg overflow-hidden font-mono text-xs" style={{ border: "1px solid #2a0050" }}>
+          <div className="ops-segment flex items-center rounded-lg overflow-hidden font-mono text-xs">
             {BENCHMARKS.map((b) => (
               <button
                 key={b.key}
                 onClick={() => setBenchmark(b.key)}
                 className="px-3 py-2 transition-all"
                 style={{
-                  background: benchmark === b.key ? "linear-gradient(90deg,#bf5af2,#ff2d78)" : "transparent",
-                  color: benchmark === b.key ? "#fff" : "#6b5e7e",
+                  background: benchmark === b.key ? "linear-gradient(90deg,#1f4b67,#1a3653)" : "transparent",
+                  color: benchmark === b.key ? "#d9f2ff" : undefined,
                 }}
               >
                 {b.label}
@@ -291,58 +291,27 @@ export default function MetricsPage() {
           <button
             onClick={() => load(benchmark, true)}
             disabled={loading}
-            className="px-3 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
-            style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#e2d9f3";
-              (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#6b5e7e";
-              (e.currentTarget as HTMLElement).style.borderColor = "#2a0050";
-            }}
+            className="ops-btn px-3 py-2 text-sm font-mono rounded-lg disabled:opacity-40"
           >
-            {loading ? "Refreshing..." : "↻ Refresh"}
+            {loading ? "Refreshing..." : "Refresh"}
           </button>
 
           <button
             onClick={exportCsv}
             disabled={!canExport}
-            className="px-3 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
-            style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#e2d9f3";
-              (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#6b5e7e";
-              (e.currentTarget as HTMLElement).style.borderColor = "#2a0050";
-            }}
-          >
-            ↓ Export CSV
-          </button>
+            className="ops-btn px-3 py-2 text-sm font-mono rounded-lg disabled:opacity-40"
+          >Export CSV</button>
 
           <button
             onClick={exportJson}
             disabled={!canExport}
-            className="px-3 py-2 text-sm font-mono rounded-lg transition-all disabled:opacity-40"
-            style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#e2d9f3";
-              (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#6b5e7e";
-              (e.currentTarget as HTMLElement).style.borderColor = "#2a0050";
-            }}
-          >
-            ↓ Export JSON
-          </button>
+            className="ops-btn px-3 py-2 text-sm font-mono rounded-lg disabled:opacity-40"
+          >Export JSON</button>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-xl p-4 text-sm" style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
+        <div className="rounded-xl p-4 text-sm" style={{ background: "#ff6b8a12", border: "1px solid #ff6b8a44", color: "#ff6b8a" }}>
           {error}
         </div>
       )}
@@ -365,7 +334,7 @@ export default function MetricsPage() {
               riskProfile={riskProfile}
             />
           ) : (
-            <div className="text-muted text-sm synth-card rounded-xl p-6" style={{ borderColor: "#2a0050" }}>
+            <div className="text-muted text-sm synth-card rounded-xl p-6" style={{ borderColor: "#1f3248" }}>
               Not enough historical data to compute metrics yet. Add more holdings or wait for 30+ trading days.
             </div>
           )}
@@ -374,3 +343,4 @@ export default function MetricsPage() {
     </div>
   );
 }
+
