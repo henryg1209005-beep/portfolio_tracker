@@ -86,6 +86,37 @@ function parseSections(raw: string): Section[] {
     }
     i++;
   }
+  if (sections.length > 0) return sections;
+
+  // Fallback parser when the model emits plain headings without divider bars.
+  const headingRe = /^(?:TL;DR|[A-Z][A-Z0-9&'/%+\-\s]{4,}|[0-9]+\.\s+[A-Z][^\n]{2,})$/;
+  let currentTitle = "";
+  let buffer: string[] = [];
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx].trim();
+    if (!line) {
+      buffer.push("");
+      continue;
+    }
+    if (headingRe.test(line) && line.length <= 80) {
+      if (currentTitle) {
+        sections.push({ title: currentTitle, body: buffer.join("\n").trim() });
+      }
+      currentTitle = line;
+      buffer = [];
+      continue;
+    }
+    buffer.push(lines[idx]);
+  }
+  if (currentTitle) {
+    sections.push({ title: currentTitle, body: buffer.join("\n").trim() });
+  }
+
+  // Last-resort: single structured section instead of raw dump card.
+  if (sections.length === 0 && raw.trim()) {
+    return [{ title: "ANALYSIS", body: raw.trim() }];
+  }
+
   return sections;
 }
 
@@ -757,8 +788,6 @@ export default function AiPage() {
           <div className="bg-surface border border-border rounded-2xl px-6">
             <LoadingState status={status} />
           </div>
-        ) : (status === "streaming" || status === "done") && sections.length === 0 && hasText ? (
-          <StreamingRawCard text={cleanText} />
         ) : sections.length > 0 || partial ? (
           <div className="space-y-3">
             {sections.map((s, i) => (
@@ -773,6 +802,14 @@ export default function AiPage() {
             {partial && (
               <StreamingSectionCard key={partial.title} section={partial} active={busy} />
             )}
+          </div>
+        ) : (status === "streaming" || status === "done") && hasText ? (
+          <div className="space-y-3">
+            <SectionCard
+              section={{ title: "ANALYSIS", body: cleanText }}
+              isLast={true}
+              isStreaming={busy}
+            />
           </div>
         ) : null}
 
