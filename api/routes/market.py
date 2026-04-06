@@ -493,8 +493,25 @@ def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
         bench = fetch_benchmark_data(start=earliest_date, benchmark=benchmark)
 
         if not hist.empty and not bench.empty and cost_weights:
-            raw = calculate_all_metrics(hist, cost_weights, bench, rf,
-                                        first_buy_dates=first_buy_dates)
+            raw = calculate_all_metrics(
+                hist, cost_weights, bench, rf, first_buy_dates=first_buy_dates
+            )
+            used_provisional = False
+
+            # New profiles often have very recent buy dates, which can leave too
+            # little overlap for stable metrics. Fall back to trailing 1Y on the
+            # current holdings composition so users still get directional signals.
+            if raw is None:
+                hist_fallback = fetch_historical_data(
+                    tickers, period="1y", gbpusd_series=gbpusd_hist
+                )
+                bench_fallback = fetch_benchmark_data(period="1y", benchmark=benchmark)
+                if not hist_fallback.empty and not bench_fallback.empty:
+                    raw = calculate_all_metrics(
+                        hist_fallback, cost_weights, bench_fallback, rf, first_buy_dates=None
+                    )
+                    used_provisional = raw is not None
+
             if raw:
                 # Serialise: drop Series objects, keep scalars
                 metrics = {
@@ -504,7 +521,11 @@ def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
                 }
                 metrics["rf_annual"] = _safe_float(rf)
                 metrics["benchmark_used"] = benchmark
-                metrics["risk_model"] = "current_holdings_cost_weighted"
+                metrics["risk_model"] = (
+                    "current_holdings_cost_weighted_provisional"
+                    if used_provisional
+                    else "current_holdings_cost_weighted"
+                )
     except Exception as exc:
         metrics = {"error": str(exc)}
 
