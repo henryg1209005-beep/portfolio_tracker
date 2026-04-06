@@ -1,12 +1,18 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
-import { streamAnalysis, fetchRefresh, fetchAIUsage, saveAiReport, listAiReports, deleteAiReport, type AiReport } from "@/lib/api";
+import { streamAnalysis, fetchRefresh, fetchAIUsage, saveAiReport, listAiReports, deleteAiReport, getToken, type AiReport } from "@/lib/api";
 import { DEMO_AI_REPORT } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
 import { trackEvent } from "@/lib/analytics";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 interface Section { title: string; body: string }
+type PersistedAiState = { text: string; status: "done" | "error"; savedAt: number };
+
+function aiStateKey(isDemoMode: boolean): string {
+  const token = typeof window !== "undefined" ? (getToken() || "anon") : "anon";
+  return `portivex_ai_state_v1_${isDemoMode ? "demo" : token}`;
+}
 
 // ─── Word-level typewriter (rAF-based for smooth frame-aligned reveal) ───────
 function useTypewriter(target: string, active: boolean): string {
@@ -567,6 +573,32 @@ export default function AiPage() {
   const [expandedReport, setExpandedReport] = useState<number | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(aiStateKey(isDemoMode));
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as PersistedAiState;
+      if (!parsed?.text) return;
+      setText(sanitizeReportText(parsed.text));
+      setStatus(parsed.status === "error" ? "error" : "done");
+      setError(parsed.status === "error" ? "Previous analysis ended with an error." : "");
+    } catch {
+      // Ignore malformed cached state
+    }
+  }, [isDemoMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!text.trim() || (status !== "done" && status !== "error")) return;
+    const payload: PersistedAiState = {
+      text: sanitizeReportText(text),
+      status: status === "error" ? "error" : "done",
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(aiStateKey(isDemoMode), JSON.stringify(payload));
+  }, [text, status, isDemoMode]);
+
+  useEffect(() => {
     if (isDemoMode) {
       // In demo mode, always allow analysis — use 1 as minimum so the button isn't disabled
       setHoldingCount(Math.max(1, demoData.holdings.length));
@@ -630,6 +662,16 @@ export default function AiPage() {
       }
     );
     cleanupRef.current = cleanup;
+  }
+
+  function clearAnalysis() {
+    setText("");
+    setStatus("idle");
+    setError("");
+    setSaveState("idle");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(aiStateKey(isDemoMode));
+    }
   }
 
   const busy        = status === "loading" || status === "streaming";
@@ -697,6 +739,18 @@ export default function AiPage() {
                 onMouseLeave={e => { if (saveState === "idle") { (e.currentTarget as HTMLElement).style.color = "#6b5e7e"; (e.currentTarget as HTMLElement).style.borderColor = "#2a0050"; }}}
               >
                 {saveState === "saving" ? "Saving…" : saveState === "saved" ? "✓ Saved" : saveState === "error" ? "Failed" : "↓ Save Report"}
+              </button>
+            )}
+            {(status === "done" || status === "error") && (
+              <button
+                onClick={clearAnalysis}
+                disabled={busy}
+                className="px-3 py-2 text-xs font-mono rounded-lg transition-all disabled:opacity-50"
+                style={{ border: "1px solid #2a0050", color: "#6b5e7e" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#e2d9f3"; (e.currentTarget as HTMLElement).style.borderColor = "#bf5af2"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#6b5e7e"; (e.currentTarget as HTMLElement).style.borderColor = "#2a0050"; }}
+              >
+                Clear
               </button>
             )}
             <button
