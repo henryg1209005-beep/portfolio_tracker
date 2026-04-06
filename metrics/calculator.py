@@ -95,7 +95,9 @@ def beta(port_returns, bench_returns):
     b = aligned.iloc[:, 1].astype(float).to_numpy()
     var_b = float(np.var(b, ddof=1))
     if not np.isfinite(var_b) or var_b <= 1e-12:
-        return 0.0
+        # A near-zero benchmark variance means the benchmark series is
+        # effectively unusable (flat/bad fetch). Returning 0.0 is misleading.
+        return None
     cov_pb = float(np.cov(p, b, ddof=1)[0, 1])
     beta_val = cov_pb / var_b
     return float(beta_val) if np.isfinite(beta_val) else None
