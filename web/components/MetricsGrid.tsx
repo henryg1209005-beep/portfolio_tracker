@@ -188,7 +188,8 @@ function MetricCard({
             <span className="text-xs font-mono text-muted/60">{period}</span>
           )}
         </div>
-        <div className="text-xs font-medium text-text/70 mt-0.5">{question}</div>`r`n      </div>
+        <div className="text-xs font-medium text-text/70 mt-0.5">{question}</div>
+      </div>
 
       {/* Value row */}
       <div className="flex items-end justify-between gap-3">
