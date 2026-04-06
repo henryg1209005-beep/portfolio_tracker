@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { streamAnalysis, fetchRefresh, fetchAIUsage, saveAiReport, listAiReports, deleteAiReport, getToken, type AiReport } from "@/lib/api";
 import { DEMO_AI_REPORT } from "@/lib/demoPortfolio";
 import { useDemoMode } from "@/lib/demoModeContext";
@@ -292,7 +292,7 @@ function renderBody(body: string): React.ReactNode {
         <ul key={`ul${i}`} className="space-y-3 my-4 pl-1">
           {bullets.map((b, j) => (
             <li key={j} className="flex gap-3.5 text-sm leading-relaxed text-white/80">
-              <span className="mt-[6px] w-1.5 h-1.5 rounded-full shrink-0 opacity-80" style={{ background: "#bf5af2", boxShadow: "0 0 4px #bf5af260" }} />
+              <span className="mt-[6px] w-1.5 h-1.5 rounded-full shrink-0 opacity-80" style={{ background: "#bf5af2" }} />
               <span>{inlineBold(b)}</span>
             </li>
           ))}
@@ -568,6 +568,9 @@ export default function AiPage() {
   const cleanupRef              = useRef<(() => void) | null>(null);
   const bottomRef               = useRef<HTMLDivElement>(null);
   const lastScrollRef           = useRef(0);
+  const rawTextRef              = useRef("");
+  const pendingChunkRef         = useRef("");
+  const flushTimerRef           = useRef<number | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedReports, setSavedReports]     = useState<AiReport[]>([]);
   const [expandedReport, setExpandedReport] = useState<number | null>(null);
@@ -632,6 +635,12 @@ export default function AiPage() {
 
   function start() {
     setText(""); setError(""); setStatus("loading"); setSaveState("idle");
+    rawTextRef.current = "";
+    pendingChunkRef.current = "";
+    if (flushTimerRef.current) {
+      window.clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
     void trackEvent("ai_analysis_run", { is_demo_mode: isDemoMode, holdings_count: holdingCount ?? 0 });
     if (isDemoMode) {
       setStatus("streaming");
@@ -641,10 +650,21 @@ export default function AiPage() {
       }, 500);
       return;
     }
+    const flushBufferedChunks = () => {
+      if (!pendingChunkRef.current) return;
+      rawTextRef.current += pendingChunkRef.current;
+      pendingChunkRef.current = "";
+      setText(sanitizeReportText(rawTextRef.current));
+      flushTimerRef.current = null;
+    };
+
     const cleanup = streamAnalysis(
       (chunk) => {
         setStatus("streaming");
-        setText(t => sanitizeReportText(t + chunk));
+        pendingChunkRef.current += chunk;
+        if (flushTimerRef.current == null) {
+          flushTimerRef.current = window.setTimeout(flushBufferedChunks, 100);
+        }
         const now = Date.now();
         if (now - lastScrollRef.current > 400) {
           lastScrollRef.current = now;
@@ -652,10 +672,12 @@ export default function AiPage() {
         }
       },
       () => {
+        flushBufferedChunks();
         setStatus("done");
         fetchAIUsage().then(setUsage).catch(() => {});
       },
       (msg) => {
+        flushBufferedChunks();
         setError(msg);
         setStatus("error");
         fetchAIUsage().then(setUsage).catch(() => {});
@@ -674,18 +696,30 @@ export default function AiPage() {
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (flushTimerRef.current) {
+        window.clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const busy        = status === "loading" || status === "streaming";
   const hasHoldings = holdingCount === null || holdingCount > 0;
   const limitHit    = usage !== null && usage.remaining === 0;
-  const cleanText   = sanitizeReportText(text);
-  const sections    = parseSections(cleanText);
+  const cleanText   = useMemo(() => sanitizeReportText(text), [text]);
+  const sections    = useMemo(() => parseSections(cleanText), [cleanText]);
   const hasText     = cleanText.trim().length > 0;
   // Keep partial alive on "done" so the typewriter can finish the last section,
   // but suppress it if parseSections already includes that section (avoids duplicate)
-  const _partial    = (busy || status === "done") ? parsePartial(cleanText) : null;
+  const _partial    = useMemo(
+    () => ((busy || status === "done") ? parsePartial(cleanText) : null),
+    [busy, status, cleanText]
+  );
   const partial     = _partial && !sections.some(s => s.title === _partial.title) ? _partial : null;
-  const execBullets = extractExecutiveBullets(cleanText);
-  const chips       = extractScoreChips(cleanText);
+  const execBullets = useMemo(() => extractExecutiveBullets(cleanText), [cleanText]);
+  const chips       = useMemo(() => extractScoreChips(cleanText), [cleanText]);
 
   return (
     <>
@@ -762,7 +796,6 @@ export default function AiPage() {
                   ? "rgba(191,90,242,0.3)"
                   : "linear-gradient(135deg, #bf5af2 0%, #9d3fd4 100%)",
                 color: "#fff",
-                boxShadow: busy || limitHit ? "none" : "0 0 20px rgba(191,90,242,0.35)",
               }}
             >
               <span style={{ fontSize: 13 }}>✦</span>
