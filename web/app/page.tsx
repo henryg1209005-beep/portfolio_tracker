@@ -149,7 +149,7 @@ export default function LandingPage() {
           </div>
 
           <div className="lg:col-span-5 animate-fade-up" style={{ animationDelay: "120ms" }}>
-            <div className="rounded-2xl p-4 sm:p-5 glow-breath" style={{ background: "linear-gradient(140deg,#120020,#0a0014)", border: "1px solid #2a0050", boxShadow: "0 0 40px #bf5af21c" }}>
+            <div className="rounded-2xl p-4 sm:p-5" style={{ background: "linear-gradient(140deg,#120020,#0a0014)", border: "1px solid #2a0050", boxShadow: "0 0 20px #bf5af218" }}>
               <div className="flex items-center justify-between text-[11px] font-mono mb-3" style={{ color: "#6b5e7e" }}>
                 <span>Risk Signal Console</span>
                 <span style={{ color: "#00f5d4" }}>DEMO</span>
@@ -275,7 +275,7 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto rounded-2xl p-8 sm:p-10" style={{ background: "linear-gradient(130deg,#120020,#0d0018)", border: "1px solid #2a0050" }}>
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">See your portfolio through a risk-intelligence lens.</h2>
           <p className="text-sm mb-7" style={{ color: "#8a7a9e" }}>Free during early access. No card required.</p>
-          <Link href="/sign-up" className="inline-flex px-8 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 26px #bf5af244" }}>
+          <Link href="/sign-up" className="inline-flex px-8 py-3 rounded-xl text-sm font-semibold hover-lift" style={{ background: "linear-gradient(90deg,#bf5af2,#ff2d78)", color: "#fff", boxShadow: "0 0 12px #bf5af228" }}>
             Create account &rarr;
           </Link>
         </div>
