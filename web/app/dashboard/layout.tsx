@@ -85,12 +85,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted">
                 PORTIVEX INTELLIGENCE CONSOLE
               </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <span className="ontology-chip ontology-chip-entity">Portfolio Object</span>
-                <span className="ontology-chip ontology-chip-rel">Shows risk metrics</span>
-                <span className="ontology-chip ontology-chip-rel">Built from holdings</span>
-                <span className="ontology-id">Ref: OBJ-PORTFOLIO-PRIMARY</span>
-              </div>
             </div>
           </div>
           {isDemoMode && (
