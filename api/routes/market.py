@@ -492,15 +492,18 @@ def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
         hist = fetch_historical_data(tickers, start=earliest_date, gbpusd_series=gbpusd_hist)
         bench = fetch_benchmark_data(start=earliest_date, benchmark=benchmark)
 
-        if not hist.empty and not bench.empty and cost_weights:
-            raw = calculate_all_metrics(
-                hist, cost_weights, bench, rf, first_buy_dates=first_buy_dates
-            )
+        if cost_weights:
+            raw = None
             used_provisional = False
 
-            # New profiles often have very recent buy dates, which can leave too
-            # little overlap for stable metrics. Fall back to trailing 1Y on the
-            # current holdings composition so users still get directional signals.
+            # Primary path: strict since-buy window.
+            if not hist.empty and not bench.empty:
+                raw = calculate_all_metrics(
+                    hist, cost_weights, bench, rf, first_buy_dates=first_buy_dates
+                )
+
+            # Fallback path: for new profiles with very recent transactions or
+            # sparse strict overlap, compute provisional trailing-1Y metrics.
             if raw is None:
                 hist_fallback = fetch_historical_data(
                     tickers, period="1y", gbpusd_series=gbpusd_hist
