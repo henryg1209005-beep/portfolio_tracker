@@ -1,14 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    if (process.env.NODE_ENV !== "development") {
-      return [];
-    }
+    const configuredTarget = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+    const devTarget = "http://localhost:8000";
+    const targetRoot = (configuredTarget || (process.env.NODE_ENV === "development" ? devTarget : ""))
+      .replace(/\/+$/, "");
+    if (!targetRoot) return [];
+    const targetApi = targetRoot.endsWith("/api") ? targetRoot : `${targetRoot}/api`;
 
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        destination: `${targetApi}/:path*`,
       },
     ];
   },

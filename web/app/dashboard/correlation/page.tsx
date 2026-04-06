@@ -17,6 +17,11 @@ type CorrMethod = "pearson" | "spearman";
 
 const TIMEFRAMES: Timeframe[] = ["1M", "3M", "6M", "1Y", "5Y"];
 
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 // ── Summary metric cards ──────────────────────────────────────────────────────
 
 function MetricCard({ label, value, sub, accent }: {
@@ -333,8 +338,8 @@ export default function CorrelationPage() {
       // Load secondary panels in the background — don't block the heatmap
       fetchCorrelationSuggestions(tf).then(setSuggestions).catch(() => null);
       fetchRollingCorrelation(tf).then(setRolling).catch(() => null);
-    } catch {
-      setError("Could not reach the API right now. Please try again in a moment.");
+    } catch (err) {
+      setError(errorMessage(err, "Could not reach the API right now. Please try again in a moment."));
       setLoading(false);
     }
   }, [isDemoMode, demoData.holdings]);

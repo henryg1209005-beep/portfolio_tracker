@@ -1,5 +1,14 @@
 import { trackEvent } from "@/lib/analytics";
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+const BASE = "/api";
+
+async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const data = await res.json();
+    if (data?.detail && typeof data.detail === "string") return data.detail;
+    if (data?.message && typeof data.message === "string") return data.message;
+  } catch {}
+  return `${fallback} (${res.status})`;
+}
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 
@@ -16,6 +25,7 @@ export async function ensureToken(): Promise<string> {
   const existing = getToken();
   if (existing) return existing;
   const res = await fetch(`${BASE}/auth/token`, { method: "POST" });
+  if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to initialize session"));
   const { token } = await res.json();
   setToken(token);
   return token;
@@ -88,7 +98,7 @@ export async function fetchRefresh(benchmark = "sp500", force = false): Promise<
   const params = new URLSearchParams({ benchmark });
   if (force) params.set("force", "true");
   const res = await fetch(`${BASE}/market/refresh?${params}`, { headers: authHeader() });
-  if (!res.ok) throw new Error("Failed to fetch market data");
+  if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to fetch market data"));
   return res.json();
 }
 
@@ -258,7 +268,7 @@ export async function fetchPerformance(
     headers: authHeader(),
     cache: "no-store",
   });
-  if (!res.ok) throw new Error("Failed to fetch performance data");
+  if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to fetch performance data"));
   return res.json();
 }
 

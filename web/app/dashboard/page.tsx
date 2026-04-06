@@ -12,6 +12,11 @@ import AddHoldingModal from "@/components/AddHoldingModal";
 import ImportCSVModal from "@/components/ImportCSVModal";
 import FixMyPortfolioPanel from "@/components/FixMyPortfolioPanel";
 
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 export default function OverviewPage() {
   const [data, setData] = useState<RefreshData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,8 +35,8 @@ export default function OverviewPage() {
     setError("");
     try {
       setData(await fetchRefresh("sp500", force));
-    } catch {
-      setError("Could not reach the API right now. Please try again in a moment.");
+    } catch (err) {
+      setError(errorMessage(err, "Could not reach the API right now. Please try again in a moment."));
     } finally {
       setLoading(false);
     }

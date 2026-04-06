@@ -143,7 +143,7 @@ export default function ChartsPage() {
     : 1;
   const [perfLoading, setPerfLoading] = useState(true);
   const [portLoading, setPortLoading] = useState(true);
-  const [perfError,   setPerfError]   = useState(false);
+  const [perfError,   setPerfError]   = useState("");
   const [timeframe,   setTimeframe]   = useState<Timeframe>("1Y");
   const [benchmark,   setBenchmark]   = useState<Benchmark>("sp500");
   const [activeSlice, setActiveSlice] = useState(0);
@@ -154,7 +154,7 @@ export default function ChartsPage() {
   // doesn't wipe out the other.
   const loadPerf = useCallback(async (tf: Timeframe, bm: Benchmark) => {
     setPerfLoading(true);
-    setPerfError(false);
+    setPerfError("");
     if (isDemoMode) {
       setPerfData(getDemoPerformance(tf, bm));
       setPerfLoading(false);
@@ -163,8 +163,8 @@ export default function ChartsPage() {
     try {
       const perf = await fetchPerformance(tf, bm);
       setPerfData(perf);
-    } catch {
-      setPerfError(true);
+    } catch (err) {
+      setPerfError(err instanceof Error && err.message ? err.message : "Could not reach API");
     } finally {
       setPerfLoading(false);
     }
@@ -238,7 +238,7 @@ export default function ChartsPage() {
   const perfFailed = !perfLoading && !perfError && hasHoldings &&
                      !!perfData && perfData.dates.length === 0;
   // Show error state when fetch itself threw
-  const perfNetworkError = !perfLoading && perfError;
+  const perfNetworkError = !perfLoading && !!perfError;
 
   return (
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto flex flex-col gap-6 md:gap-8">
@@ -306,7 +306,7 @@ export default function ChartsPage() {
 
       {perfNetworkError && (
         <div className="rounded-xl p-4 text-sm" style={{ background: "#ff2d7811", border: "1px solid #ff2d7833", color: "#ff2d78" }}>
-          Could not reach the API right now. Please try again in a moment.
+          {perfError}
         </div>
       )}
 

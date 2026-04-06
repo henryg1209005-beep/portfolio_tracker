@@ -22,6 +22,11 @@ const BENCHMARKS: { key: Benchmark; label: string }[] = [
   { key: "msci_world", label: "MSCI World" },
 ];
 
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 function formatTimestampForFilename(d: Date): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -99,8 +104,8 @@ export default function MetricsPage() {
       ]);
       setData(refresh);
       setPerfData(perf);
-    } catch {
-      setError("Could not reach the API right now. Please try again in a moment.");
+    } catch (err) {
+      setError(errorMessage(err, "Could not reach the API right now. Please try again in a moment."));
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+const BASE = "/api";
 
 type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;
 
