@@ -212,14 +212,21 @@ def calculate_all_metrics(prices_df, weights, benchmark_series, rf_annual,
             upper=_mean + 5 * _std,
         )
 
-    bench_ret_full = benchmark_series.pct_change().dropna()
-    bench_ret_full = _strip_tz_index(bench_ret_full)
+    bench_ret_full = pd.Series(dtype=float)
+    aligned = pd.DataFrame(columns=["p", "b"])
+    port_ret_overlap = pd.Series(dtype=float)
+    bench_ret_overlap = pd.Series(dtype=float)
 
-    # Strict overlap is used for benchmark-relative metrics only (beta/alpha/CAPM).
-    aligned = pd.concat([port_ret_full, bench_ret_full], axis=1, join="inner").dropna()
-    aligned.columns = ["p", "b"]
-    port_ret_overlap = aligned["p"]
-    bench_ret_overlap = aligned["b"]
+    # Benchmark is optional for benchmark-relative metrics only.
+    if benchmark_series is not None and len(benchmark_series) > 0:
+        bench_ret_full = benchmark_series.pct_change().dropna()
+        bench_ret_full = _strip_tz_index(bench_ret_full)
+
+        # Strict overlap is used for benchmark-relative metrics only (beta/alpha/CAPM).
+        aligned = pd.concat([port_ret_full, bench_ret_full], axis=1, join="inner").dropna()
+        aligned.columns = ["p", "b"]
+        port_ret_overlap = aligned["p"]
+        bench_ret_overlap = aligned["b"]
 
     # Geometric annualised return (compound, not arithmetic)
     # Full-history return shown to user as their actual P&L since inception.

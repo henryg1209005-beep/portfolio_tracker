@@ -497,9 +497,11 @@ def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
             used_provisional = False
 
             # Primary path: strict since-buy window.
-            if not hist.empty and not bench.empty:
+            # Benchmark can be empty; in that case benchmark-relative metrics
+            # (beta/alpha) become unavailable, while absolute metrics still compute.
+            if not hist.empty:
                 raw = calculate_all_metrics(
-                    hist, cost_weights, bench, rf, first_buy_dates=first_buy_dates
+                    hist, cost_weights, (bench if not bench.empty else None), rf, first_buy_dates=first_buy_dates
                 )
 
             # Fallback path: for new profiles with very recent transactions or
@@ -509,9 +511,13 @@ def _refresh_data(token: str, benchmark: str = "sp500") -> dict:
                     tickers, period="1y", gbpusd_series=gbpusd_hist
                 )
                 bench_fallback = fetch_benchmark_data(period="1y", benchmark=benchmark)
-                if not hist_fallback.empty and not bench_fallback.empty:
+                if not hist_fallback.empty:
                     raw = calculate_all_metrics(
-                        hist_fallback, cost_weights, bench_fallback, rf, first_buy_dates=None
+                        hist_fallback,
+                        cost_weights,
+                        (bench_fallback if not bench_fallback.empty else None),
+                        rf,
+                        first_buy_dates=None,
                     )
                     used_provisional = raw is not None
 
