@@ -104,6 +104,91 @@ function parsePartial(raw: string): Section | null {
   return null;
 }
 
+function sanitizeReportText(raw: string): string {
+  return raw
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/^\s*(?:[-_=~]{3,}|[━─]{3,})\s*$/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/^\s*---+\s*$/gm, "")
+    .replace(/^\s*•\s*/gm, "- ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractExecutiveBullets(text: string): string[] {
+  const sections = parseSections(text);
+  const tldr = sections.find((s) => s.title.toUpperCase() === "TL;DR");
+  const source = tldr?.body ?? text;
+  const bullets = source
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => /^[-*]\s+/.test(l))
+    .map((l) => l.replace(/^[-*]\s+/, ""))
+    .slice(0, 3);
+  if (bullets.length > 0) return bullets;
+  return source
+    .split(/[.!?]\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+type ScoreChip = { label: string; value: string; tone: "good" | "warn" | "bad" | "muted" };
+function extractScoreChips(text: string): ScoreChip[] {
+  const picks: ScoreChip[] = [];
+  const score = text.match(/overall\s*score[:\s]+(\d{1,3})\s*\/\s*100/i);
+  if (score) {
+    const v = Number(score[1]);
+    picks.push({
+      label: "Overall Score",
+      value: `${v}/100`,
+      tone: v >= 75 ? "good" : v >= 50 ? "warn" : "bad",
+    });
+  }
+  const sharpe = text.match(/sharpe\s+ratio(?:\s+of)?[:\s]+(-?\d+(?:\.\d+)?)/i);
+  if (sharpe) {
+    const v = Number(sharpe[1]);
+    picks.push({
+      label: "Sharpe",
+      value: v.toFixed(2),
+      tone: v >= 1 ? "good" : v >= 0.5 ? "warn" : "bad",
+    });
+  }
+  const sortino = text.match(/sortino\s+ratio(?:\s+of)?[:\s]+(-?\d+(?:\.\d+)?)/i);
+  if (sortino) {
+    const v = Number(sortino[1]);
+    picks.push({
+      label: "Sortino",
+      value: v.toFixed(2),
+      tone: v >= 1.5 ? "good" : v >= 0.7 ? "warn" : "bad",
+    });
+  }
+  const beta = text.match(/\bbeta(?:\s*\(.*?\))?[:\s]+(-?\d+(?:\.\d+)?)/i);
+  if (beta) {
+    const v = Number(beta[1]);
+    picks.push({
+      label: "Beta",
+      value: v.toFixed(2),
+      tone: v < 0.8 ? "good" : v < 1.3 ? "warn" : "bad",
+    });
+  }
+  const mdd = text.match(/max(?:imum)?\s+drawdown[:\s]+(-?\d+(?:\.\d+)?)%/i);
+  if (mdd) {
+    const v = Math.abs(Number(mdd[1]));
+    picks.push({
+      label: "Max Drawdown",
+      value: `-${v.toFixed(1)}%`,
+      tone: v <= 12 ? "good" : v <= 25 ? "warn" : "bad",
+    });
+  }
+  if (picks.length === 0) {
+    picks.push({ label: "Analysis", value: "Processing", tone: "muted" });
+  }
+  return picks.slice(0, 5);
+}
+
 // ─── Rich text helpers ────────────────────────────────────────────────────────
 function highlightNumbers(text: string): React.ReactNode {
   const re = /(£[\d,]+(?:\.\d+)?|[+][\d.]+%|[-][\d.]+%|\d+(?:\.\d+)?%|\b\d+\.\d{2}\b)/g;
@@ -488,7 +573,7 @@ export default function AiPage() {
     if (isDemoMode) {
       setStatus("streaming");
       window.setTimeout(() => {
-        setText(DEMO_AI_REPORT);
+        setText(sanitizeReportText(DEMO_AI_REPORT));
         setStatus("done");
       }, 500);
       return;
@@ -496,7 +581,7 @@ export default function AiPage() {
     const cleanup = streamAnalysis(
       (chunk) => {
         setStatus("streaming");
-        setText(t => t + chunk);
+        setText(t => sanitizeReportText(t + chunk));
         const now = Date.now();
         if (now - lastScrollRef.current > 400) {
           lastScrollRef.current = now;
@@ -519,12 +604,15 @@ export default function AiPage() {
   const busy        = status === "loading" || status === "streaming";
   const hasHoldings = holdingCount === null || holdingCount > 0;
   const limitHit    = usage !== null && usage.remaining === 0;
-  const sections    = parseSections(text);
-  const hasText     = text.trim().length > 0;
+  const cleanText   = sanitizeReportText(text);
+  const sections    = parseSections(cleanText);
+  const hasText     = cleanText.trim().length > 0;
   // Keep partial alive on "done" so the typewriter can finish the last section,
   // but suppress it if parseSections already includes that section (avoids duplicate)
-  const _partial    = (busy || status === "done") ? parsePartial(text) : null;
+  const _partial    = (busy || status === "done") ? parsePartial(cleanText) : null;
   const partial     = _partial && !sections.some(s => s.title === _partial.title) ? _partial : null;
+  const execBullets = extractExecutiveBullets(cleanText);
+  const chips       = extractScoreChips(cleanText);
 
   return (
     <>
@@ -536,7 +624,7 @@ export default function AiPage() {
         }
       `}</style>
 
-      <div className="p-6 max-w-3xl mx-auto space-y-5 pb-16">
+      <div className="p-6 max-w-5xl mx-auto space-y-5 pb-16">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -604,6 +692,60 @@ export default function AiPage() {
           </div>
         )}
 
+        {(sections.length > 0 || hasText) && (
+          <div
+            className="rounded-2xl border px-5 py-4 md:px-6 md:py-5 space-y-4"
+            style={{
+              background: "linear-gradient(180deg, rgba(191,90,242,0.09) 0%, rgba(255,255,255,0.02) 65%)",
+              borderColor: "#2a0050",
+            }}
+          >
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-widest" style={{ color: "#bf5af2" }}>
+                  Executive Summary
+                </div>
+                <p className="text-xs mt-1 text-white/55">
+                  Key takeaways before the deep-dive sections.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {chips.map((c) => {
+                  const tone =
+                    c.tone === "good" ? { bg: "#00f5d422", fg: "#00f5d4", br: "#00f5d455" } :
+                    c.tone === "warn" ? { bg: "#f5a62322", fg: "#f5a623", br: "#f5a62355" } :
+                    c.tone === "bad" ? { bg: "#ff2d7822", fg: "#ff2d78", br: "#ff2d7855" } :
+                    { bg: "#6b5e7e22", fg: "#9b8ab0", br: "#6b5e7e55" };
+                  return (
+                    <div
+                      key={`${c.label}-${c.value}`}
+                      className="rounded-lg px-2.5 py-1.5"
+                      style={{ background: tone.bg, color: tone.fg, border: `1px solid ${tone.br}` }}
+                    >
+                      <div className="text-[9px] font-mono uppercase tracking-widest opacity-85">{c.label}</div>
+                      <div className="text-sm font-mono font-semibold">{c.value}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid md:grid-cols-3 gap-2.5">
+              {execBullets.map((b, i) => (
+                <div
+                  key={`${i}-${b.slice(0, 16)}`}
+                  className="rounded-xl px-3 py-2.5 text-sm leading-relaxed"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #2a0050" }}
+                >
+                  <span className="text-[10px] font-mono mr-2" style={{ color: "#bf5af2" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="text-white/80">{b}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Content area */}
         {holdingCount === 0 ? (
           <NoHoldingsState />
@@ -616,7 +758,7 @@ export default function AiPage() {
             <LoadingState status={status} />
           </div>
         ) : (status === "streaming" || status === "done") && sections.length === 0 && hasText ? (
-          <StreamingRawCard text={text} />
+          <StreamingRawCard text={cleanText} />
         ) : sections.length > 0 || partial ? (
           <div className="space-y-3">
             {sections.map((s, i) => (
@@ -657,7 +799,8 @@ export default function AiPage() {
               const date = new Date(r.created_at);
               const label = date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " · " + date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
               const isOpen = expandedReport === r.id;
-              const reportSections = parseSections(r.text);
+              const reportText = sanitizeReportText(r.text);
+              const reportSections = parseSections(reportText);
               return (
                 <div key={r.id} className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid #2a0050" }}>
                   {/* Row header */}
@@ -691,7 +834,7 @@ export default function AiPage() {
                         ? reportSections.map((s, i) => (
                             <SectionCard key={i} section={s} isLast={i === reportSections.length - 1} isStreaming={false} />
                           ))
-                        : <p className="text-sm text-white/40 whitespace-pre-wrap">{r.text}</p>
+                        : <p className="text-sm text-white/40 whitespace-pre-wrap">{reportText}</p>
                       }
                     </div>
                   )}
