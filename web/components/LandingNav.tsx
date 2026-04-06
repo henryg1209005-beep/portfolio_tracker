@@ -11,7 +11,7 @@ export default function LandingNav() {
   return (
     <nav
       className="sticky top-0 z-50"
-      style={{ background: "linear-gradient(180deg,#080012ee,#080012aa)", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a0030" }}
+      style={{ background: "linear-gradient(180deg,#080012ee,#080012cc)", borderBottom: "1px solid #1a0030" }}
     >
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <Image src="/logo.png" alt="Portivex" width={140} height={46} className="object-contain" />

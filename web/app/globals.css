@@ -8,11 +8,7 @@
 body {
   background-color: #080012;
   color: #e2d9f3;
-  /* Synthwave grid */
-  background-image:
-    linear-gradient(rgba(191, 90, 242, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(191, 90, 242, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-image: none;
 }
 
 /* ── Animations ── */
@@ -61,11 +57,12 @@ body {
 }
 
 .ambient-orb {
+  display: none;
   position: absolute;
   border-radius: 9999px;
-  filter: blur(24px);
+  filter: none;
   pointer-events: none;
-  opacity: 0.28;
+  opacity: 0;
   will-change: transform;
 }
 
@@ -93,9 +90,7 @@ body {
   transform: translateY(-3px);
 }
 
-.glow-breath {
-  animation: glowBreath 4.5s ease-in-out infinite;
-}
+.glow-breath { animation: none; }
 
 .signal-meter {
   background-size: 200% 100%;

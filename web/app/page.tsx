@@ -105,14 +105,11 @@ export default function LandingPage() {
       <LandingNav />
 
       <section className="relative overflow-hidden">
-        <div className="ambient-orb ambient-orb-cyan w-80 h-80 -left-24 -top-16" />
-        <div className="ambient-orb ambient-orb-pink w-72 h-72 -right-20 top-10" />
-        <div className="ambient-orb ambient-orb-purple w-96 h-96 left-1/3 -bottom-44" />
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(1200px 420px at 15% -10%, #00f5d414 0%, transparent 70%), radial-gradient(1000px 500px at 100% 0%, #ff2d7816 0%, transparent 65%), radial-gradient(900px 380px at 50% 110%, #bf5af214 0%, transparent 65%)",
+              "linear-gradient(180deg, rgba(191,90,242,0.10) 0%, rgba(8,0,18,0) 55%)",
           }}
         />
         <div className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
