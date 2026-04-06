@@ -87,7 +87,6 @@ export default function HoldingsTable({
           <span className="ontology-chip ontology-chip-entity">Holdings Schema</span>
           <span className="ontology-chip ontology-chip-rel">Each row contributes to portfolio value</span>
           <span className="ontology-chip ontology-chip-rel">Each row tracks its own return stream</span>
-          <span className="ontology-id">Ref: SCHEMA-HOLDING-V1</span>
         </div>
       </div>
       <div className="md:hidden">

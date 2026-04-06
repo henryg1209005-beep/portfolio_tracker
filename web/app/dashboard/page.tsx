@@ -155,7 +155,6 @@ export default function OverviewPage() {
             <span className="ontology-chip ontology-chip-entity">Portfolio Snapshot</span>
             <span className="ontology-chip ontology-chip-rel">Includes your holdings</span>
             <span className="ontology-chip ontology-chip-rel">Calculates live P&L</span>
-            <span className="ontology-id">Ref: OBJ-PORTFOLIO-SNAPSHOT</span>
           </div>
           <p className="text-muted text-sm mt-0.5">
             {isDemoMode ? "Demo sandbox: local-only edits, reset anytime." : "Holdings, valuation, and live P&L at a glance"}

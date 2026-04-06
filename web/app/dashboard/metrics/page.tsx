@@ -273,7 +273,6 @@ export default function MetricsPage() {
             <span className="ontology-chip ontology-chip-entity">Risk Metrics Model</span>
             <span className="ontology-chip ontology-chip-rel">Calculated from your returns</span>
             <span className="ontology-chip ontology-chip-rel">Compared with benchmark</span>
-            <span className="ontology-id">Ref: OBJ-RISKMODEL-TRAILING252</span>
           </div>
           <p className="text-muted text-sm mt-0.5">How your portfolio risk compares to {benchLabel}</p>
           {isDemoMode && (
