@@ -210,6 +210,37 @@ body {
   color: #d9e4f2;
 }
 
+.ontology-chip {
+  border: 1px solid #2b415c;
+  background: #0b1523;
+  color: #9cb2ca;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ontology-chip-entity {
+  border-color: #4dd2ff44;
+  color: #4dd2ff;
+  background: #4dd2ff12;
+}
+
+.ontology-chip-rel {
+  border-color: #7ca8ff44;
+  color: #7ca8ff;
+  background: #7ca8ff12;
+}
+
+.ontology-id {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #7f93ad;
+}
+
 /* Scanline overlay (subtle) */
 .scanlines::after {
   content: "";

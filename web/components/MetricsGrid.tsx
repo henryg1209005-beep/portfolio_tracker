@@ -144,7 +144,7 @@ const STATUS_LABELS: Record<string, Record<Status, string>> = {
 // ── MetricCard ────────────────────────────────────────────────────────────────
 
 function MetricCard({
-  metricKey, name, period, question, value, status, explain, detail, tip, sparkData, trend, statusContext,
+  metricKey, name, period, question, value, status, explain, detail, tip, sparkData, trend, statusContext, ontologyId, relationLabel,
 }: {
   metricKey: string;
   name: string;
@@ -158,6 +158,8 @@ function MetricCard({
   sparkData?: number[];
   trend?: TrendInfo;
   statusContext?: string;
+  ontologyId?: string;
+  relationLabel?: string;
 }) {
   const color      = STATUS_COLORS[status];
   const statusText = STATUS_LABELS[metricKey]?.[status] ?? (status === "neutral" ? "No data" : status);
@@ -189,6 +191,12 @@ function MetricCard({
           )}
         </div>
         <div className="text-xs font-medium text-text/70 mt-0.5">{question}</div>
+        {(relationLabel || ontologyId) && (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {relationLabel && <span className="ontology-chip ontology-chip-rel">{relationLabel}</span>}
+            {ontologyId && <span className="ontology-id">{ontologyId}</span>}
+          </div>
+        )}
       </div>
 
       {/* Value row */}
@@ -558,6 +566,8 @@ export default function MetricsGrid({
           tip={sharpeTip}
           sparkData={sharpeSpark}
           trend={sharpeTrend ?? sharpeTrendFallback}
+        relationLabel="Derived: return_per_unit_risk"
+          ontologyId="METRIC-SHARPE-252D"
         />
 
         {/* Sortino Ratio */}
@@ -572,6 +582,8 @@ export default function MetricsGrid({
           statusContext={`${profileLabel} threshold: Good ≥ ${bands.sortinoGood.toFixed(1)}, OK ≥ ${bands.sortinoOk.toFixed(1)}.`}
           detail="Like Sharpe, but only penalises downside volatility. Upside swings don't count against you. Status thresholds are adjusted by your selected risk profile."
           tip={sortinoTip}
+        relationLabel="Derived: downside_risk_efficiency"
+          ontologyId="METRIC-SORTINO-252D"
         />
 
         {/* Jensen's Alpha */}
@@ -585,6 +597,8 @@ export default function MetricsGrid({
           explain={alphaExplain}
           detail={`Alpha measures return above what CAPM predicts given your beta exposure to ${benchmarkLabel}, computed on the same benchmark-overlap window. Positive alpha means outperformance on a risk-adjusted basis.`}
           tip={alphaTip}
+        relationLabel={`Compared: portfolio_vs_${benchmarkLabel.toLowerCase().replace(/\s+/g, "_")}`}
+          ontologyId="METRIC-ALPHA-OVERLAP"
         />
 
         {/* Volatility */}
@@ -601,6 +615,8 @@ export default function MetricsGrid({
           tip={volTip}
           sparkData={volSpark}
           trend={volTrend ?? volTrendFallback}
+        relationLabel="Derived: return_dispersion"
+          ontologyId="METRIC-VOLATILITY-252D"
         />
 
         {/* Beta */}
@@ -617,6 +633,8 @@ export default function MetricsGrid({
           tip={betaTip}
           sparkData={betaSpark}
           trend={betaTrend}
+        relationLabel="Compared: sensitivity_to_benchmark"
+          ontologyId="METRIC-BETA-OVERLAP"
         />
 
         {/* VaR */}
@@ -633,6 +651,8 @@ export default function MetricsGrid({
             ? `Historical: ${gbp(varGbp ?? 0)} (raw 5th percentile). Cornish-Fisher: ${gbp(cfVarGbp)} (adjusted for skew & kurtosis). The gap between them indicates how fat-tailed your returns are.`
             : "On a typical bad day — the kind that happens roughly once a month — losses are expected to stay below this figure. 5% of days historically exceed it."}
           tip={varTip}
+        relationLabel="Derived: tail_loss_estimate"
+          ontologyId="METRIC-VAR95-252D"
         />
 
         {/* Max Drawdown */}
@@ -653,6 +673,8 @@ export default function MetricsGrid({
           tip={mddTip}
           sparkData={ddSpark}
           trend={ddTrend}
+        relationLabel="Derived: peak_to_trough_loss"
+          ontologyId="METRIC-DRAWDOWN-252D"
         />
 
       </div>
@@ -670,3 +692,5 @@ export default function MetricsGrid({
     </div>
   );
 }
+
+

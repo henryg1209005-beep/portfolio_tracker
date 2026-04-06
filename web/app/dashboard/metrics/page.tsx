@@ -264,6 +264,12 @@ export default function MetricsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Risk Metrics</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="ontology-chip ontology-chip-entity">Entity: RiskMetricSet</span>
+            <span className="ontology-chip ontology-chip-rel">Edge: derived_from portfolio_returns</span>
+            <span className="ontology-chip ontology-chip-rel">Edge: compared_to benchmark</span>
+            <span className="ontology-id">OBJ-RISKMODEL-TRAILING252</span>
+          </div>
           <p className="text-muted text-sm mt-0.5">1-year rolling, {benchLabel} benchmark</p>
           {isDemoMode && (
             <p className="text-[11px] font-mono mt-1" style={{ color: "#7ca8ff" }}>

@@ -146,6 +146,12 @@ export default function OverviewPage() {
               </span>
             )}
           </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="ontology-chip ontology-chip-entity">Entity: Portfolio</span>
+            <span className="ontology-chip ontology-chip-rel">Edge: contains holding</span>
+            <span className="ontology-chip ontology-chip-rel">Edge: materializes pnl</span>
+            <span className="ontology-id">OBJ-PORTFOLIO-SNAPSHOT</span>
+          </div>
           <p className="text-muted text-sm mt-0.5">
             {isDemoMode ? "Demo sandbox: local-only edits, reset anytime." : "Your portfolio at a glance"}
           </p>

@@ -52,6 +52,10 @@ export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onTogg
         <div className="mb-5 px-1">
           <Image src="/logo.png" alt="Portivex" width={180} height={60} className="object-contain w-full" />
           <div className="mt-3 text-[10px] font-mono tracking-[0.16em] text-muted uppercase">Operations</div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className="ontology-chip ontology-chip-entity">Graph</span>
+            <span className="ontology-chip ontology-chip-rel">Portfolio -&gt; Holding -&gt; Metric</span>
+          </div>
         </div>
 
         {visibleLinks.map((l) => {
