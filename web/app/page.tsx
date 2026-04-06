@@ -4,23 +4,23 @@ import LandingNav from "@/components/LandingNav";
 import LandingHeroCTA from "@/components/LandingHeroCTA";
 
 export const metadata: Metadata = {
-  title: "Portivex — Portfolio Risk Analytics | Sharpe Ratio, Beta, VaR & More",
+  title: "Portivex - AI Portfolio Analysis & Risk Analytics | Sharpe Ratio, Beta, VaR",
   description:
-    "Analyse your investment portfolio with institutional risk metrics. Calculate Sharpe Ratio, Sortino, Beta, VaR, and Maximum Drawdown with plain-English interpretation and confidence scoring. Works with any broker. Free to start.",
+    "AI portfolio analysis with institutional risk metrics. Calculate Sharpe Ratio, Sortino, Beta, VaR, and Maximum Drawdown, then get plain-English portfolio insights you can revisit and act on.",
   alternates: { canonical: "https://portivex.co.uk" },
   openGraph: {
-    title: "Portivex — Portfolio Risk Analytics",
+    title: "Portivex - AI Portfolio Analysis & Risk Analytics",
     description:
-      "Institutional risk metrics for retail investors. Track Sharpe Ratio, Sortino, Beta, VaR, Maximum Drawdown and more — with plain-English interpretation. Free to start.",
+      "AI portfolio analysis for retail investors. Track Sharpe Ratio, Sortino, Beta, VaR, Maximum Drawdown and get structured plain-English insight.",
     url: "https://portivex.co.uk",
     siteName: "Portivex",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Portivex — Portfolio Risk Analytics",
+    title: "Portivex - AI Portfolio Analysis & Risk Analytics",
     description:
-      "Institutional risk metrics for retail investors. Sharpe, Sortino, Beta, VaR, Max Drawdown — with plain-English interpretation.",
+      "AI portfolio analysis with Sharpe, Sortino, Beta, VaR, and Max Drawdown - with structured plain-English interpretation.",
   },
 };
 
@@ -34,7 +34,7 @@ const PILLARS = [
   {
     title: "Decision Clarity",
     tag: "Action",
-    body: "Get specific observations on concentration, correlation, and risk trends — not just numbers, but what they mean for your portfolio right now.",
+    body: "Get specific observations on concentration, correlation, and risk trends - not just numbers, but what they mean for your portfolio right now.",
     accent: "#bf5af2",
   },
   {
@@ -66,7 +66,22 @@ const FLOW = [
   {
     step: "03",
     title: "Act with structure",
-    body: "Receive specific observations on what's working, what's elevated, and what's worth reflecting on — in plain English.",
+    body: "Receive specific observations on what's working, what's elevated, and what's worth reflecting on - in plain English.",
+  },
+];
+
+const AI_FEATURES = [
+  {
+    title: "Persistent AI Reports",
+    body: "Your latest analysis stays visible until you manually clear it, so you can compare portfolio changes without losing context.",
+  },
+  {
+    title: "Structured Portfolio Analysis",
+    body: "Get an executive summary, score chips, and sectioned risk commentary instead of an unstructured text dump.",
+  },
+  {
+    title: "Actionable Risk Prompts",
+    body: "See practical observations on concentration, diversification, drawdown profile, and risk-adjusted return quality.",
   },
 ];
 
@@ -109,14 +124,14 @@ export default function LandingPage() {
               Your broker tracks your gains. Portivex tells you if they were worth the risk.
             </h1>
             <p className="text-base sm:text-lg max-w-xl leading-relaxed" style={{ color: "#8a7a9e" }}>
-              Portivex analyses your portfolio and tells you exactly what your risk metrics mean — and what&apos;s worth your attention.
+              Portivex analyses your portfolio and tells you exactly what your risk metrics mean - and what&apos;s worth your attention.
             </p>
             <LandingHeroCTA />
             <div className="inline-flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: "#00f5d411", border: "1px solid #00f5d433", color: "#00f5d4" }}>
               Free during early access · No card required
             </div>
             <div className="text-xs font-mono" style={{ color: "#4a3a5e" }}>
-              Works with Revolut, Freetrade, Trading 212 and any broker — add holdings manually or import via CSV.
+              Works with Revolut, Freetrade, Trading 212 and any broker - add holdings manually or import via CSV.
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               {[
@@ -195,6 +210,33 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section id="ai-analysis" className="max-w-5xl mx-auto px-6 py-14">
+        <div className="mb-8">
+          <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>AI Portfolio Analysis</div>
+          <h2 className="text-2xl sm:text-3xl font-bold">Understand what your portfolio is doing, not just what it returned.</h2>
+          <p className="text-sm mt-3 max-w-3xl leading-relaxed" style={{ color: "#8a7a9e" }}>
+            Portivex combines AI portfolio analysis with deterministic risk metrics so you get both the numbers and the interpretation. Track
+            Sharpe Ratio, Sortino Ratio, Beta, Value at Risk and drawdown, then read a structured analysis that highlights where risk is concentrated and what may deserve action.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {AI_FEATURES.map((f) => (
+            <div key={f.title} className="rounded-xl p-4" style={{ background: "#0d0020", border: "1px solid #2a0050" }}>
+              <h3 className="text-sm font-semibold mb-2">{f.title}</h3>
+              <p className="text-xs leading-relaxed" style={{ color: "#8a7a9e" }}>{f.body}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <Link href="/sign-up" className="font-semibold" style={{ color: "#bf5af2" }}>
+            Try AI analysis on your portfolio &rarr;
+          </Link>
+          <Link href="/learn" style={{ color: "#6b5e7e" }}>
+            Learn how each risk metric is calculated &rarr;
+          </Link>
+        </div>
+      </section>
+
       <section className="max-w-4xl mx-auto px-6 py-12 w-full">
         <div className="text-center mb-8">
           <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>Learn</div>
@@ -224,7 +266,7 @@ export default function LandingPage() {
         </div>
         <div className="text-center">
           <Link href="/learn" className="text-sm font-medium" style={{ color: "#6b5e7e" }}>
-            View full metric library →
+            View full metric library &rarr;
           </Link>
         </div>
       </section>
