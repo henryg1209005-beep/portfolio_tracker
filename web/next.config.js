@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    const configuredTarget = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+    const configuredTarget = process.env.API_URL;
     const devTarget = "http://localhost:8000";
     const targetRoot = (configuredTarget || (process.env.NODE_ENV === "development" ? devTarget : ""))
       .replace(/\/+$/, "");
