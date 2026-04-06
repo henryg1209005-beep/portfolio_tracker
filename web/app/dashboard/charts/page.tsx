@@ -246,9 +246,9 @@ export default function ChartsPage() {
       {/* ── Header ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Charts</h1>
+          <h1 className="text-2xl font-bold text-text">Performance Charts</h1>
           <p className="text-muted text-sm mt-0.5 font-mono">
-            Portfolio analytics · {timeframe} · {benchmarkLabel}
+            Portfolio performance trends ({timeframe}) vs {benchmarkLabel}
           </p>
         </div>
 
@@ -543,3 +543,4 @@ function EmptyState({ icon, message, sub }: { icon: string; message: string; sub
     </div>
   );
 }
+

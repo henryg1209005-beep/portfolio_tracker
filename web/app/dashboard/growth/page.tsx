@@ -101,9 +101,9 @@ export default function GrowthPage() {
   return (
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Growth OS</h1>
+        <h1 className="text-2xl font-bold">Growth Command Center</h1>
         <p className="text-sm mt-1" style={{ color: "#6b5e7e" }}>
-          Coded promotion workflow: discover, post, reply, track, iterate.
+          Promotion workflow: discover opportunities, post, reply, track, iterate.
         </p>
       </div>
 
@@ -307,4 +307,3 @@ function ActionButton({ label, onClick }: { label: string; onClick: () => void }
     </button>
   );
 }
-

@@ -352,9 +352,9 @@ export default function CorrelationPage() {
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text">Correlation</h1>
+          <h1 className="text-2xl font-bold text-text">Diversification Map</h1>
           <p className="text-muted text-sm mt-0.5 font-mono">
-            Pairwise {method === "spearman" ? "rank " : ""}correlations · {timeframe} daily returns
+            Which holdings move together vs independently ({timeframe})
           </p>
         </div>
 
@@ -484,3 +484,4 @@ export default function CorrelationPage() {
     </div>
   );
 }
+

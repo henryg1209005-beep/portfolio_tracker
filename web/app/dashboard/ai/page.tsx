@@ -735,9 +735,9 @@ export default function AiPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">AI Overview</h1>
+            <h1 className="text-2xl font-bold tracking-tight">AI Portfolio Report</h1>
             <p className="text-white/35 text-sm mt-1">
-              Private-wealth-grade analysis · Live data
+              Actionable portfolio insights powered by live market data
             </p>
             {isDemoMode ? (
               <p className="text-[11px] mt-1 font-mono" style={{ color: "#4a3a5e" }}>
@@ -973,3 +973,4 @@ export default function AiPage() {
     </>
   );
 }
+

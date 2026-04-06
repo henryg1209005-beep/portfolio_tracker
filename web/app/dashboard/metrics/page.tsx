@@ -263,14 +263,14 @@ export default function MetricsPage() {
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Risk Metrics</h1>
+          <h1 className="text-2xl font-bold">Risk Analysis</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="ontology-chip ontology-chip-entity">Risk Metrics Model</span>
             <span className="ontology-chip ontology-chip-rel">Calculated from your returns</span>
             <span className="ontology-chip ontology-chip-rel">Compared with benchmark</span>
             <span className="ontology-id">Ref: OBJ-RISKMODEL-TRAILING252</span>
           </div>
-          <p className="text-muted text-sm mt-0.5">1-year rolling, {benchLabel} benchmark</p>
+          <p className="text-muted text-sm mt-0.5">How your portfolio risk compares to {benchLabel}</p>
           {isDemoMode && (
             <p className="text-[11px] font-mono mt-1" style={{ color: "#7ca8ff" }}>
               Demo mode data
