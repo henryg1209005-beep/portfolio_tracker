@@ -268,7 +268,7 @@ export default function MetricsPage() {
     <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Risk Analysis</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Risk Analysis</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="ontology-chip ontology-chip-entity">Risk Metrics Model</span>
             <span className="ontology-chip ontology-chip-rel">Calculated from your returns</span>
@@ -282,8 +282,8 @@ export default function MetricsPage() {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="ops-segment flex items-center rounded-lg overflow-hidden font-mono text-xs">
+        <div className="flex flex-wrap gap-2 max-w-full">
+          <div className="ops-segment flex items-center rounded-lg font-mono text-xs max-w-full">
             {BENCHMARKS.map((b) => (
               <button
                 key={b.key}

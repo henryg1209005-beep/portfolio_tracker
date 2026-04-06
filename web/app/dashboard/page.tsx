@@ -130,7 +130,7 @@ export default function OverviewPage() {
       <div className="flex flex-col gap-3 animate-fade-up sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Portfolio Overview</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Portfolio Overview</h1>
             {!loading && data && (
               <span
                 className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full animate-fade-up"
@@ -161,9 +161,9 @@ export default function OverviewPage() {
             {isDemoMode ? "Demo sandbox: local-only edits, reset anytime." : "Holdings, valuation, and live P&L at a glance"}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-w-full">
           {data && (
-            <div className="ops-segment flex items-center rounded-lg overflow-hidden font-mono text-xs">
+            <div className="ops-segment flex items-center rounded-lg font-mono text-xs max-w-full">
               {CURRENCIES.map((c) => (
                 <button
                   key={c}

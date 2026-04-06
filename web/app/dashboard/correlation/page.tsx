@@ -109,18 +109,18 @@ function PairRow({ pair, rank }: { pair: PairResult; rank: number }) {
     pair.level === "inverse"  ? "#ff2d78" : "#6b5e7e";
 
   return (
-    <div className="flex items-center gap-3 py-2" style={{ borderBottom: "1px solid #1a0030" }}>
+    <div className="flex items-center gap-2 sm:gap-3 py-2" style={{ borderBottom: "1px solid #1a0030" }}>
       <span className="text-[10px] font-mono text-muted w-4 shrink-0">{rank}</span>
-      <span className="font-mono text-sm text-text flex-1">
+      <span className="font-mono text-xs sm:text-sm text-text flex-1 break-all">
         {pair.row.replace(".L","")}
         <span className="text-muted mx-1">/</span>
         {pair.col.replace(".L","")}
       </span>
-      <span className="font-mono text-sm font-bold" style={{ color }}>
+      <span className="font-mono text-xs sm:text-sm font-bold shrink-0" style={{ color }}>
         {pair.value >= 0 ? "+" : ""}{pair.value.toFixed(3)}
       </span>
       <span
-        className="text-[10px] font-mono px-1.5 py-0.5 rounded w-16 text-center shrink-0"
+        className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded w-16 text-center shrink-0"
         style={{ background: `${color}18`, color, border: `1px solid ${color}33` }}
       >
         {pair.level.toUpperCase()}
@@ -352,20 +352,20 @@ export default function CorrelationPage() {
   }, [data]);
 
   return (
-    <div className="p-6 max-w-screen-2xl mx-auto flex flex-col gap-6">
+    <div className="p-4 md:p-6 max-w-screen-2xl mx-auto flex flex-col gap-6">
 
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text">Diversification Map</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text">Diversification Map</h1>
           <p className="text-muted text-sm mt-0.5 font-mono">
             Which holdings move together vs independently ({timeframe})
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Method toggle */}
-          <div className="flex" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
+          <div className="flex overflow-x-auto max-w-full" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
             {(["pearson", "spearman"] as CorrMethod[]).map(m => (
               <button
                 key={m}
@@ -385,7 +385,7 @@ export default function CorrelationPage() {
           </div>
 
           {/* Timeframe selector */}
-          <div className="flex" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
+          <div className="flex overflow-x-auto max-w-full" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
             {TIMEFRAMES.map(tf => (
               <button
                 key={tf}

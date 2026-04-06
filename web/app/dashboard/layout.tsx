@@ -82,7 +82,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto bg-bg pb-16 md:pb-0">
           <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-3">
             <div className="ops-panel rounded-lg px-3 py-2">
-              <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted">
+              <div className="text-[9px] sm:text-[10px] font-mono uppercase tracking-[0.12em] sm:tracking-[0.16em] text-muted break-words">
                 PORTIVEX INTELLIGENCE CONSOLE
               </div>
             </div>
@@ -90,13 +90,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           {isDemoMode && (
             <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-4">
               <div
-                className="rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3"
+                className="rounded-xl px-4 py-3 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                 style={{ background: "#7ca8ff12", border: "1px solid #7ca8ff44", color: "#7ca8ff" }}
               >
                 <span>Exploring with sample data. Exit demo when you&apos;re ready to add your real holdings.</span>
                 <button
                   onClick={() => setDemoMode(false)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-mono"
+                  className="px-3 py-1.5 rounded-lg text-xs font-mono w-full sm:w-auto"
                   style={{ border: "1px solid #7ca8ff44", color: "#7ca8ff" }}
                 >
                   Add real holdings -&gt;
@@ -107,13 +107,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           {profileError && (
             <div className="mx-auto max-w-screen-xl px-4 md:px-6 pt-4">
               <div
-                className="rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3"
+                className="rounded-xl px-4 py-3 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                 style={{ background: "#ff6b8a12", border: "1px solid #ff6b8a44", color: "#ff6b8a" }}
               >
                 <span>{profileError}</span>
                 <button
                   onClick={() => window.location.reload()}
-                  className="px-3 py-1.5 rounded-lg text-xs font-mono"
+                  className="px-3 py-1.5 rounded-lg text-xs font-mono w-full sm:w-auto"
                   style={{ border: "1px solid #ff6b8a44", color: "#ff6b8a" }}
                 >
                   Retry

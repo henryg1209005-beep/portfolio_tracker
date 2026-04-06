@@ -199,6 +199,9 @@ body {
 .ops-segment {
   border: 1px solid #1f3248;
   background: #0d1828;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ops-segment button {
@@ -220,6 +223,9 @@ body {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .ontology-chip-entity {
@@ -239,6 +245,9 @@ body {
   font-size: 10px;
   letter-spacing: 0.12em;
   color: #7f93ad;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* Scanline overlay (subtle) */
@@ -263,6 +272,29 @@ body {
   }
   .glow-breath {
     animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .ops-btn,
+  .ops-btn-primary,
+  .ops-btn-soft,
+  .ops-btn-danger {
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 8px 10px;
+  }
+
+  .ops-segment button {
+    white-space: nowrap;
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+
+  .ontology-chip,
+  .ontology-id {
+    font-size: 9px;
+    letter-spacing: 0.05em;
   }
 }
 

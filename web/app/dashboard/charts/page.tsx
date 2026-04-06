@@ -246,14 +246,14 @@ export default function ChartsPage() {
       {/* ── Header ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Performance Charts</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text">Performance Charts</h1>
           <p className="text-muted text-sm mt-0.5 font-mono">
             Portfolio performance trends ({timeframe}) vs {benchmarkLabel}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex overflow-x-auto" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
+        <div className="flex items-center gap-2 flex-wrap max-w-full">
+          <div className="flex overflow-x-auto max-w-full" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
             {BENCHMARKS.map(b => (
               <button
                 key={b.key}
@@ -272,7 +272,7 @@ export default function ChartsPage() {
             ))}
           </div>
 
-          <div className="flex overflow-x-auto" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
+          <div className="flex overflow-x-auto max-w-full" style={{ background: "#0d0020", border: "1px solid #2a0050", borderRadius: "0.5rem" }}>
             {TIMEFRAMES.map(tf => (
               <button
                 key={tf}
@@ -333,7 +333,7 @@ export default function ChartsPage() {
 
       {/* ── Summary stat cards ── */}
       {hasPerf && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: "Portfolio Return", short: "Return",  value: `${sign(portReturn)}${portReturn.toFixed(2)}%`,   accent: portReturn  >= 0 ? "#00f5d4" : "#ff2d78" },
             { label: `${benchmarkLabel} Return`, short: benchmarkLabel, value: `${sign(benchReturn)}${benchReturn.toFixed(2)}%`, accent: benchReturn >= 0 ? "#00f5d4" : "#ff2d78" },
@@ -349,7 +349,7 @@ export default function ChartsPage() {
                 <span className="sm:hidden">{short}</span>
                 <span className="hidden sm:inline">{label}</span>
               </span>
-              <span className="text-base sm:text-xl font-bold font-mono truncate" style={{ color: accent }}>{value}</span>
+              <span className="text-base sm:text-xl font-bold font-mono break-words leading-tight" style={{ color: accent }}>{value}</span>
             </div>
           ))}
         </div>

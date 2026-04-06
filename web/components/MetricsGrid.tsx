@@ -192,9 +192,9 @@ function MetricCard({
       </div>
 
       {/* Value row */}
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold font-mono" style={{ color }}>{value}</span>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-3">
+          <div className="flex items-baseline gap-2">
+          <span className="text-2xl sm:text-3xl font-bold font-mono break-words leading-tight" style={{ color }}>{value}</span>
           {trend && trend.arrow !== "→" && (
             <div className="flex flex-col pb-0.5">
               <span className="text-sm font-bold leading-none" style={{ color: trend.color }}>{trend.arrow}</span>
@@ -206,7 +206,7 @@ function MetricCard({
           )}
         </div>
         <div
-          className="flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 rounded-full shrink-0 mb-1"
+          className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono px-2 py-0.5 rounded-full shrink-0 sm:mb-1 self-start sm:self-auto"
           style={{ background: `${color}15`, color, border: `1px solid ${color}33` }}
         >
           <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ background: color }} />

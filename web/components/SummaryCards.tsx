@@ -75,14 +75,14 @@ function Card({
         boxShadow: a.glow,
       }}
     >
-      <span className="text-xs text-muted uppercase tracking-widest font-mono">{label}</span>
+      <span className="text-[10px] sm:text-xs text-muted uppercase tracking-widest font-mono break-words">{label}</span>
       <span
-        className="text-2xl font-bold font-mono mt-1 tabular-nums"
+        className="text-lg sm:text-2xl font-bold font-mono mt-1 tabular-nums leading-tight break-words"
         style={{ color: a.color }}
       >
         {displayValue ?? fmtAnimated(animated, symbol)}
       </span>
-      {sub && <span className="text-xs text-muted">{sub}</span>}
+      {sub && <span className="text-[11px] sm:text-xs text-muted break-words">{sub}</span>}
     </div>
   );
 }
@@ -105,7 +105,7 @@ export default function SummaryCards({ summary, currency = "GBP" }: { summary: S
     : (summary.gbpusd != null ? summary.gbpusd.toFixed(4) : "—");
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card
         index={0}
         label="Portfolio Value"

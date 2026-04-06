@@ -156,7 +156,7 @@ export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onTogg
               style={{ color: active ? "#4dd2ff" : "#7f93ad" }}
             >
               <span className="text-[10px] leading-none font-mono">{l.icon}</span>
-              <span className="text-[9px] font-mono tracking-wide">{l.label}</span>
+              <span className="text-[8px] font-mono tracking-wide max-w-full px-1 truncate">{l.label}</span>
             </Link>
           );
         })}

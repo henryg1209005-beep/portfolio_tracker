@@ -94,10 +94,10 @@ export default function HoldingsTable({
         {sorted.map((h, i) => {
           const badge = TYPE_BADGE[h.type] ?? TYPE_BADGE.stock;
           return (
-            <div key={h.ticker} className="px-4 py-3.5 flex items-center justify-between gap-3" style={{ borderTop: i > 0 ? "1px solid #1a2a3f" : undefined }}>
+            <div key={h.ticker} className="px-4 py-3.5 flex items-start justify-between gap-3" style={{ borderTop: i > 0 ? "1px solid #1a2a3f" : undefined }}>
               <div className="flex flex-col gap-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold font-mono" style={{ color: "#d9e4f2" }}>{h.ticker.replace(".L", "")}</span>
+                  <span className="font-bold font-mono break-all" style={{ color: "#d9e4f2" }}>{h.ticker.replace(".L", "")}</span>
                   <span className="text-xs px-1.5 py-0.5 rounded font-mono font-medium shrink-0" style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>
                     {h.type}
                   </span>
@@ -109,8 +109,8 @@ export default function HoldingsTable({
                   avg {typeof fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) === "string" ? fmt(h.avg_cost != null ? h.avg_cost * fxRate : null, symbol) : "-"}
                 </span>
               </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="font-mono font-semibold text-sm text-text">{fmt(h.market_value != null ? h.market_value * fxRate : null, symbol)}</span>
+              <div className="flex flex-col items-end gap-1 shrink-0 max-w-[45%]">
+                <span className="font-mono font-semibold text-sm text-text break-words text-right">{fmt(h.market_value != null ? h.market_value * fxRate : null, symbol)}</span>
                 <PnL val={h.pnl != null ? h.pnl * fxRate : null} pct={h.pnl_pct} symbol={symbol} />
               </div>
               <button onClick={() => onRemove(h.ticker)} className="text-xs shrink-0 px-2 py-2 rounded transition-colors hover:text-[#ff6b8a] hover:bg-[#ff6b8a14]" style={{ color: "#7f93ad" }}>
