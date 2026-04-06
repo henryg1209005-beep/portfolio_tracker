@@ -108,6 +108,12 @@ body {
   transform: translateY(0);
 }
 
+/* Landing performance: skip below-the-fold layout/paint until needed */
+.lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 700px;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -167,7 +167,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="position" className="max-w-6xl mx-auto px-6 py-16">
+      <section id="position" className="lazy-section max-w-6xl mx-auto px-6 py-16">
         <div className="mb-10">
           <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>What makes it different</div>
           <h2 className="text-2xl sm:text-3xl font-bold">Built as risk intelligence, not a generic tracker.</h2>
@@ -185,7 +185,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="how" className="px-6 py-16" style={{ background: "linear-gradient(180deg,transparent,#0d001888,transparent)" }}>
+      <section id="how" className="lazy-section px-6 py-16" style={{ background: "linear-gradient(180deg,transparent,#0d001888,transparent)" }}>
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>Workflow</div>
@@ -207,7 +207,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="ai-analysis" className="max-w-5xl mx-auto px-6 py-14">
+      <section id="ai-analysis" className="lazy-section max-w-5xl mx-auto px-6 py-14">
         <div className="mb-8">
           <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>AI Portfolio Analysis</div>
           <h2 className="text-2xl sm:text-3xl font-bold">Understand what your portfolio is doing, not just what it returned.</h2>
@@ -234,7 +234,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-6 py-12 w-full">
+      <section className="lazy-section max-w-4xl mx-auto px-6 py-12 w-full">
         <div className="text-center mb-8">
           <div className="text-[11px] font-mono uppercase tracking-widest mb-3" style={{ color: "#4a3a5e" }}>Learn</div>
           <h2 className="text-2xl sm:text-3xl font-bold">Understand every number in your portfolio.</h2>
@@ -268,7 +268,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="px-6 py-20 text-center">
+      <section className="lazy-section px-6 py-20 text-center">
         <div className="max-w-2xl mx-auto rounded-2xl p-8 sm:p-10" style={{ background: "linear-gradient(130deg,#120020,#0d0018)", border: "1px solid #2a0050" }}>
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">See your portfolio through a risk-intelligence lens.</h2>
           <p className="text-sm mb-7" style={{ color: "#8a7a9e" }}>Free during early access. No card required.</p>
