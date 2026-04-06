@@ -194,7 +194,7 @@ function MetricCard({
         {(relationLabel || ontologyId) && (
           <div className="mt-1 flex flex-wrap items-center gap-2">
             {relationLabel && <span className="ontology-chip ontology-chip-rel">{relationLabel}</span>}
-            {ontologyId && <span className="ontology-id">{ontologyId}</span>}
+            {ontologyId && <span className="ontology-id">Ref: {ontologyId}</span>}
           </div>
         )}
       </div>
@@ -566,7 +566,7 @@ export default function MetricsGrid({
           tip={sharpeTip}
           sparkData={sharpeSpark}
           trend={sharpeTrend ?? sharpeTrendFallback}
-        relationLabel="Derived: return_per_unit_risk"
+          relationLabel="Shows return for each unit of risk"
           ontologyId="METRIC-SHARPE-252D"
         />
 
@@ -582,7 +582,7 @@ export default function MetricsGrid({
           statusContext={`${profileLabel} threshold: Good ≥ ${bands.sortinoGood.toFixed(1)}, OK ≥ ${bands.sortinoOk.toFixed(1)}.`}
           detail="Like Sharpe, but only penalises downside volatility. Upside swings don't count against you. Status thresholds are adjusted by your selected risk profile."
           tip={sortinoTip}
-        relationLabel="Derived: downside_risk_efficiency"
+          relationLabel="Focuses on downside risk only"
           ontologyId="METRIC-SORTINO-252D"
         />
 
@@ -597,7 +597,7 @@ export default function MetricsGrid({
           explain={alphaExplain}
           detail={`Alpha measures return above what CAPM predicts given your beta exposure to ${benchmarkLabel}, computed on the same benchmark-overlap window. Positive alpha means outperformance on a risk-adjusted basis.`}
           tip={alphaTip}
-        relationLabel={`Compared: portfolio_vs_${benchmarkLabel.toLowerCase().replace(/\s+/g, "_")}`}
+          relationLabel={`Compares your portfolio against ${benchmarkLabel}`}
           ontologyId="METRIC-ALPHA-OVERLAP"
         />
 
@@ -615,7 +615,7 @@ export default function MetricsGrid({
           tip={volTip}
           sparkData={volSpark}
           trend={volTrend ?? volTrendFallback}
-        relationLabel="Derived: return_dispersion"
+          relationLabel="Measures how widely returns swing"
           ontologyId="METRIC-VOLATILITY-252D"
         />
 
@@ -633,7 +633,7 @@ export default function MetricsGrid({
           tip={betaTip}
           sparkData={betaSpark}
           trend={betaTrend}
-        relationLabel="Compared: sensitivity_to_benchmark"
+          relationLabel="Shows sensitivity to benchmark moves"
           ontologyId="METRIC-BETA-OVERLAP"
         />
 
@@ -651,7 +651,7 @@ export default function MetricsGrid({
             ? `Historical: ${gbp(varGbp ?? 0)} (raw 5th percentile). Cornish-Fisher: ${gbp(cfVarGbp)} (adjusted for skew & kurtosis). The gap between them indicates how fat-tailed your returns are.`
             : "On a typical bad day — the kind that happens roughly once a month — losses are expected to stay below this figure. 5% of days historically exceed it."}
           tip={varTip}
-        relationLabel="Derived: tail_loss_estimate"
+          relationLabel="Estimates loss on bad market days"
           ontologyId="METRIC-VAR95-252D"
         />
 
@@ -673,7 +673,7 @@ export default function MetricsGrid({
           tip={mddTip}
           sparkData={ddSpark}
           trend={ddTrend}
-        relationLabel="Derived: peak_to_trough_loss"
+          relationLabel="Tracks largest drop from a prior peak"
           ontologyId="METRIC-DRAWDOWN-252D"
         />
 

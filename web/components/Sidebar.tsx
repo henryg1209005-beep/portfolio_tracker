@@ -54,7 +54,7 @@ export default function Sidebar({ token, copied, onCopyToken, isDemoMode, onTogg
           <div className="mt-3 text-[10px] font-mono tracking-[0.16em] text-muted uppercase">Operations</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <span className="ontology-chip ontology-chip-entity">Graph</span>
-            <span className="ontology-chip ontology-chip-rel">Portfolio -&gt; Holding -&gt; Metric</span>
+            <span className="ontology-chip ontology-chip-rel">Portfolio leads to holdings, then metrics</span>
           </div>
         </div>
 

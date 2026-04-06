@@ -265,10 +265,10 @@ export default function MetricsPage() {
         <div>
           <h1 className="text-2xl font-bold">Risk Metrics</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="ontology-chip ontology-chip-entity">Entity: RiskMetricSet</span>
-            <span className="ontology-chip ontology-chip-rel">Edge: derived_from portfolio_returns</span>
-            <span className="ontology-chip ontology-chip-rel">Edge: compared_to benchmark</span>
-            <span className="ontology-id">OBJ-RISKMODEL-TRAILING252</span>
+            <span className="ontology-chip ontology-chip-entity">Risk Metrics Model</span>
+            <span className="ontology-chip ontology-chip-rel">Calculated from your returns</span>
+            <span className="ontology-chip ontology-chip-rel">Compared with benchmark</span>
+            <span className="ontology-id">Ref: OBJ-RISKMODEL-TRAILING252</span>
           </div>
           <p className="text-muted text-sm mt-0.5">1-year rolling, {benchLabel} benchmark</p>
           {isDemoMode && (

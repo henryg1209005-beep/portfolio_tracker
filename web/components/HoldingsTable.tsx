@@ -84,10 +84,10 @@ export default function HoldingsTable({
     <div className="synth-card rounded-xl overflow-hidden" style={{ borderColor: "#1f3248" }}>
       <div className="px-4 py-2.5 border-b" style={{ borderColor: "#1f3248", background: "#0d1828" }}>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="ontology-chip ontology-chip-entity">Entity: Holding</span>
-          <span className="ontology-chip ontology-chip-rel">Edge: contributes_to portfolio_value</span>
-          <span className="ontology-chip ontology-chip-rel">Edge: emits return_stream</span>
-          <span className="ontology-id">SCHEMA-HOLDING-V1</span>
+          <span className="ontology-chip ontology-chip-entity">Holdings Schema</span>
+          <span className="ontology-chip ontology-chip-rel">Each row contributes to portfolio value</span>
+          <span className="ontology-chip ontology-chip-rel">Each row tracks its own return stream</span>
+          <span className="ontology-id">Ref: SCHEMA-HOLDING-V1</span>
         </div>
       </div>
       <div className="md:hidden">
